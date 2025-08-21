@@ -36,7 +36,7 @@ class Window:
             self._initialized = False
 
     def to_screen(self, x: float, y: float):
-        # set center point to middle of screen
+        # normalize position around screen center
         sx = self.width // 2 + int(x)
         sy = self.height // 2 - int(y)
         return sx, sy
@@ -47,6 +47,7 @@ def main():
     win = Window(title="Window")
     win.init()
 
+    # --- Main Loop ---
     while not rl.window_should_close():
         rl.begin_drawing()
         rl.clear_background(rl.RAYWHITE)
