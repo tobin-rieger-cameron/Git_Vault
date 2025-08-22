@@ -1,4 +1,6 @@
-# pyray must be installed to run
+# pip install pyray
+# pip install raylib
+
 import pyray as rl
 
 # screen dimensions set as constants for now
@@ -55,8 +57,8 @@ def main():
         # draw objects here
 
         rl.end_drawing()
-    rl.enable_curson()
-    win.close_window
+    rl.enable_cursor()
+    win.close_window()
 
 
 if __name__ == "__main__":
