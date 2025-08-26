@@ -19,8 +19,6 @@ class Line():
     It is breathless length.
     """
     def __init__( self, A: Point, B: Point):
-        if A == B:
-            raise ValueError("A straight line requires two distinct points")
         self.A = A
         self.B = B
 
