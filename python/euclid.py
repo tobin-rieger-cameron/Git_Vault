@@ -1,6 +1,14 @@
+"""
+!important
+this script needs raylib and pyray pip packages to run
+
+I have created a virtual environment with the required
+packages for my own needs. ./python-venv/
+
+run: source ./python-venv/bin/activate(.csh, .fish,)
+"""
 import math
 import pyray as rl
-
 
 # ---- Definitions ----
 
@@ -22,7 +30,10 @@ class Point():
         # string representation
         return f"Point({self.x}, {self.y})" # debug print
 
-    def draw(self, rl.RED: color):
+    def is_hovered(self, mx, my):
+        return (self.x - mx) ** 2 + (self.y - my) ** 2 <= 5 ** 2
+
+    def draw(self, color=rl.RED):
         # draw with raylib
         rl.draw_circle(int(self.x), int(self.y), 5, color)
 
@@ -61,7 +72,7 @@ class StraightLine(Line):
         # Pythagorean theorum used to find length
         return ((self.B.x - self.A.x) ** 2 + (self.B.y - self.A.y) ** 2) ** 0.5 # √((Bx - Ax)² + (By - Ay)²)
 
-    def draw(self, rl.BLACK: color):
+    def draw(self, color=rl.BLACK):
         # draw with raylib
         rl.draw_line(int(self.A.x), int(self.A.y), int(self.B.x), int(self.B.y), color)
 
@@ -105,6 +116,9 @@ class Angle:
         self.AB = AB
         self.AC = AC
 
+    def __repr__(self):
+        return f"Angle({self.AB}, {self.AC}"
+
     def measure(self) -> float:
         """return angle in degrees"""
         v1 = (self.AB.B.x - self.AB.A.x, self.AB.B.y - self.AB.A.y) # TODO: function to calc vectors
@@ -115,5 +129,62 @@ class Angle:
         cos_theta = dot_product / (mag1 * mag2)
         return math.degrees(math.acos(cos_theta))
 
-    def __repr___(self):
-        return f"Angle({self.AB}, {self.AC}"
+
+
+# ---- Application Framework ----
+
+class GeometryApp:
+    def __init__(self, width = 1280, height = 720, title = "Euclidean Geometry"):
+        self.width = width
+        self.height = height
+        self.title = title
+
+        self.points: list[Point] = []
+        self.lines: list[StraightLine] = []
+
+    def run(self):
+        rl.init_window(self.width, self.height, self.title)
+        rl.set_target_fps(60)
+        
+        print("Window initialized, starting main loop...")
+        while not rl.window_should_close():
+            self.update()
+            self.draw()
+
+        rl.close_window()
+        print("Window closed")
+
+    def update(self):
+        # left click to add a point
+        if rl.is_mouse_button_pressed(rl.MOUSE_LEFT_BUTTON):
+            mx, my = rl.get_mouse_x(), rl.get_mouse_y()
+            self.points.append(Point(mx, my))
+            print(f"point created at:({Point(mx, my)})")
+
+            # for now, automatically create a line between two points
+            #if len(self.points) >= 2:
+            #    self.lines.append(StraightLine(self.points[-2], self.points[-1]))
+
+        if rl.is_mouse_button_pressed(rl.MOUSE_RIGHT_BUTTON):
+            mx, my = rl.get_mouse_x(), rl.get_mouse_y()
+            mouse_point = Point(mx, my)
+            self.lines.append(StraightLine(mouse_point, self.points[-1]))
+            print(f"line created from {mouse_point} to {self.points[-1]}")
+
+    def draw(self):
+        rl.begin_drawing()
+        rl.clear_background(rl.RAYWHITE)
+
+        for line in self.lines:
+            line.draw()
+
+
+        for p in self.points:
+            p.draw()
+
+        rl.end_drawing()
+
+if __name__ == "__main__":
+    print("Starting application...")
+    app = GeometryApp()
+    app.run()
