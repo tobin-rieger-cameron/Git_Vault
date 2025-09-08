@@ -1,1 +1,3 @@
 # ignore certain files / folders
+
+./python/euclid2.py

@@ -2,6 +2,7 @@
 # pip install raylib
 
 import pyray as rl
+import euclid
 
 # screen dimensions set as constants for now
 SCREEN_WIDTH = 1200

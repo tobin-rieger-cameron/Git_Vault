@@ -15,7 +15,6 @@ import pyray as rl
 ## -----------
 ## -- Point --
 ## -----------
-
 class Point():
     """
     a point is that which has no parts,
@@ -33,31 +32,28 @@ class Point():
     def is_hovered(self, mx, my):
         return (self.x - mx) ** 2 + (self.y - my) ** 2 <= 5 ** 2
 
-    def draw(self, color=rl.RED):
+    def draw(self, color=rl.RED, radius=5):
         # draw with raylib
-        rl.draw_circle(int(self.x), int(self.y), 5, color)
+        rl.draw_circle(int(self.x), int(self.y), radius, color)
 
 ## ----------
 ## -- Line --
 ## ----------
-
 class Line():
     """
-    any type of line
     a line is breadthless length
     """
 
     # so far, this object is simply here for difinition
-    # TODO: line type implementation
+    # TODO: line type implementation: curved, infinite, cissoid
 
     pass
 
 class StraightLine(Line):
     """
-    A straight line lies evenly with
-    the points on itself.
+    A straight line lies evenly with the points on itself.
     It is breathless length.
-    Its extremities are points
+    Its extremities are points.
     """
     def __init__( self, A: Point, B: Point):
         # initialization
@@ -72,15 +68,15 @@ class StraightLine(Line):
         # Pythagorean theorum used to find length
         return ((self.B.x - self.A.x) ** 2 + (self.B.y - self.A.y) ** 2) ** 0.5 # √((Bx - Ax)² + (By - Ay)²)
 
-    def draw(self, color=rl.BLACK):
+    def draw(self, color=rl.BLACK, thickness=2):
         # draw with raylib
-        rl.draw_line(int(self.A.x), int(self.A.y), int(self.B.x), int(self.B.y), color)
+        # rl.draw_line(int(self.A.x), int(self.A.y), int(self.B.x), int(self.B.y), color)
+        rl.draw_line_ex(rl.Vector2(self.A.x, self.A.y), rl.Vector2(self.B.x, self.B.y), thickness, color)
 
 
 ## -------------
 ## -- Surface --
 ## -------------
-
 class Surface():
     """
     A surface is that which has length and breadth only
@@ -103,7 +99,6 @@ class PlaneSurface(Surface):
 ## -----------
 ## -- Angle --
 ## -----------
-
 class Angle:
     """
     the inclination of two lines which
@@ -121,14 +116,22 @@ class Angle:
 
     def measure(self) -> float:
         """return angle in degrees"""
-        v1 = (self.AB.B.x - self.AB.A.x, self.AB.B.y - self.AB.A.y) # TODO: function to calc vectors
+        v1 = (self.AB.B.x - self.AB.A.x, self.AB.B.y - self.AB.A.y)
         v2 = (self.AC.B.x - self.AC.A.x, self.AC.B.y - self.AC.A.y)
         dot_product = v1[0]*v2[0] + v1[1]*v2[1]
-        mag1 = (v1[0]**2 + v1[1]**2) ** 0.5 # TODO: function to calculate magnitude
+        mag1 = (v1[0]**2 + v1[1]**2) ** 0.5
         mag2 = (v2[0]**2 + v2[1]**2) ** 0.5
         cos_theta = dot_product / (mag1 * mag2)
         return math.degrees(math.acos(cos_theta))
 
+    def get_type(self):
+        """check if angle is acute or obtuse"""
+        pass
+
+    def draw(self, color=rl.RED, thickness=2):
+        """draw a curved line to represent the angle"""
+        pass
+        
 
 
 # ---- Application Framework ----
@@ -139,9 +142,27 @@ class GeometryApp:
         self.height = height
         self.title = title
 
+        # Object lists
         self.points: list[Point] = []
         self.lines: list[StraightLine] = []
 
+        self.mode = None # POINT, LINE, SURFACE,
+        self.preview_line = None
+        self.hovered_point = None
+        self.line_start_point = None
+
+    ## -----------------------
+    ## -- Get hovered point --
+    ## -----------------------
+    def get_hovered_point(self, mx, my):
+        """find point under ouse cursor"""
+        for point in self.points:
+            if point.is_hovered(mx, my):
+                return point
+    
+    ## ---------
+    ## -- Run --
+    ## ---------
     def run(self):
         rl.init_window(self.width, self.height, self.title)
         rl.set_target_fps(60)
@@ -154,32 +175,75 @@ class GeometryApp:
         rl.close_window()
         print("Window closed")
 
+
+    ## ------------
+    ## -- Update --
+    ## ------------
     def update(self):
-        # left click to add a point
+
+        mx, my = rl.get_mouse_x(), rl.get_mouse_y()
+        hovered_point = self.get_hovered_point(mx, my)
+
+
+        if self.line_start_point and not hovered_point:
+            self.preview_line = StraightLine(self.line_start_point, Point(mx, my))
+
         if rl.is_mouse_button_pressed(rl.MOUSE_LEFT_BUTTON):
-            mx, my = rl.get_mouse_x(), rl.get_mouse_y()
-            self.points.append(Point(mx, my))
-            print(f"point created at:({Point(mx, my)})")
+            # if hovering a point
+            if hovered_point:
+                if not self.line_start_point:
+                    # Clicked on hovered point, start new line
+                    self.line_start_point = hovered_point
+                    print(f"Line started from: {hovered_point}")
+                elif self.line_start_point != hovered_point:
+                    # Complete the line
+                    new_line = StraightLine(self.line_start_point, hovered_point)
+                    self.lines.append(new_line)
+                    print(f"Line created: {new_line}")
+                    self.line_start_point = None
+                    self.preview_line = None
+                else:
+                    # Clicked the same point, cancel
+                    self.line_start_point = None
+                    print("Line creation cancelled")
+            else:
+                # clicked empty space, create new point
+                new_point = Point(mx, my)
+                self.points.append(new_point)
+                print(f"Point created at: {new_point}")
 
-            # for now, automatically create a line between two points
-            #if len(self.points) >= 2:
-            #    self.lines.append(StraightLine(self.points[-2], self.points[-1]))
-
-        if rl.is_mouse_button_pressed(rl.MOUSE_RIGHT_BUTTON):
-            mx, my = rl.get_mouse_x(), rl.get_mouse_y()
-            mouse_point = Point(mx, my)
-            self.lines.append(StraightLine(mouse_point, self.points[-1]))
-            print(f"line created from {mouse_point} to {self.points[-1]}")
+    ## ----------
+    ## -- Draw --
+    ## ----------
 
     def draw(self):
         rl.begin_drawing()
         rl.clear_background(rl.RAYWHITE)
 
+        mx, my = rl.get_mouse_x(), rl.get_mouse_y()
+        hovered_point = self.get_hovered_point(mx, my)
+
+        # draw lines
         for line in self.lines:
             line.draw()
 
+        # draw preview line
+        if self.preview_line:
+            self.preview_line.draw(rl.BLUE, 1)
 
+        # Draw points
         for p in self.points:
+
+            # Highlight hovered point
+            if p == self.hovered_point:
+                color = rl.ORANGE
+                radus = 8
+
+            # Highlihgt line start point
+            if p == self.line_start_point:
+                color = rl.BLUE
+                radius = 8
+
             p.draw()
 
         rl.end_drawing()
