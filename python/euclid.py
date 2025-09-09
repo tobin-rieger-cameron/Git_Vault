@@ -20,21 +20,24 @@ class Point():
     a point is that which has no parts,
     it has position
     """
-    def __init__(self, x: float, y: float):
+    def __init__(self, x: float, y: float, radius=5, color=rl.RED):
         # initialization
         self.x = x
         self.y = y
+        self.radius = radius
+        self.color = color
 
     def __repr__(self):
-        # string representation
-        return f"Point({self.x}, {self.y})" # debug print
+        # debug string representation
+        return f"Point({self.x}, {self.y})"
 
     def is_hovered(self, mx, my):
-        return (self.x - mx) ** 2 + (self.y - my) ** 2 <= 5 ** 2
+        # distance check
+        return (self.x - mx) ** 2 + (self.y - my) ** 2 <= self.radius ** 3
 
-    def draw(self, color=rl.RED, radius=5):
+    def draw(self):
         # draw with raylib
-        rl.draw_circle(int(self.x), int(self.y), radius, color)
+        rl.draw_circle(int(self.x), int(self.y), self.radius, self.color)
 
 ## ----------
 ## -- Line --
@@ -47,7 +50,7 @@ class Line():
     # so far, this object is simply here for difinition
     # TODO: line type implementation: curved, infinite, cissoid
 
-    pass
+    def add_line():
 
 class StraightLine(Line):
     """
@@ -65,8 +68,8 @@ class StraightLine(Line):
         return f"Straight Line: {self.A}, {self.B}" # debug print
 
     def length(self) -> float:
-        # Pythagorean theorum used to find length
-        return ((self.B.x - self.A.x) ** 2 + (self.B.y - self.A.y) ** 2) ** 0.5 # √((Bx - Ax)² + (By - Ay)²)
+        # distance between two points, with pythagorean theorum
+        return math.sqrt((self.B.x - self.A.x) ** 2 + (self.B.y - self.A.y) ** 2) # √((Bx - Ax)² + (By - Ay)²)
 
     def draw(self, color=rl.BLACK, thickness=2):
         # draw with raylib
@@ -82,7 +85,6 @@ class Surface():
     A surface is that which has length and breadth only
     Its extremities are lines
     """
-
     def __init__(self, boundaries: list[Line]):
         self.boundaries = boundaries
 
