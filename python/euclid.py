@@ -1,3 +1,4 @@
+# ./euclid.py
 """
 !important
 this script needs raylib and pyray pip packages to run

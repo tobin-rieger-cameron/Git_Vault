@@ -57,7 +57,7 @@ class StraightLine(Line):
     def length(self) -> float:
         # distance between two points, with pythagorean theorum
         return math.sqrt((self.B.x - self.A.x) ** 2 + (self.B.y - self.A.y) ** 2) # √((Bx - Ax)² + (By - Ay)²)
-
+ g
     def connects(self, point: Point) ->  bool:
         # checks for connections
         return self.A == point or self.B == point
@@ -102,6 +102,9 @@ class PlaneSurface(Surface): #TODO:
     a flat surface lies evenly with all the points in itself
     """
     def __init__(self):
+
+
+
 
 ## -----------
 ## -- Angle --
