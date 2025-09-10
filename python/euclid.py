@@ -6,133 +6,11 @@ I have created a virtual environment with the required
 packages for my own needs. ./python-venv/
 
 run: source ./python-venv/bin/activate(.csh, .fish,)
+currently untested on windows
 """
 import math
 import pyray as rl
-
-# ---- Definitions ----
-
-## -----------
-## -- Point --
-## -----------
-class Point():
-    """
-    a point is that which has no parts,
-    it has position
-    """
-    def __init__(self, x: float, y: float, radius=5, color=rl.RED):
-        # initialization
-        self.x = x
-        self.y = y
-        self.radius = radius
-        self.color = color
-
-    def __repr__(self):
-        # debug string representation
-        return f"Point({self.x}, {self.y})"
-
-    def is_hovered(self, mx, my):
-        # distance check
-        return (self.x - mx) ** 2 + (self.y - my) ** 2 <= self.radius ** 3
-
-    def draw(self):
-        # draw with raylib
-        rl.draw_circle(int(self.x), int(self.y), self.radius, self.color)
-
-## ----------
-## -- Line --
-## ----------
-class Line():
-    """
-    a line is breadthless length
-    """
-
-    # so far, this object is simply here for difinition
-    # TODO: line type implementation: curved, infinite, cissoid
-
-    def add_line():
-
-class StraightLine(Line):
-    """
-    A straight line lies evenly with the points on itself.
-    It is breathless length.
-    Its extremities are points.
-    """
-    def __init__( self, A: Point, B: Point):
-        # initialization
-        self.A = A
-        self.B = B
-
-    def __repr__(self):
-        # string representation
-        return f"Straight Line: {self.A}, {self.B}" # debug print
-
-    def length(self) -> float:
-        # distance between two points, with pythagorean theorum
-        return math.sqrt((self.B.x - self.A.x) ** 2 + (self.B.y - self.A.y) ** 2) # √((Bx - Ax)² + (By - Ay)²)
-
-    def draw(self, color=rl.BLACK, thickness=2):
-        # draw with raylib
-        # rl.draw_line(int(self.A.x), int(self.A.y), int(self.B.x), int(self.B.y), color)
-        rl.draw_line_ex(rl.Vector2(self.A.x, self.A.y), rl.Vector2(self.B.x, self.B.y), thickness, color)
-
-
-## -------------
-## -- Surface --
-## -------------
-class Surface():
-    """
-    A surface is that which has length and breadth only
-    Its extremities are lines
-    """
-    def __init__(self, boundaries: list[Line]):
-        self.boundaries = boundaries
-
-    def __repr__(self):
-        return f"Surface(boundaries={self.boundaries}"
-
-class PlaneSurface(Surface):
-    """
-    a flat surface
-    """
-    def __init__(self, boundaries: list[StraightLine]):
-        super().__init__(boundaries)
-
-## -----------
-## -- Angle --
-## -----------
-class Angle:
-    """
-    the inclination of two lines which
-    meet each other but do not have the same direction
-    """
-    def __init__(self, AB: StraightLine, AC: StraightLine):
-        if AB.A != AC.A:
-            raise ValueError("Lines must share a common point to create an angle")
-        self.vertex = AB.A
-        self.AB = AB
-        self.AC = AC
-
-    def __repr__(self):
-        return f"Angle({self.AB}, {self.AC}"
-
-    def measure(self) -> float:
-        """return angle in degrees"""
-        v1 = (self.AB.B.x - self.AB.A.x, self.AB.B.y - self.AB.A.y)
-        v2 = (self.AC.B.x - self.AC.A.x, self.AC.B.y - self.AC.A.y)
-        dot_product = v1[0]*v2[0] + v1[1]*v2[1]
-        mag1 = (v1[0]**2 + v1[1]**2) ** 0.5
-        mag2 = (v2[0]**2 + v2[1]**2) ** 0.5
-        cos_theta = dot_product / (mag1 * mag2)
-        return math.degrees(math.acos(cos_theta))
-
-    def get_type(self):
-        """check if angle is acute or obtuse"""
-        pass
-
-    def draw(self, color=rl.RED, thickness=2):
-        """draw a curved line to represent the angle"""
-        pass
+import utils.definitions as def
         
 
 
@@ -154,14 +32,51 @@ class GeometryApp:
         self.line_start_point = None
 
     ## -----------------------
-    ## -- Get hovered point --
+    ## -- Helper Functions --
     ## -----------------------
-    def get_hovered_point(self, mx, my):
-        """find point under ouse cursor"""
-        for point in self.points:
-            if point.is_hovered(mx, my):
-                return point
     
+    def add_line(self, A: Point, B: Point):
+        """Add line and check for polygon closure"""
+        new_line = StraightLine(A, B)
+        self.lines.append(new_line)
+        print(f"Line Created at: {new_line}")
+
+        polygon = self.detect_polygon()
+        if polygon:
+            surface = PlaneSurface(polygon)
+            print(f"Surface created at: {surface}")
+        return new_line
+
+    def detect_polygon(self):
+        # each line should only have 2 points connected to it
+        if len(self.lines) < 3:
+            return None
+        
+        # adjacency map:
+        adjacency = {}
+        for line in self.lines:
+            adjacency.setdefault(line.A, []).append(line.B)
+            adjacency.setdefault(line.B, []).append(line.A)
+
+        for start in adjacency:
+            path = [start]
+            if self._walk_cycle(start, start, adjacency, path):
+                return [StraightLine(path[i], path[i+1]) for i in range(len(path)-1)]
+        return None
+
+        def _walk_cycle(self, current, target, adjacency, path):
+            """DFS walk to find cycle."""
+            for neighbor in adjacency[current]:
+                if neighbor == target and len(path) >= 3:
+                    path.append(neighbor)
+                    return True
+                if neighbor not in path:
+                    path.append(neighbor)
+                    if self._walk_cycle(neighbor, target, adjacency, path):
+                        return True
+                    path.pop()
+            return False 
+
     ## ---------
     ## -- Run --
     ## ---------
@@ -181,38 +96,77 @@ class GeometryApp:
     ## ------------
     ## -- Update --
     ## ------------
+    # def update(self):
+    #
+    #     mx, my = rl.get_mouse_x(), rl.get_mouse_y()
+    #
+    #
+    #     if self.line_start_point and not hovered_point:
+    #         self.preview_line = StraightLine(self.line_start_point, Point(mx, my))
+    #
+    #     if rl.is_mouse_button_pressed(rl.MOUSE_LEFT_BUTTON):
+    #         # if hovering a point
+    #         if hovered_point:
+    #             if not self.line_start_point:
+    #                 # Clicked on hovered point, start new line
+    #                 self.line_start_point = hovered_point
+    #                 print(f"Line started from: {hovered_point}")
+    #             elif self.line_start_point != hovered_point:
+    #                 # Complete the line
+    #                 new_line = StraightLine(self.line_start_point, hovered_point)
+    #                 self.lines.append(new_line)
+    #                 print(f"Line created: {new_line}")
+    #                 self.line_start_point = None
+    #                 self.preview_line = None
+    #             else:
+    #                 # Clicked the same point, cancel
+    #                 self.line_start_point = None
+    #                 print("Line creation cancelled")
+    #         else:
+    #             # clicked empty space, create new point
+    #             new_point = Point(mx, my)
+    #             self.points.append(new_point)
+    #             print(f"Point created at: {new_point}")
+
     def update(self):
-
-        mx, my = rl.get_mouse_x(), rl.get_mouse_y()
-        hovered_point = self.get_hovered_point(mx, my)
-
-
-        if self.line_start_point and not hovered_point:
-            self.preview_line = StraightLine(self.line_start_point, Point(mx, my))
-
-        if rl.is_mouse_button_pressed(rl.MOUSE_LEFT_BUTTON):
-            # if hovering a point
-            if hovered_point:
-                if not self.line_start_point:
-                    # Clicked on hovered point, start new line
-                    self.line_start_point = hovered_point
-                    print(f"Line started from: {hovered_point}")
-                elif self.line_start_point != hovered_point:
-                    # Complete the line
-                    new_line = StraightLine(self.line_start_point, hovered_point)
-                    self.lines.append(new_line)
-                    print(f"Line created: {new_line}")
-                    self.line_start_point = None
-                    self.preview_line = None
-                else:
-                    # Clicked the same point, cancel
-                    self.line_start_point = None
-                    print("Line creation cancelled")
+        # Draw all points
+        for p in self.points:
+            # highlight if hovered
+            if p.is_hovered(self.hovered_point):
+                p.draw(color=rl.ORANGE, radis=8)
             else:
-                # clicked empty space, create new point
+                p.draw()
+
+        # Draw all lines
+        for line in self.lines:
+            ine.draw()
+
+        # Mouse input
+        if rl.is_mouse_button_pressed(rl.MOUSE_LEFT_BUTTON):
+            mx, my = rl.get_mouse_x(), rl.get_mouse_y()
+            clicked_point = None
+
+            # did we click on an existing point?
+            for p in self.points:
+                if p.is_hovered(rl.get_mouse_position):
+                    clicked_point = p
+                    break
+
+            if clicked_point:
+                # select/deselect points for line creation
+                if self.selected_point is None:
+                    self.selected_point = clicked_point
+                    print("Selected {clicked_point}")
+                else:
+                    if self.selected_point != clicked_point:
+                        # create a line between two selected points
+                        self.add_line(self.selected_point, clicked_point)
+                    self.selected_point = None # reset after use
+            else:
+                # no point clicked -> create a new point
                 new_point = Point(mx, my)
                 self.points.append(new_point)
-                print(f"Point created at: {new_point}")
+                print(r"Point created: {new_point}")
 
     ## ----------
     ## -- Draw --
@@ -223,7 +177,6 @@ class GeometryApp:
         rl.clear_background(rl.RAYWHITE)
 
         mx, my = rl.get_mouse_x(), rl.get_mouse_y()
-        hovered_point = self.get_hovered_point(mx, my)
 
         # draw lines
         for line in self.lines:
@@ -237,7 +190,7 @@ class GeometryApp:
         for p in self.points:
 
             # Highlight hovered point
-            if p == self.hovered_point:
+            if p.is_hovered:
                 color = rl.ORANGE
                 radus = 8
 

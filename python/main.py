@@ -1,8 +1,14 @@
 # pip install pyray
 # pip install raylib
 
+"""
+Placeholder main file to eventually link up entire program
+
+Will be responsible for creating a window and managing main loop logic
+"""
+
 import pyray as rl
-import euclid
+import euclid as eu
 
 # screen dimensions set as constants for now
 SCREEN_WIDTH = 1200
