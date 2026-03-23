@@ -14,13 +14,13 @@ def main():
     win.init()
 
     # --- Create bodies ---
-    sphere1 = Body(x=0, y=0, z=0, radius=8, color=rl.BLUE, density=1000.0, fixed=True)
+    #sphere1 = Body(x=0, y=0, z=0, radius=8, color=rl.BLUE, density=1000.0, fixed=True)
     sphere1_moon1 = Body(25, 0, 0, 3, rl.GRAY, 2000.0)
-    sphere1_moon1.vy = 20  # initial velocity
+    #sphere1_moon1.vy = 20  # initial velocity
     sphere1_moon2 = Body(-40, 0, 0, 2, rl.DARKGRAY, 150.0)
 
     # --- Initialize camera ---
-    camera = OrbitCam(target_body=sphere1, radius=50.0)
+    camera = OrbitCam(target_body=sphere1_moon1, radius=50.0)
 
     # Main game loop
     while not rl.window_should_close():

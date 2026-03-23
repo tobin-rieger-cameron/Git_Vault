@@ -7,16 +7,25 @@ class Vector3D:
         self.x = x
         self.y = y
         self.z = z
+    
+    # ── arithmetic operators ──────────────────────────────────────────────────
+    def __add__(self, other):
+        return Vector3D( self.x + other.x, self.y + other.y, self.z + other.z)
 
-    def add(self, other):
-        return Vector3D(self.x + other.x, self.y + other.y, self.z + other.z)
+    def __sub__(self, other):
+        return Vector3D( self.x - other.x, self.y - other.y, self.z - other.z)
 
-    def subtract(self, other):
-        return Vector3D(self.x - other.x, self.y - other.y, self.z - other.z)
+    def __mul__(self, scalar):
+        return Vector3D( self.x * scalar, self.y * scalar, self.z * scalar)
 
-    def multiply(self, scalar):
-        return Vector3D(self.x * scalar, self.y * scalar, self.z * scalar)
+    def __rmul__(self, scalar):
+        return self.__mul__(scalar)
 
+    def __neg__(self):
+        return Vector3D(-self.x, -self.y, -self.z)
+
+
+    # ── vector operations ─---─────────────────────────────────────────────────
     def dot(self, other):
         return self.x * other.x + self.y * other.y + self.z * other.z
 
@@ -27,24 +36,28 @@ class Vector3D:
             self.x * other.y - self.y * other.x,
         )
 
+    def scale(self, scalar):
+        return self.__mul__(scalar)
+
     def length(self):
-        return math.sqrt(self.x * self.x + self.y * self.y + self.z * self.z)
+        return math.hypot(self.x, self.y, self.z)
 
     def length_squared(self):
         return self.x * self.x + self.y * self.y + self.z * self.z
 
     def normalize(self):
-        length = self.length()
-        if length == 0:
-            return Vector3D(0, 0, 0)
-        return Vector3D(self.x / length, self.y / length, self.z / length)
+        magnitude = self.length()
+        if magnitude < 1e-12:
+            return Vector3D(0.0, 0.0, 0.0)
+        return self.__mul__(1.0 / magnitude)
 
     def distance_to(self, other):
-        return self.subtract(other).length()
+        return (self - other).length()
 
+
+    # ── display ─────────────────────────────────────────────────────-───────
     def __str__(self):
         return f"Vector3D({self.x:.2f}, {self.y:.2f}, {self.z:.2f})"
 
     def __repr__(self):
         return self.__str__()
-
