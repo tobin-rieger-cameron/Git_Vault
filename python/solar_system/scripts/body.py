@@ -115,9 +115,13 @@ class Body:
     @classmethod
     def update_all_bodies(cls, dt):
         """Apply physics for all bodies at once"""
+        for body in cls.all_bodies:
+            body.forces = []
         for i, body1 in enumerate(cls.all_bodies):
             for body2 in cls.all_bodies[i+1:]:
                 fx, fy, fz = body1.calculate_gravitational_force(body2)
+                body1.forces.append((fx, fy, fz))
+                body2.forces.append((-fx, -fy, -fz))
                 body1.apply_force(fx, fy, fz)
                 body2.apply_force(-fx, -fy, -fz)
 
