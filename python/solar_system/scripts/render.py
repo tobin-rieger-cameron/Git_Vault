@@ -12,19 +12,19 @@ def to_rl(v):
 
 def draw_arrow(origin, vec, color, shaft_r=0.045, head_r=0.13, head_ratio=0.22):
     # convert to Vector3D for math
-    o = Vector3D(origin.x, origin.y, origin.z)
-    v = Vector3D(vec.x, vec.y, vec.z)
+    origin = Vector3D(origin.x, origin.y, origin.z)
+    vec = Vector3D(vec.x, vec.y, vec.z)
 
-    length = v.length()
+    length = vec.length()
     if length < 1e-6:
         return
 
-    direction = v.normalize()
-    shaft_end = o + direction * (length * (1 - head_ratio))
-    tip       = o + v
+    direction = vec.normalize()
+    shaft_end = origin + direction * (length * (1 - head_ratio))
+    tip       = origin + vec
 
     # convert back to rl.Vector3 for pyray
-    rl.draw_cylinder_ex(to_rl(o),         to_rl(shaft_end), shaft_r, shaft_r, 12, color)
+    rl.draw_cylinder_ex(to_rl(origin), to_rl(shaft_end), shaft_r, shaft_r, 12, color)
     rl.draw_cylinder_ex(to_rl(shaft_end), to_rl(tip),       head_r,  0.0,     12, color)
 
 def draw_force_vectors(bodies):
