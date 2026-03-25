@@ -1,7 +1,7 @@
 # scripts/input.py
 
 import pyray as rl
-# test change for branch commit
+
 def handle_input(state):
 
     current_mouse   = rl.get_mouse_position()
