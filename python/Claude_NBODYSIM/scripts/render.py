@@ -17,3 +17,9 @@ def draw_bodies():
 
 def draw_force_vectors():
     return none
+
+def draw_arrow():
+    return none
+
+def to_rl():
+    return none
