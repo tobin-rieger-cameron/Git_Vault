@@ -20,7 +20,7 @@ def draw_arrow(origin, vec, color, shaft_r=0.045, head_r=0.13, head_ratio=0.22):
         return
 
     direction = vec.normalize()
-    shaft_end = origin + direction * (length * (1 - head_ratio))
+    shaft_end = origin + direction.scale(length * (1 - head_ratio))
     tip       = origin + vec
 
     # convert back to rl.Vector3 for pyray
