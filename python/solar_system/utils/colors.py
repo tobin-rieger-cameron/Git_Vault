@@ -11,8 +11,14 @@ def hex_to_color(hex_str, alpha=255):
 
 
 
-BACKGROUND = hex_to_color("#f2e5bc")
-
+BACKGROUND    = hex_to_color("#f2e5bc")
+GRID_COLOR    = rl.Color(180, 170, 150, 80)
+X_AXIS_COLOR  = rl.Color(255, 0, 0, 120)
+Y_AXIS_COLOR  = rl.Color(0, 255, 0, 120)
+Z_AXIS_COLOR  = rl.Color(0, 0, 255, 120)
+RESULTANT_COL = rl.Color(255, 220,  50, 255)
+WHITE         = rl.Color(255, 255, 255, 255)
+DARK_OVERLAY  = rl.Color(  0,   0,   0, 140)
 
 BODY_COLS = [
     rl.Color( 70, 140, 230, 255),   # blue
@@ -29,7 +35,4 @@ TRAIL_COLS = [
     rl.Color(220,  80,  80, 120),
     rl.Color( 55, 200, 120, 120),
 ]
-RESULTANT_COL = rl.Color(255, 220,  50, 255)
-WHITE         = rl.Color(255, 255, 255, 255)
-DARK_OVERLAY  = rl.Color(  0,   0,   0, 140)
 
