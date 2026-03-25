@@ -1,9 +1,9 @@
 # main.py
 
 from scripts.state import SimState
-
 state = SimState()
 
+# main loop
 while not rl.window_should_close():
 
     state = handle_input(state)

@@ -1,5 +1,7 @@
 # scripts/input.py
 
+import pyray as rl
+
 def handle_input(state):
 
     current_mouse   = rl.get_mouse_position()
