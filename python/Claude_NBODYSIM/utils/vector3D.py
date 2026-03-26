@@ -111,3 +111,7 @@ class Vector3D:
     # v1.scale(x)
     def scale(self, scalar):
         return self.__mul__(scalar)
+
+    # v1.copy()
+    def copy(self):
+        return Vector3D(self.x, self.y, self.z)
