@@ -35,6 +35,13 @@ class Vector3D:
             self.z + other.z
         )
 
+    # v1 += v2
+    def __iadd__(self, other):
+        self.x += other.x
+        self.y += other.y
+        self.z += other.z
+        return self
+
     # v1 - v2
     def __sub__(self, other):
         return Vector3D(
@@ -43,12 +50,22 @@ class Vector3D:
             self.z - other.z
         )
 
-    # v1 * v2
+    #TODO: ADD INCREMENTAL SUBTRACTION, MULTIPLICATION
+
+    # v1 * x
     def __mul__(self, scalar):
         return Vector3D(
             self.x * scalar,
             self.y * scalar,
             self.z * scalar
+        )
+
+    # v1 / x
+    def __truediv__(self, scalar):
+        return Vector3D(
+            self.x / scalar,
+            self.y / scalar,
+            self.z / scalar
         )
 
     # -v1
