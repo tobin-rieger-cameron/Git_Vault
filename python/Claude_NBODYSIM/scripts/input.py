@@ -28,16 +28,16 @@ def handle_input(state):
         state.reset()
 
     if rl.is_key_pressed(rl.KEY_T):
-        state.display.show_trails = not state.display.show_trails
-        if not state.display.show_trails:
+        state.render.show_trails = not state.render.show_trails
+        if not state.render.show_trails:
             for body in state.bodies:
                 body.trail.clear()
 
     if rl.is_key_pressed(rl.KEY_V):
-        state.display.show_vectors = not state.display.show_vectors
+        state.render.show_vectors = not state.render.show_vectors
 
     if rl.is_key_pressed(rl.KEY_C):
-        state.display.show_components = not state.display.show_components
+        state.render.show_components = not state.render.show_components
 
     if rl.is_key_pressed(rl.KEY_EQUAL):
         state.sim.time_scale = min(8.0, state.sim.time_scale * 1.25)

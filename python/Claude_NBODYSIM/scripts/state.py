@@ -8,7 +8,7 @@ from scripts.physics import GRAVITATIONAL_CONSTANT
 
 
 @dataclass
-class DisplayState:
+class RenderState:
     """Controls what is visible in the scene."""
     show_trails     : bool = True
     show_vectors    : bool = True
@@ -42,7 +42,7 @@ class SimState:
     All mutable runtime values live here, grouped by concern.
 
     Access pattern:
-        state.display.show_trails
+        state.render.show_trails
         state.sim.time_scale
         state.input.is_dragging
         state.camera
@@ -52,7 +52,7 @@ class SimState:
     def __init__(self):
         self.camera  = Camera()
         self.bodies  = Body.create_all()
-        self.display = DisplayState()
+        self.render  = RenderState()
         self.sim     = SimulationState()
         self.input   = InputState()
 

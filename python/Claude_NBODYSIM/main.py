@@ -29,7 +29,7 @@ while not rl.window_should_close():
             sim_step(state.bodies, substep_dt, state.sim.gravity_constant)
         state.sim.simulation_time += real_dt * state.sim.time_scale
 
-        if state.display.show_trails:
+        if state.render.show_trails:
             for body in state.bodies:
                 body.trail.append(body.position.copy())
 
@@ -43,9 +43,9 @@ while not rl.window_should_close():
     draw_gravity_lines(state.bodies)
     draw_bodies(state.bodies, queue_label, state.camera.get())
 
-    if state.display.show_trails:
+    if state.render.show_trails:
         draw_trails(state.bodies)
-    if state.display.show_vectors:
+    if state.render.show_vectors:
         draw_force_vectors(state.bodies, queue_label, state.camera.get())
 
     rl.end_mode_3d()
