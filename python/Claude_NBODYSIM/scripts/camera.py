@@ -31,9 +31,9 @@ class Camera:
                                        0.0, 0.0, 1.0, 0.0,
                                        0.0, 0.0, 0.0, 1.0, )
 
-    def update(self, bodies=None):
+    def update(self):
         if self.target_body is not None:
-            self.target = self.target_body.get_position()
+            self.target = Vector3(self.target_body.position.x, self.target_body.position.y, self.target_body.position.z)
 
         self.update_camera_free_6dof()
 
