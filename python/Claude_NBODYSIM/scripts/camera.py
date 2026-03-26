@@ -63,7 +63,7 @@ class Camera:
 
     def orbit(self, delta_x, delta_y):
         y_rotation = rl.matrix_rotate_y(-delta_x * self.sensitivity)
-        x_rotaion  = rl.matrix_rotate_x(-delta_y * self.sensitivity)
+        x_rotation = rl.matrix_rotate_x(-delta_y * self.sensitivity)
         self.camera_rotation = rl.matrix_multiply(y_rotation, self.camera_rotation)
         self.camera_rotation = rl.matrix_multiply(x_rotation, self.camera_rotation)
 

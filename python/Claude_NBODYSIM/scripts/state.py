@@ -1,7 +1,7 @@
 # scripts/state.py
 
 import pyray as rl
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from scripts.camera  import Camera
 from scripts.body    import Body
 from scripts.physics import GRAVITATIONAL_CONSTANT

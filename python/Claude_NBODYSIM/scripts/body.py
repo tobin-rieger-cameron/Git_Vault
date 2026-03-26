@@ -24,7 +24,7 @@ class Body:
 
     @classmethod
     # create_all needs to build Body objects, so it can't be a regular instance method
-    def create_all(cls, initial_states):
+    def create_all(cls):
         return [
             cls(
                 position = Vector3D(10, 10, 10),
