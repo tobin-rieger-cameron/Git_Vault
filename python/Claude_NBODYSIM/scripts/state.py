@@ -1,9 +1,9 @@
 # scripts/state.py
 
 import pyray as rl
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from scripts.camera  import Camera
-from scripts.body    import Body, INITIAL_BODY_STATES
+from scripts.body    import Body
 from scripts.physics import GRAVITATIONAL_CONSTANT
 
 
@@ -51,14 +51,14 @@ class SimState:
 
     def __init__(self):
         self.camera  = Camera()
-        self.bodies  = Body.create_all(INITIAL_BODY_STATES)
+        self.bodies  = Body.create_all()
         self.display = DisplayState()
         self.sim     = SimulationState()
         self.input   = InputState()
 
     def reset(self):
         """Reset simulation back to initial conditions."""
-        self.bodies             = Body.create_all(INITIAL_BODY_STATES)
+        self.bodies               = Body.create_all()
         self.sim.simulation_time  = 0.0
         self.sim.time_scale       = 1.0
         self.sim.gravity_constant = GRAVITATIONAL_CONSTANT
