@@ -9,7 +9,7 @@ from scripts.physics  import sim_step
 from scripts.render   import (draw_grid, draw_axes, draw_trails,
                               draw_gravity_lines, draw_bodies,
                               draw_force_vectors)
-
+#TODO: dynamic display system
 WINDOW_WIDTH      = 1280
 WINDOW_HEIGHT     = 720
 SUBSTEPS_PER_FRAME = 8
@@ -29,12 +29,17 @@ while not rl.window_should_close():
             sim_step(state.bodies, substep_dt, state.sim.gravity_constant)
         state.sim.simulation_time += real_dt * state.sim.time_scale
 
+        if state.display.show_trails:
+            for body in state.bodies:
+                body.trail.append(body.position.copy())
+
     rl.begin_drawing()
     rl.clear_background(BACKGROUND)
+    state.camera.set_target_body(state.bodies[0])
     rl.begin_mode_3d(state.camera.get())
 
-    draw_grid()
-    draw_axes(queue_label, state.camera.get())
+    #draw_grid()
+    #draw_axes(queue_label, state.camera.get())
     draw_gravity_lines(state.bodies)
     draw_bodies(state.bodies, queue_label, state.camera.get())
 
@@ -51,18 +56,3 @@ while not rl.window_should_close():
     rl.end_drawing()
 
 rl.close_window()
-"""
-Two things to notice:
-
-**1. `sim_step` signature changed** — your original `main.py` was passing `state.display.show_trails` into `sim_step`, but we removed that — trail appending needs to be added to `apply_forces` in `physics.py` instead. That's one of the remaining TODOs.
-
-**2. `rl.close_window()`** at the end — cleans up pyray properly when the loop exits.
-
----
-
-Here's the full TODO list before first run:
-```
-1. physics.py  — append body.position to body.trail in apply_forces when trails enabled
-2. body.py     — create_all() needs realistic starting positions/velocities for interesting orbits
-4. input.py    — add import pyray as rl at the top
-"""
