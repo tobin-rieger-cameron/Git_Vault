@@ -27,25 +27,25 @@ class Body:
     def create_all(cls):
         return [
             cls(
-                position = Vector3D(10, 10, 10),
-                velocity = Vector3D(10, 10, 10),
-                mass = 10, radius = 10,
+                position = Vector3D(25, 30, 100),
+                velocity = Vector3D(0, 0, 0),
+                mass = 1000, radius = 10,
                 color = BODY_COLS[0],
                 trail_color = TRAIL_COLS[0],
             ),
 
             cls(
-                position = Vector3D(20, 20, 20),
-                velocity = Vector3D(20, 20, 20),
-                mass = 20, radius = 20,
+                position = Vector3D(80, -70, 60),
+                velocity = Vector3D(0, 0, 0),
+                mass = 2000, radius = 8,
                 color = BODY_COLS[1],
                 trail_color = TRAIL_COLS[1],
             ),
 
             cls(
-                position = Vector3D(30, 30, 30),
-                velocity = Vector3D(30, 30, 30),
-                mass = 30, radius = 30,
+                position = Vector3D(0, 0, 0),
+                velocity = Vector3D(0, 0, 0),
+                mass = 3000, radius = 20,
                 color = BODY_COLS[2],
                 trail_color = TRAIL_COLS[2],
             ),
