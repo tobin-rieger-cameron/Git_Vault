@@ -25,7 +25,7 @@ def draw_arrow(origin, vec, color, shaft_r=0.045, head_r=0.13, head_ratio=0.22):
 
     # convert back to rl.Vector3 for pyray
     rl.draw_cylinder_ex(to_rl(origin), to_rl(shaft_end), shaft_r, shaft_r, 12, color)
-    rl.draw_cylinder_ex(to_rl(shaft_end), to_rl(tip),       head_r,  0.0,     12, color)
+    rl.draw_cylinder_ex(to_rl(shaft_end), to_rl(tip), head_r, 0.0, 12, color)
 
 def draw_force_vectors(bodies):
     for i, b in enumerate(bodies):
