@@ -12,7 +12,7 @@ def draw_hud(state, window_width, window_height):
     rl.draw_text("BODIES", 15, 15, 16, WHITE)
     for i, body in enumerate(state.bodies):
         y = 35 + i * 80
-        rl.draw_text(f"body {i}", 15, y,      14, BODY_COLS[i])
+        rl.draw_text(body.name, 15, y,      14, BODY_COLS[i])
         rl.draw_text(f"pos  x:{body.position.x:.1f} y:{body.position.y:.1f} z:{body.position.z:.1f}", 15, y+18, 12, WHITE)
         rl.draw_text(f"vel  x:{body.velocity.x:.1f} y:{body.velocity.y:.1f} z:{body.velocity.z:.1f}", 15, y+34, 12, WHITE)
         rl.draw_text(f"mass {body.mass:.2f}  radius {body.radius:.1f}", 15, y+50, 12, WHITE)
