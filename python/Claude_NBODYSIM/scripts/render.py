@@ -31,7 +31,7 @@ def draw_gravity_lines(bodies):
 def draw_bodies(bodies, queue_label, camera):
     for i, body in enumerate(bodies):
         rl.draw_sphere(to_rl(body.position), body.radius, body.color)
-        queue_label(to_rl(body.position), f"body {i}", camera)
+        queue_label(to_rl(body.position), body.name, camera)
 
 def draw_force_vectors(bodies, queue_label, camera):
     for i, body in enumerate(bodies):
@@ -40,7 +40,7 @@ def draw_force_vectors(bodies, queue_label, camera):
         for force, ref in body.forces:
             force_direction = force.normalize()
             offset_origin = body.position + force_direction * body.radius
-            scaled = force_direction * (math.log1p(force.length()) * 3)
+            scaled = force_direction * min(3.0, math.sqrt(force.length()) * 4)
 
             draw_arrow(offset_origin, scaled, ref.color)
             total += force
@@ -51,7 +51,7 @@ def draw_force_vectors(bodies, queue_label, camera):
         draw_arrow(offset_origin, scaled_total, RESULTANT_COL)
         queue_label(to_rl(body.position), "F", camera)
 
-def draw_arrow(origin, vec, color, shaft_r=0.045, head_r=0.13, head_ratio=0.22):
+def draw_arrow(origin, vec, color, shaft_r=0.085, head_r=0.23, head_ratio=0.22):
 
     direction = vec.normalize()
     length = vec.length()
