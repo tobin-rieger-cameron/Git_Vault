@@ -54,6 +54,7 @@ class SimState:
         self.render  = RenderState()
         self.sim     = SimulationState()
         self.input   = InputState()
+        self.font    = rl.load_font("assets/fonts/CaskaydiaCoveNerdFontMono-Regular.ttf")
 
     def reset(self):
         """Reset simulation back to initial conditions."""

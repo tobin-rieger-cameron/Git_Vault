@@ -50,7 +50,7 @@ while not rl.window_should_close():
 
     rl.end_mode_3d()
 
-    flush_labels()
+    flush_labels(state.font)
     draw_hud(state, WINDOW_WIDTH, WINDOW_HEIGHT)
 
     rl.end_drawing()
