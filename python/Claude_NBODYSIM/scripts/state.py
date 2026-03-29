@@ -4,7 +4,6 @@ import pyray as rl
 from dataclasses import dataclass
 from scripts.camera  import Camera
 from scripts.body    import Body
-from scripts.physics import GRAVITATIONAL_CONSTANT
 
 
 @dataclass
@@ -20,9 +19,8 @@ class SimulationState:
     """Controls how the simulation runs."""
     is_paused        : bool  = False
     time_scale       : float = 1.0
-    gravity_constant : float = GRAVITATIONAL_CONSTANT
+    gravity_constant : float = 0.01
     simulation_time  : float = 0.0
-
 
 @dataclass
 class InputState:
@@ -38,8 +36,8 @@ class InputState:
 
 class SimState:
     """
-    Single source of truth for the entire simulation.
-    All mutable runtime values live here, grouped by concern.
+    Single source for the entire simulation.
+    All mutable runtime values live here.
 
     Access pattern:
         state.render.show_trails
@@ -50,6 +48,7 @@ class SimState:
     """
 
     def __init__(self):
+        """init simulation based on starting variables"""
         self.camera  = Camera()
         self.bodies  = Body.create_all()
         self.render  = RenderState()
@@ -58,7 +57,5 @@ class SimState:
 
     def reset(self):
         """Reset simulation back to initial conditions."""
-        self.bodies               = Body.create_all()
-        self.sim.simulation_time  = 0.0
-        self.sim.time_scale       = 1.0
-        self.sim.gravity_constant = GRAVITATIONAL_CONSTANT
+        self.bodies  = Body.create_all()
+        self.sim     = SimulationState()
