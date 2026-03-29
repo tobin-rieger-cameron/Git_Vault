@@ -4,8 +4,7 @@ import math
 from utils.colors import *
 from utils.vector3D import Vector3D
 
-V3 = rl.Vector3
-
+# convert to raylib vector for drawing
 def to_rl(v):
     return rl.Vector3(v.x, v.y, v.z)
 
@@ -13,12 +12,9 @@ def draw_grid():
     rl.draw_grid(100, 10)
 
 def draw_axes(queue_label, camera):
-    rl.draw_line_3d(V3(0, 0, 0), V3(100, 0, 0), X_AXIS_COLOR)
-    queue_label(V3(100, 0, 0), "X", camera)
-    rl.draw_line_3d(V3(0, 0, 0), V3(0, 100, 0), Y_AXIS_COLOR)
-    queue_label(V3(0, 100, 0), "Y", camera)
-    rl.draw_line_3d(V3(0, 0, 0), V3(0, 0, 100), Z_AXIS_COLOR)
-    queue_label(V3(0, 0, 100), "Z", camera)
+    rl.draw_line_3d(rl.Vector3(0, 0, 0), rl.Vector3(100, 0, 0), X_AXIS_COLOR); queue_label(rl.Vector3(100, 0, 0), "X", camera)
+    rl.draw_line_3d(rl.Vector3(0, 0, 0), rl.Vector3(0, 100, 0), Y_AXIS_COLOR); queue_label(rl.Vector3(0, 100, 0), "Y", camera)
+    rl.draw_line_3d(rl.Vector3(0, 0, 0), rl.Vector3(0, 0, 100), Z_AXIS_COLOR); queue_label(rl.Vector3(0, 0, 100), "Z", camera)
 
 def draw_trails(bodies):
     for body in bodies:
@@ -39,17 +35,39 @@ def draw_bodies(bodies, queue_label, camera):
 
 def draw_force_vectors(bodies, queue_label, camera):
     for i, body in enumerate(bodies):
-        for force in body.forces:
-            scaled = force.normalize() * math.log1p(force.length()) * 3
-            draw_arrow(to_rl(body.position), scaled, FORCE_COLS[i])
         total = Vector3D(0, 0, 0)
-        for force in body.forces:
+        
+        for force, ref in body.forces:
+            force_direction = force.normalize()
+            offset_origin = body.position + force_direction * body.radius
+            scaled = force_direction * (math.log1p(force.length()) * 3)
+
+            draw_arrow(offset_origin, scaled, ref.color)
             total += force
-        scaled_total = total.normalize() * math.log1p(total.length()) * 3
-        draw_arrow(to_rl(body.position), scaled_total, RESULTANT_COL)
+        
+        total_direction = total.normalize()
+        scaled_total = total_direction * (math.log1p(total.length()) * 3)
+        offset_origin = body.position + total_direction * body.radius
+        draw_arrow(offset_origin, scaled_total, RESULTANT_COL)
         queue_label(to_rl(body.position), "F", camera)
 
-def draw_arrow(start, force, color):
-    end = V3(start.x + force.x, start.y + force.y, start.z + force.z)
-    rl.draw_line_3d(start, end, color)
-    rl.draw_sphere(end, 0.3, color)
+def draw_arrow(origin, vec, color, shaft_r=0.045, head_r=0.13, head_ratio=0.22):
+
+    direction = vec.normalize()
+    length = vec.length()
+    if length < 1e-6:
+        return
+
+    shaft_end = origin + direction * (length * (1 - head_ratio))
+    tip       = origin + vec
+
+    rl.draw_cylinder_ex(to_rl(origin), to_rl(shaft_end), shaft_r, shaft_r, 12, color)
+    rl.draw_cylinder_ex(to_rl(shaft_end), to_rl(tip), head_r, 0.0, 12, color)
+
+
+
+
+
+
+
+    
