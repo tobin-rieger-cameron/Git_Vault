@@ -2,6 +2,18 @@
 from utils.vector3D import Vector3D
 
 
+def displacement(b1, b2):
+    return b2.position - b1.position
+
+def distance(b1, b2):
+    return displacement(b1, b2).length()
+
+def acceleration(force, mass):
+    return force / mass
+
+def normal(b1, b2):
+    return displacement(b1, b2).normalize()
+
 def compute_forces(bodies, G):
 
     # clear forces from previous frame
@@ -11,14 +23,14 @@ def compute_forces(bodies, G):
     # compute forces for each unique set of bodies
     for i, b1 in enumerate(bodies):
         for b2 in bodies[i+1:]: # address each pair once
-            
-            displacement = b2.position - b1.position
-            distance = displacement.length()
+
+            disp = displacement(b1, b2)
+            dist = distance(b1, b2)
 
             # Newton's law: F = G * m1 * m2 / r^2
-            force_magnitude = G * (b1.mass * b2.mass) / (distance**2 + 0.01)
+            force_magnitude = G * (b1.mass * b2.mass) / (dist**2 + 0.01)
 
-            force_direction = displacement.normalize()
+            force_direction = disp.normalize()
             force_vec = force_direction * force_magnitude
 
             # add computed forces to state list
@@ -27,6 +39,7 @@ def compute_forces(bodies, G):
 
 def apply_forces(bodies, dt):
 
+    # apply force to each body
     for body in bodies:
         total_force = Vector3D(0, 0, 0)
 
@@ -34,13 +47,47 @@ def apply_forces(bodies, dt):
             total_force += f
 
         #a = F/m
-        acceleration = total_force / body.mass
+        a = acceleration(total_force, body.mass)
 
-        # symplectic Euler integraation:
+        # symplectic Euler integration:
         # update velocity, then position
-        body.velocity += acceleration * dt
+        body.velocity += a * dt
         body.position += body.velocity * dt
+
+def collision_detection(bodies):
+    
+    # bodies cannot move within each others radii
+    for i, b1 in enumerate(bodies):
+        for b2 in bodies[i+1:]:
+            if distance(b1, b2) < b1.radius + b2.radius:
+                # bodies are colliding
+                # prevent bodies from moving further inside one another
+                resolve_collision(b1, b2)
+
+# applies necessary forces to avoid boundary overlap
+def resolve_collision(b1, b2):
+
+    contact_point = normal(b1, b2)
+    relative_vel = (b2.velocity - b1.velocity).dot(contact_point)
+
+    # move overlapping bodies away from each other
+    overlap = (b1.radius + b2.radius) - distance(b1, b2)
+    total_mass = b1.mass + b2.mass
+    b1.position -= contact_point * overlap * (b2.mass / total_mass)
+    b2.position += contact_point * overlap * (b1.mass / total_mass)
+
+    if relative_vel > 0:
+        impulse_scalar = (2 * relative_vel) / (1 / b1.mass + 1 / b2.mass)
+
+        # apply equal and opposite velocities
+        b1.velocity += (impulse_scalar / b1.mass) * contact_point
+        b2.velocity -= (impulse_scalar / b2.mass) * contact_point
+
+    
+
+
 
 def sim_step(bodies, dt, G):
     compute_forces(bodies, G)
     apply_forces(bodies, dt)
+    collision_detection(bodies)
