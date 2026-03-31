@@ -3,6 +3,8 @@
 import pyray as rl
 
 def handle_input(state):
+    if state.input.previous_mouse is None:
+        state.input.previous_mouse = rl.get_mouse_position()
 
     current_mouse   = rl.get_mouse_position()
     left_mouse_held = rl.is_mouse_button_down(rl.MOUSE_BUTTON_LEFT)
