@@ -7,12 +7,26 @@ from scripts.body    import Body
 
 
 @dataclass
+class WindowState:
+    """Tracks raylib window"""
+    w          : int = 1280
+    h          : int = 720
+    fullscreen : bool = True
+
+    @property
+    def width(self) -> int:
+        return rl.get_screen_width()
+
+    @property
+    def height(self) -> int:
+        return rl.get_screen_height()
+
+@dataclass
 class RenderState:
     """Controls what is visible in the scene."""
     show_trails     : bool = True
     show_vectors    : bool = True
     show_components : bool = False
-
 
 @dataclass
 class SimulationState:
@@ -26,12 +40,7 @@ class SimulationState:
 class InputState:
     """Tracks raw input between frames."""
     is_dragging    : bool = False
-    previous_mouse : any  = None
-
-    def __post_init__(self):
-        # previous_mouse needs a live pyray call so we can't set it
-        # as a default value above — pyray must be initialized first
-        self.previous_mouse = rl.get_mouse_position()
+    previous_mouse : Any = None
 
 
 class SimState:
@@ -49,12 +58,20 @@ class SimState:
 
     def __init__(self):
         """init simulation based on starting variables"""
-        self.camera  = Camera()
-        self.bodies  = Body.create_all()
-        self.render  = RenderState()
-        self.sim     = SimulationState()
-        self.input   = InputState()
-        self.font    = rl.load_font("assets/fonts/CaskaydiaCoveNerdFontMono-Regular.ttf")
+        self.window   = WindowState()
+        self.camera   = Camera()
+        self.bodies   = Body.create_all()
+        self.render   = RenderState()
+        self.sim      = SimulationState()
+        self.input    = InputState()
+        self.substeps = 8
+
+        if self.window.fullscreen: 
+            rl.toggle_fullscreen()
+        rl.init_window(self.window.w, self.window.h, "N-Body Gravity Simulator")
+        rl.set_target_fps(60)
+
+        self.font     = rl.load_font("assets/fonts/CaskaydiaCoveNerdFontMono-Regular.ttf")
 
     def reset(self):
         """Reset simulation back to initial conditions."""
