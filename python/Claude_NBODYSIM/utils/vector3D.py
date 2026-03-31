@@ -60,6 +60,10 @@ class Vector3D:
             self.z * scalar
         )
 
+    # x * v1
+    def __rmul__(self, scalar):
+        return self.__mul__(scalar)
+
     # v1 / x
     def __truediv__(self, scalar):
         return Vector3D(
