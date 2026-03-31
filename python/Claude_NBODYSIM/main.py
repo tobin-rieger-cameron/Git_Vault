@@ -9,13 +9,7 @@ from scripts.physics  import sim_step
 from scripts.render   import (draw_grid, draw_axes, draw_trails,
                               draw_gravity_lines, draw_bodies,
                               draw_force_vectors)
-#TODO: dynamic display system
-WINDOW_WIDTH      = 1280
-WINDOW_HEIGHT     = 720
-SUBSTEPS_PER_FRAME = 8
 
-rl.init_window(WINDOW_WIDTH, WINDOW_HEIGHT, "N-Body Gravity Simulator")
-rl.set_target_fps(60)
 
 state = SimState()
 
@@ -24,8 +18,8 @@ while not rl.window_should_close():
 
     if not state.sim.is_paused:
         real_dt    = rl.get_frame_time()
-        substep_dt = real_dt * state.sim.time_scale / SUBSTEPS_PER_FRAME
-        for _ in range(SUBSTEPS_PER_FRAME):
+        substep_dt = real_dt * state.sim.time_scale / state.substeps
+        for _ in range(state.substeps):
             sim_step(state.bodies, substep_dt, state.sim.gravity_constant)
         state.sim.simulation_time += real_dt * state.sim.time_scale
 
@@ -35,7 +29,7 @@ while not rl.window_should_close():
 
     rl.begin_drawing()
     rl.clear_background(BACKGROUND)
-    state.camera.set_target_body(state.bodies[0])
+    state.camera.set_target_body(state.bodies[2])
     rl.begin_mode_3d(state.camera.get())
 
     #draw_grid()
@@ -51,8 +45,9 @@ while not rl.window_should_close():
     rl.end_mode_3d()
 
     flush_labels(state.font)
-    draw_hud(state, WINDOW_WIDTH, WINDOW_HEIGHT)
+    draw_hud(state, state.window.width, state.window.height)
 
     rl.end_drawing()
 
 rl.close_window()
+print(f"font: {state.font}")
