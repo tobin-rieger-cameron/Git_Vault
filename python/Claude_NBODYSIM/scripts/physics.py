@@ -14,6 +14,7 @@ def acceleration(force, mass):
 def normal(b1, b2):
     return displacement(b1, b2).normalize()
 
+
 def compute_forces(bodies, G):
 
     # clear forces from previous frame
@@ -67,21 +68,25 @@ def collision_detection(bodies):
 # applies necessary forces to avoid boundary overlap
 def resolve_collision(b1, b2):
 
-    contact_point = normal(b1, b2)
-    relative_vel = (b2.velocity - b1.velocity).dot(contact_point)
+    restitution = 0.8
+
+    # normalized vector pointing from one bodies center to the other
+    contact_axis = normal(b1, b2)
+    relative_vel = (b2.velocity - b1.velocity).dot(contact_axis)
 
     # move overlapping bodies away from each other
-    overlap = (b1.radius + b2.radius) - distance(b1, b2)
+    overlap = ((b1.radius + b2.radius) - distance(b1, b2)) * restitution
     total_mass = b1.mass + b2.mass
-    b1.position -= contact_point * overlap * (b2.mass / total_mass)
-    b2.position += contact_point * overlap * (b1.mass / total_mass)
+    b1.position -= contact_axis * overlap * (b2.mass / total_mass)
+    b2.position += contact_axis * overlap * (b1.mass / total_mass)
 
     if relative_vel > 0:
-        impulse_scalar = (2 * relative_vel) / (1 / b1.mass + 1 / b2.mass)
+        # impulse_scalar = (2 * relative_vel) / (1 / b1.mass + 1 / b2.mass)
+        impulse_scalar = (-(1 + restitution) * relative_vel) / (1 / b1.mass + 1 / b2.mass)
 
         # apply equal and opposite velocities
-        b1.velocity += (impulse_scalar / b1.mass) * contact_point
-        b2.velocity -= (impulse_scalar / b2.mass) * contact_point
+        b1.velocity += (impulse_scalar / b1.mass) * contact_axis
+        b2.velocity -= (impulse_scalar / b2.mass) * contact_axis
 
     
 
