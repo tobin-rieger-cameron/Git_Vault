@@ -30,7 +30,7 @@ def draw_gravity_lines(bodies):
 
 def draw_bodies(bodies, queue_label, camera):
     for i, body in enumerate(bodies):
-        rl.draw_sphere(to_rl(body.position), body.radius, body.color)
+        rl.draw_sphere_ex(to_rl(body.position), body.radius, 128, 128, body.color)
         queue_label(to_rl(body.position), body.name, camera)
 
 def draw_force_vectors(bodies, queue_label, camera):
@@ -40,7 +40,7 @@ def draw_force_vectors(bodies, queue_label, camera):
         for force, ref in body.forces:
             force_direction = force.normalize()
             offset_origin = body.position + force_direction * body.radius
-            scaled = force_direction * min(3.0, math.sqrt(force.length()) * 4)
+            scaled = (force_direction * min(3.0, math.sqrt(force.length()) * 4)) #TODO: scale by zoom amount
 
             draw_arrow(offset_origin, scaled, ref.color)
             total += force
