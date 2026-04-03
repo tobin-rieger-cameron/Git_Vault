@@ -6,9 +6,7 @@ from utils.hud        import draw_hud
 from scripts.state    import SimState
 from scripts.input    import handle_input
 from scripts.physics  import sim_step
-from scripts.render   import (draw_grid, draw_axes, draw_trails,
-                              draw_gravity_lines, draw_bodies,
-                              draw_force_vectors)
+from scripts.render   import *
 
 
 state = SimState()
@@ -34,7 +32,7 @@ while not rl.window_should_close():
 
     #draw_grid()
     #draw_axes(queue_label, state.camera.get())
-    draw_gravity_lines(state.bodies)
+    #draw_gravity_lines(state.bodies)
     draw_bodies(state.bodies, queue_label, state.camera.get())
 
     if state.render.show_trails:

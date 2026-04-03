@@ -19,7 +19,7 @@ def handle_input(state):
     else:
         state.input.is_dragging = False
 
-    state.camera.zoom(scroll_amount)
+    state.camera.set_zoom(scroll_amount)
     state.camera.update()
     state.input.previous_mouse = current_mouse
 
