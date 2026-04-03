@@ -64,9 +64,9 @@ class SimState:
         self.render   = RenderState()
         self.sim      = SimulationState()
         self.input    = InputState()
-        self.substeps = 8
+        self.substeps = 32
 
-        if self.window.fullscreen: 
+        if self.window.fullscreen:
             rl.toggle_fullscreen()
         rl.init_window(self.window.w, self.window.h, "N-Body Gravity Simulator")
         rl.set_target_fps(60)
