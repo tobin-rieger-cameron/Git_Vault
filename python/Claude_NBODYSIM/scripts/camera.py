@@ -2,23 +2,24 @@
 import pyray as rl
 from pyray import Vector3, Matrix
 
+#TODO: other scripts need to have access to Camera class variables, like zoom
 
 class Camera:
     def __init__(
         self,
         target_position=None,
         target_body=None,
-        orbit_dist=50.0,
+        zoom=50.0,
         sensitivity=0.03,
     ):
         self.target = target_position if target_position else Vector3(0, 0, 0)
         self.target_body = target_body
-        self.orbit_dist = orbit_dist
+        self.zoom = zoom
         self.sensitivity = sensitivity
 
         # Initialize the camera
         self.camera = rl.Camera3D(
-            Vector3(0, 0, orbit_dist),  # position
+            Vector3(0, 0, zoom),  # position
             Vector3(0, 0, 0),  # target
             Vector3(0, 1, 0),  # up
             45,  # fovy
@@ -30,6 +31,7 @@ class Camera:
                                        0.0, 1.0, 0.0, 0.0,
                                        0.0, 0.0, 1.0, 0.0,
                                        0.0, 0.0, 0.0, 1.0, )
+
 
     def update(self):
         if self.target_body is not None:
@@ -55,9 +57,9 @@ class Camera:
         )
 
         # Camera position
-        self.camera.position.x = self.target.x - forward.x * self.orbit_dist
-        self.camera.position.y = self.target.y - forward.y * self.orbit_dist
-        self.camera.position.z = self.target.z - forward.z * self.orbit_dist
+        self.camera.position.x = self.target.x - forward.x * self.zoom
+        self.camera.position.y = self.target.y - forward.y * self.zoom
+        self.camera.position.z = self.target.z - forward.z * self.zoom
 
         self.camera.target = self.target
 
@@ -67,9 +69,12 @@ class Camera:
         self.camera_rotation = rl.matrix_multiply(y_rotation, self.camera_rotation)
         self.camera_rotation = rl.matrix_multiply(x_rotation, self.camera_rotation)
 
-    def zoom(self, scroll):
+    def set_zoom(self, scroll):
         """Control distance from body"""
-        self.orbit_dist = self.orbit_dist - scroll * 2.0
+        self.zoom = self.zoom - scroll * 2.0
+
+    def get_zoom(self):
+        return self.zoom
 
     def get(self):
         """Return camera object for rendering"""
@@ -84,6 +89,3 @@ class Camera:
         """Update target to follow a body"""
         self.target_body = body
 
-    def set_orbit_dist(self, x):
-        """Update orbit radius"""
-        self.orbit_dist = x
