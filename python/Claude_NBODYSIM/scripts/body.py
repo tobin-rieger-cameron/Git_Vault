@@ -3,12 +3,47 @@
 from utils.colors import *
 from utils.vector3D import Vector3D
 
+def figure_8():
+    scale_pos = 50
+    scale_vel = 0.1  # sqrt(0.01)
+
+    return [
+        dict(
+            position = Vector3D(-0.97000436 * scale_pos,  0.24308753 * scale_pos, 0),
+            velocity = Vector3D( 0.4662036850 * scale_vel,  0.4323657300 * scale_vel, 0),
+            radius = 8,
+            mass = 1000,
+            color = BODY_COLS[0],
+            trail_color = TRAIL_COLS[0],
+        ),
+
+        dict(
+            position = Vector3D( 0.97000436 * scale_pos, -0.24308753 * scale_pos, 0),
+            velocity = Vector3D( 0.4662036850 * scale_vel,  0.4323657300 * scale_vel, 0),
+            radius = 8,
+            mass = 1000,
+            color = BODY_COLS[1],
+            trail_color = TRAIL_COLS[1],
+        ),
+
+        dict(
+            position = Vector3D(0, 0, 0),
+            velocity = Vector3D(-0.93240737 * scale_vel, -0.86473146 * scale_vel, 0),
+            radius = 8,
+            mass = 1000,
+            color = BODY_COLS[2],
+            trail_color = TRAIL_COLS[2],
+        ),
+    ]
+
+
 def default_bodies():
     return [
         dict(
             position = Vector3D(25, 30, 100),
             velocity = Vector3D(0, 0, 0),
-            mass = 1000, radius = 10,
+            radius = 10,
+            mass = 1000,
             color = BODY_COLS[0],
             trail_color = TRAIL_COLS[0],
         ),
@@ -16,7 +51,8 @@ def default_bodies():
         dict(
             position = Vector3D(80, -70, 60),
             velocity = Vector3D(0, 0, 0),
-            mass = 2000, radius = 8,
+            radius = 8,
+            mass = 2000,
             color = BODY_COLS[1],
             trail_color = TRAIL_COLS[1],
         ),
@@ -24,7 +60,8 @@ def default_bodies():
         dict(
             position = Vector3D(0, 0, 0),
             velocity = Vector3D(0, 0, 0),
-            mass = 3000, radius = 20,
+            radius = 20,
+            mass = 3000,
             color = BODY_COLS[2],
             trail_color = TRAIL_COLS[2],
         ),
@@ -60,5 +97,5 @@ class Body:
     # create_all needs to build Body objects, so it can't be a regular instance method
     def create_all(cls, system=None):
         if system is None:
-            system = default_bodies()
+            system = figure_8()
         return [cls(name=f"b{i+1}", **body_data) for i, body_data in enumerate(system)]
