@@ -9,17 +9,12 @@ from scripts.body    import Body
 @dataclass
 class WindowState:
     """Tracks raylib window"""
-    w          : int = 1280
-    h          : int = 720
-    fullscreen : bool = True
-
-    @property
-    def width(self) -> int:
-        return rl.get_screen_width()
-
-    @property
-    def height(self) -> int:
-        return rl.get_screen_height()
+    def __post_init__(self):
+        self.width = rl.get_monitor_width(0)
+        self.height = rl.get_monitor_height(0)
+        rl.init_window(self.width, self.height, "N-Body Gravity Simulator")
+        rl.set_target_fps(60)
+        rl.toggle_fullscreen()
 
 @dataclass
 class RenderState:
@@ -65,11 +60,6 @@ class SimState:
         self.sim      = SimulationState()
         self.input    = InputState()
         self.substeps = 32
-
-        if self.window.fullscreen:
-            rl.toggle_fullscreen()
-        rl.init_window(self.window.w, self.window.h, "N-Body Gravity Simulator")
-        rl.set_target_fps(60)
 
         self.font     = rl.load_font("assets/fonts/CaskaydiaCoveNerdFontMono-Regular.ttf")
 

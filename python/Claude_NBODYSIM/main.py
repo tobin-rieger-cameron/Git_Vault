@@ -1,4 +1,5 @@
 # main.py
+
 import pyray as rl
 from utils.labels     import queue_label, flush_labels
 from utils.colors     import BACKGROUND
@@ -10,6 +11,7 @@ from scripts.render   import *
 
 
 state = SimState()
+print(f"width: {state.window.width}, height: {state.window.height}")
 
 while not rl.window_should_close():
     state = handle_input(state)
@@ -48,4 +50,3 @@ while not rl.window_should_close():
     rl.end_drawing()
 
 rl.close_window()
-print(f"font: {state.font}")
