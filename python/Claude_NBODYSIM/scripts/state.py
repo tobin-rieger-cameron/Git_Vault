@@ -10,10 +10,11 @@ from scripts.body    import Body
 class WindowState:
     """Tracks raylib window"""
     def __post_init__(self):
+        rl.init_window(0, 0, "N-Body Gravity Simulator")
+        rl.set_target_fps(60)
         self.width = rl.get_monitor_width(0)
         self.height = rl.get_monitor_height(0)
-        rl.init_window(self.width, self.height, "N-Body Gravity Simulator")
-        rl.set_target_fps(60)
+        rl.set_window_size(self.width, self.height)
         rl.toggle_fullscreen()
 
 @dataclass

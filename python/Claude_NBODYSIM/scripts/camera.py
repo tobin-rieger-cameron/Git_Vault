@@ -12,10 +12,10 @@ class Camera:
         self.target_position = rl.Vector3(0, 0, 0)
         self.target_body = None
         self.rot_matrix = rl.matrix_identity()
-        self.rl_cam = rl.Camera3D(rl.Vector3(0, 0, self.zoom), # position
-                                  rl.Vector3(0, 0, 0), # target
-                                  rl.Vector3(0, 1, 0), # up
-                                  45, # fovy
+        self.rl_cam = rl.Camera3D(rl.Vector3(0, 0, self.zoom),  # position
+                                  rl.Vector3(0, 0, 0),          # target
+                                  rl.Vector3(0, 1, 0),          # up
+                                  45,                           # fovy
                                   rl.CAMERA_PERSPECTIVE,)
 
 
@@ -23,7 +23,9 @@ class Camera:
 
     def update(self):
         if self.target_body is not None:
-            self.target_position = Vector3(self.target_body.position.x, self.target_body.position.y, self.target_body.position.z)
+            self.target_position = Vector3(self.target_body.position.x,
+                                           self.target_body.position.y,
+                                           self.target_body.position.z)
 
         # forward vector from rotation matrix
         forward = Vector3(
@@ -33,18 +35,18 @@ class Camera:
         )
 
         # up vector from rotation matrix
-        self.up = Vector3(
+        self.rl_cam.up = Vector3(
             self.rot_matrix.m4,
             self.rot_matrix.m5,
             self.rot_matrix.m6,
         )
 
         # camera position
-        self.rl_cam.position.x = self.rl_cam.target.x - forward.x * self.zoom
-        self.rl_cam.position.y = self.rl_cam.target.y - forward.y * self.zoom
-        self.rl_cam.position.z = self.rl_cam.target.z - forward.z * self.zoom
+        self.rl_cam.position.x = self.target_position.x - forward.x * self.zoom
+        self.rl_cam.position.y = self.target_position.y - forward.y * self.zoom
+        self.rl_cam.position.z = self.target_position.z - forward.z * self.zoom
 
-        self.target_position = self.target_position
+        self.rl_cam.target = self.target_position
 
     def orbit(self, delta_x, delta_y):
         y_rotation = rl.matrix_rotate_y(-delta_x * self.sensitivity)

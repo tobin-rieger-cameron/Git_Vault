@@ -42,7 +42,7 @@ def handle_input(state):
         state.render.show_components = not state.render.show_components
 
     if rl.is_key_pressed(rl.KEY_EQUAL):
-        state.sim.time_scale = min(8.0, state.sim.time_scale * 1.25)
+        state.sim.time_scale = min(100.0, state.sim.time_scale * 1.25)
     if rl.is_key_pressed(rl.KEY_MINUS):
         state.sim.time_scale = max(0.05, state.sim.time_scale / 1.25)
 

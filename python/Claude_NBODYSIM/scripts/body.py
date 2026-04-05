@@ -97,5 +97,5 @@ class Body:
     # create_all needs to build Body objects, so it can't be a regular instance method
     def create_all(cls, system=None):
         if system is None:
-            system = figure_8()
+            system = default_bodies()
         return [cls(name=f"b{i+1}", **body_data) for i, body_data in enumerate(system)]
