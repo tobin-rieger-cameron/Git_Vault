@@ -4,8 +4,8 @@ from utils.colors import *
 from utils.vector3D import Vector3D
 
 def figure_8():
-    scale_pos = 50
-    scale_vel = 0.1  # sqrt(0.01)
+    scale_pos = 90
+    scale_vel = 0.35  # sqrt(0.01)
 
     return [
         dict(
@@ -94,7 +94,6 @@ class Body:
         return self.velocity.normalize()
 
     @classmethod
-    # create_all needs to build Body objects, so it can't be a regular instance method
     def create_all(cls, system=None):
         if system is None:
             system = default_bodies()

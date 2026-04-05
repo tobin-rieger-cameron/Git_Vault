@@ -2,21 +2,34 @@
 from utils.vector3D import Vector3D
 
 
+# Vector relationships between two bodies
+
 def displacement(b1, b2):
     return b2.position - b1.position
 
 def distance(b1, b2):
     return displacement(b1, b2).length()
 
-def acceleration(force, mass):
-    return force / mass
-
 def normal(b1, b2):
     return displacement(b1, b2).normalize()
 
+def acceleration(force, mass):
+    return force / mass
 
-def compute_forces(bodies, G):
 
+def compute_forces(bodies: tuple, G: float):
+    """ Calculate the forces that a group of bodies
+        apply to one another.
+
+        Args:
+            bodies: list of bodies (and their qualities) 
+                    held in statefile.
+
+                 G: Gravitational Constant
+
+        Returns: N/a
+            appends calculated forces directly to body state
+    """
     # clear forces from previous frame
     for body in bodies:
         body.forces = []
