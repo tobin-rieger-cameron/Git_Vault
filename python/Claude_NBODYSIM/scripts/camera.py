@@ -3,7 +3,6 @@
 import pyray as rl
 from pyray import Vector3, Matrix
 
-#TODO: other scripts need to have access to Camera class variables, like zoom
 
 class Camera:
     def __init__(self):

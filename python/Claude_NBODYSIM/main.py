@@ -15,32 +15,38 @@ from scripts.physics  import sim_step
 from scripts.render   import *
 
 # ── Init ──────────────────────────────────────────────────────────
-state = SimState()
+"""Initialize global variables"""
+state = SimState() # scripts/state.py
 
 # ══ Main Loop ═══════════════════════════════════════════════════════════════════════╗
+"""Mutate state globals over time, draw objects"""                                  # ║
 while not rl.window_should_close():                                                 # ║
                                                                                     # ║
-    # ── Input ───────────────────────────────────────────────────────────          # ║
-    state = handle_input(state)                                                     # ║
-                                                                                    # ║ 
-    # ── Physics ───────────────────────────────────────────────────────────        # ║                                                                                   # ║
+    # ── Input ─────────────────────────────────────────────────────────────        # ║
+    """pass state through player input"""                                           # ║
+    state = handle_input(state)                                                     # ║ > scripts/input.py
+                                                                                    # ║
+    # ── Physics ───────────────────────────────────────────────────────────        # ║
     if not state.sim.is_paused:                                                     # ║
         real_dt    = rl.get_frame_time()                                            # ║
         substep_dt = real_dt * state.sim.time_scale / state.substeps                # ║
+                                                                                    # ║
         for _ in range(state.substeps):                                             # ║
-            sim_step(state.bodies, substep_dt, state.sim.gravity_constant)          # ║
+            sim_step(state.bodies, substep_dt, state.sim.gravity_constant)          # ║ > scripts/physics.py
+                                                                                    # ║
         state.sim.simulation_time += real_dt * state.sim.time_scale                 # ║
                                                                                     # ║
         if state.render.show_trails:                                                # ║
             for body in state.bodies:                                               # ║
-                body.trail.append(body.position.copy())                             # ║
+                body.trail.append(body.position.copy())                             # ║ > scripts/body.py
                                                                                     # ║
+    # ── Render: 3D Pass ───────────────────────────────────────────────────        # ║
     rl.begin_drawing()                                                              # ║
-    rl.clear_background(BACKGROUND)                                                 # ║
-    state.camera.set_target_body(state.bodies[0])                                   # ║
+    rl.clear_background(BACKGROUND)                                                 # ║ > utils/colors.py
+    state.camera.set_target_body(state.bodies[0])                                   # ║ > scripts/camera.py
     rl.begin_mode_3d(state.camera.get())                                            # ║
                                                                                     # ║
-    draw_grid()                                                                     # ║
+    draw_grid()                                                                     # ║ > scripts/render.py
     draw_axes(queue_label, state.camera.get())                                      # ║
     #draw_gravity_lines(state.bodies)                                               # ║
     draw_bodies(state.bodies, queue_label, state.camera.get())                      # ║
@@ -52,9 +58,13 @@ while not rl.window_should_close():                                             
                                                                                     # ║
     rl.end_mode_3d()                                                                # ║
                                                                                     # ║
+    # ── Render: 2D Pass ───────────────────────────────────────────────────        # ║
     flush_labels(state.font)                                                        # ║
-    draw_hud(state, state.window.width, state.window.height)                        # ║
+    draw_hud(state, state.window.width, state.window.height)                        # ║ > utils/hud.py
                                                                                     # ║
     rl.end_drawing()                                                                # ║
                                                                                     # ║
 rl.close_window()                                                                   # ║
+ # ═══════════════════════════════════════════════════════════════════════════════════╝
+
+#print(f"screen dimensions: {state.window.width}x{state.window.height}")
