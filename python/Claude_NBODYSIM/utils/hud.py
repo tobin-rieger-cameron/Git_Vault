@@ -39,7 +39,7 @@ def make_sim_panel(state, s, window_width):
         x       = window_width - s(210),
         y       = s(10),
         w       = s(200),
-        h       = s(100),
+        h       = s(200),
         padding = s(5)
     )
 
@@ -77,11 +77,13 @@ def draw_hud(state, window_width, window_height):
     sp.text(f"timescale  {state.sim.time_scale:.2f}",      sp.padding, sp.padding+s(41), s(12))
     sp.text(f"G          {state.sim.gravity_constant:.2f}", sp.padding, sp.padding+s(57), s(12))
     sp.text("PAUSED" if state.sim.is_paused else "RUNNING", sp.padding, sp.padding+s(73), s(12))
+    sp.text(f"Width: {state.window.width:.1f} Height: {state.window.height:.1f}", sp.padding, sp.padding+s(82), s(12))
+    sp.text(f"HUDScale: {s(15)}", sp.padding, sp.padding+s(92), s(12))
 
     # --- footer
     fp = make_footer_panel(state, s, window_width, window_height)
     fp.draw_background()
     fp.text(
-        "SPACE pause   R reset   T trails   V vectors   C components   +/- timescale   G/shift+G gravity",
+        "SPACE pause   R reset   T trails   V vectors   +/- timescale   G/shift+G gravity",
         fp.padding, fp.padding, s(12)
     )
