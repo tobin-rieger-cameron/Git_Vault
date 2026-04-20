@@ -1,7 +1,7 @@
 # utils/hud.py
 import pyray as rl
 from utils.colors import DARK_OVERLAY, WHITE, BODY_COLS
-
+from dataclasses import dataclass, field
 
 class Panel:
     """A positioned, padded HUD region. All values pre-scaled at construction."""
@@ -22,6 +22,41 @@ class Panel:
                         rl.Vector2(self.x + ox, self.y + oy),
                         size, 1, color)
 
+@dataclass                                                                  # ║
+class HudState:                                                             # ║
+    """Holds hud information"""                                             # ║
+    screen_panels   : list = field(default_factory=list)                    # ║
+    body_panels     : dict = field(default_factory=dict)                    # ║
+
+class ScreenPanel:
+    def __init__(self, x, y, w, h, elements:list):
+        self.x = x
+        self.y = y
+        self.w = w
+        self.h = h
+        self.elements = elements
+
+class BodyPanel:
+    def __init__(self, w, h, offset_x, offset_y, elements:list):
+        self.w = w
+        self.h = h
+        self.offset_x = offset_x
+        self.offset_y = offset_y
+        self.elements = elements
+
+def init_hud(bodies) -> HudState:
+    top_left   = ScreenPanel(x=0.01, y=0.01, w=0.20, h=0.40, elements=[])
+    top_right  = ScreenPanel(x=0.79, y=0.01, w=0.20, h=0.40, elements=[])
+    bottom_bar = ScreenPanel(x=0.00, y=0.95, w=1.00, h=0.05, elements=[])
+    
+    body_panels = {}
+    for body in bodies:
+        body_panels[body.id] = BodyPanel(w=0.15, h=0.20, offset_x=10, offset_y=-20, elements=[])
+    
+    return HudState(
+        screen_panels=[top_left, top_right, bottom_bar],
+        body_panels=body_panels,
+    )
 
 def make_bodies_panel(state, s):
     return Panel(

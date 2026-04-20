@@ -7,10 +7,10 @@
 """
 
 import pyray as rl
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from scripts.camera  import Camera
 from scripts.body    import Body
-
+from utils.hud       import init_hud
 
 # ══ Data Classes ════════════════════════════════════════════════════════════╗
                                                                             # ║
@@ -24,6 +24,7 @@ class WindowState:                                                          # �
         self.height = rl.get_monitor_height(0)                              # ║
         rl.set_window_size(self.width, self.height)                         # ║
         rl.toggle_fullscreen()                                              # ║
+                                                                            # ║
                                                                             # ║
 @dataclass                                                                  # ║
 class RenderState:                                                          # ║
@@ -50,7 +51,6 @@ class InputState:                                                           # �
 
 class SimState:
     """
-
     Access pattern:
         state.render.show_trails
         state.sim.time_scale
@@ -64,6 +64,7 @@ class SimState:
         self.window   = WindowState()
         self.camera   = Camera()
         self.bodies   = Body.create_all()
+        self.hud      = init_hud(self.bodies)
         self.render   = RenderState()
         self.sim      = SimulationState()
         self.input    = InputState()
@@ -74,4 +75,5 @@ class SimState:
     def reset(self):
         """Reset simulation back to initial conditions."""
         self.bodies  = Body.create_all()
+        self.hud     = init_hud(self.bodies)
         self.sim     = SimulationState()
