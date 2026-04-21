@@ -34,18 +34,22 @@ def handle_input(state):
     state.camera.update()                                                                   # ║
     state.input.previous_mouse = current_mouse                                              # ║
                                                                                             # ║
-    # ════════════════════════════════════════════════════════════════════════════════════════╝
 
     # ══ Keyboard ════════════════════════════════════════════════════════════════════════════╗
                                                                                             # ║
     # ── Sim Controls ───────────────────────────────────────────────────────────────       # ║
-    if rl.is_key_pressed(rl.KEY_SPACE):                                                     # ║
-        state.sim.is_paused = not state.sim.is_paused                                       # ║
-                                                                                            # ║
+    if rl.is_key_pressed(rl.KEY_E):
+        state.hud.edit_mode = not state.hud.edit_mode
+        state.sim.is_paused = state.hud.edit_mode
+
+
     if rl.is_key_pressed(rl.KEY_R):                                                         # ║
         state.reset()                                                                       # ║
                                                                                             # ║
     # ── Toggles ────────────────────────────────────────────────────────────────────       # ║
+    if rl.is_key_pressed(rl.KEY_SPACE):                                                     # ║
+        state.sim.is_paused = not state.sim.is_paused                                       # ║
+                                                                                            # ║
     if rl.is_key_pressed(rl.KEY_T):                                                         # ║
         state.render.show_trails = not state.render.show_trails                             # ║
         if not state.render.show_trails:                                                    # ║
@@ -73,6 +77,5 @@ def handle_input(state):
             state.sim.gravity_constant = min(20.0, state.sim.gravity_constant + 0.25)       # ║
                                                                                             # ║
                                                                                             # ║
-    # ════════════════════════════════════════════════════════════════════════════════════════╝
 
     return state

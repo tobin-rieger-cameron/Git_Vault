@@ -59,6 +59,8 @@ while not rl.window_should_close():                                             
     rl.end_mode_3d()                                                                # ║
                                                                                     # ║
     # ── Render: 2D Pass ───────────────────────────────────────────────────        # ║
+    if state.hud.edit_mode:
+        rl.draw_rectangle(0, 0, state.window.width, state.window.height, rl.Color(0, 0, 0, 120))
     flush_labels(state.font)                                                        # ║
     draw_hud(state, state.window.width, state.window.height)                        # ║ > utils/hud.py
                                                                                     # ║
