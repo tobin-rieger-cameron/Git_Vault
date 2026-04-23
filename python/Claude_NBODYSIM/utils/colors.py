@@ -1,18 +1,15 @@
-# utils/colors.py
-
 """
-BACKGROUND_COLOR    — the sky/background of the scene
-GRID_COLOR          — the floor grid lines
-BODY_COLORS         — a list of 3 colors, one per body
-FORCE_COLORS        — a list of 3 colors, one per body's force arrows
-TRAIL_COLORS        — a list of 3 colors, one per body's trail
-RESULTANT_COLOR     — color for the combined/resultant force arrow
+╔══════════════════════════════════════════════════════════════╗
+║  colors.py                                                   ║
+║  Color constants and hex utility — scene, bodies, UI         ║
+╚══════════════════════════════════════════════════════════════╝
 """
-
 
 import pyray as rl
 
 
+# ── hex_to_color ──────────────────────────────────────────────────
+# converts "#rrggbb" hex strings to rl.Color
 def hex_to_color(hex_str, alpha=255):
     hex_str = hex_str.lstrip("#")
     r = int(hex_str[0:2], 16)
@@ -21,30 +18,45 @@ def hex_to_color(hex_str, alpha=255):
     return rl.Color(r, g, b, alpha)
 
 
+# ══ Scene ═══════════════════════════════════════════════════════════╗
+                                                                    # ║
+BACKGROUND   = hex_to_color("#f2e5bc")                              # ║
+GRID_COLOR   = rl.Color(180, 170, 150,  80)                         # ║
+                                                                    # ║
+X_AXIS_COLOR = rl.Color(255,   0,   0, 120)                         # ║
+Y_AXIS_COLOR = rl.Color(  0, 255,   0, 120)                         # ║
+Z_AXIS_COLOR = rl.Color(  0,   0, 255, 120)                         # ║
+                                                                    # ║
+# ════════════════════════════════════════════════════════════════════╝
 
 
-BACKGROUND    = hex_to_color("#f2e5bc")
-GRID_COLOR    = rl.Color(180, 170, 150, 80)
-X_AXIS_COLOR  = rl.Color(255, 0, 0, 120)
-Y_AXIS_COLOR  = rl.Color(0, 255, 0, 120)
-Z_AXIS_COLOR  = rl.Color(0, 0, 255, 120)
-RESULTANT_COL = rl.Color(255, 220,  50, 255)
-WHITE         = rl.Color(255, 255, 255, 255)
-DARK_OVERLAY  = rl.Color(  0,   0,   0, 140)
+# ══ UI ══════════════════════════════════════════════════════════════╗
+                                                                    # ║
+RESULTANT_COL = rl.Color(255, 220,  50, 255)                        # ║
+WHITE         = rl.Color(255, 255, 255, 255)                        # ║
+DARK_OVERLAY  = rl.Color(  0,   0,   0, 140)                        # ║
+                                                                    # ║
+# ════════════════════════════════════════════════════════════════════╝
 
-BODY_COLS = [
-    rl.Color( 70, 140, 230, 255),   # blue
-    rl.Color(220,  80,  80, 255),   # red
-    rl.Color( 55, 200, 120, 255),   # green
-]
-FORCE_COLS = [
-    rl.Color(120, 190, 255, 220),
-    rl.Color(255, 140, 140, 220),
-    rl.Color(120, 240, 170, 220),
-]
-TRAIL_COLS = [
-    rl.Color( 70, 140, 230, 120),
-    rl.Color(220,  80,  80, 120),
-    rl.Color( 55, 200, 120, 120),
-]
 
+# ══ Bodies ══════════════════════════════════════════════════════════╗
+                                                                    # ║
+BODY_COLS = [                                                       # ║
+    rl.Color( 70, 140, 230, 255),   # blue                          # ║
+    rl.Color(220,  80,  80, 255),   # red                           # ║
+    rl.Color( 55, 200, 120, 255),   # green                         # ║
+]                                                                   # ║
+                                                                    # ║
+FORCE_COLS = [                                                      # ║
+    rl.Color(120, 190, 255, 220),                                   # ║
+    rl.Color(255, 140, 140, 220),                                   # ║
+    rl.Color(120, 240, 170, 220),                                   # ║
+]                                                                   # ║
+                                                                    # ║
+TRAIL_COLS = [                                                      # ║
+    rl.Color( 70, 140, 230, 120),                                   # ║
+    rl.Color(220,  80,  80, 120),                                   # ║
+    rl.Color( 55, 200, 120, 120),                                   # ║
+]                                                                   # ║
+                                                                    # ║
+# ════════════════════════════════════════════════════════════════════╝
