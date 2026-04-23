@@ -23,3 +23,6 @@ related-files:
 - [[Formal Sciences]]
 - [[Knowledge]]
 - [[Pure Mathematics]]
+
+Mr Khan's Lectures:
+[1.1 Polynomial Review](1.1%20Polynomial%20Review.md)
