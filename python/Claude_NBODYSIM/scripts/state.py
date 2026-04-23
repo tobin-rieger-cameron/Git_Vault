@@ -15,20 +15,25 @@ from utils.hud       import ScreenPanel, BodyPanel
 # ══ Data Classes ════════════════════════════════════════════════════════════╗
                                                                             # ║
 @dataclass                                                                  # ║
-class WindowState:                                                          # ║
+class WindowState:                                                          # ║  TODO: grabs monitor 0, doesn't seem to change dynamically yet
     """Tracks raylib window"""                                              # ║
-    def update_window(self):
-        if rl.get_current_monitor != self.current_monitor:
-            self.current_monitor = rl.get_current_monitor
-            self.width = rl.get_monitor_width(current_monitor)
-            self.height = rl.get_monitor_height(current_monitor)
-
+    current_monitor  : int = 0
+    def update(self):                                                # ║
+        if rl.get_current_monitor() != self.current_monitor:                # ║
+            self.current_monitor = rl.get_current_monitor()                 # ║
+            self.width = rl.get_monitor_width(self.current_monitor)         # ║
+            self.height = rl.get_monitor_height(self.current_monitor)       # ║
+            rl.set_window_size()
+        if rl.is_window_resized():
+            self.width = rl.get_screen_width()
+            self.height = rl.get_screen_height()
+                                                                            # ║
     def __post_init__(self):                                                # ║
         rl.init_window(0, 0, "N-Body Gravity Simulator")                    # ║
         rl.set_target_fps(60)                                               # ║
-        current_monitor = rl.get_current_monitor()
-        self.width = rl.get_monitor_width(current_monitor)                  # ║ #TODO: currently grabs the first monitors resolution, needs to grab the active monitors resolution, and maybe change resolution depending on the active monitor
-        self.height = rl.get_monitor_height(current_monitor)                # ║
+        self.current_monitor = rl.get_current_monitor()                     # ║
+        self.width = rl.get_monitor_width(self.current_monitor)             # ║
+        self.height = rl.get_monitor_height(self.current_monitor)           # ║
         rl.set_window_size(self.width, self.height)                         # ║
         rl.toggle_fullscreen()                                              # ║
                                                                             # ║
@@ -37,7 +42,7 @@ class HudState:                                                             # �
     """Holds hud information"""                                             # ║
     screen_panels   : list = field(default_factory=list)                    # ║
     body_panels     : dict = field(default_factory=dict)                    # ║
-    edit_mode       : bool = False
+    edit_mode       : bool = False                                          # ║
                                                                             # ║
 def init_hud(bodies):                                                       # ║
     top_left   = ScreenPanel(x=0.01, y=0.01, w=0.20, h=0.40, elements=[])   # ║

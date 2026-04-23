@@ -8,11 +8,10 @@
 import pyray as rl
 
 
-# ── handle_input ─────────────────────────────────────────────────────────────────────────────
+# ── handle_input ──────────────────────────────────────────────────
 def handle_input(state):
 
     # ══ Mouse ═══════════════════════════════════════════════════════════════════════════════╗
-                                                                                            # ║
     if state.input.previous_mouse is None:                                                  # ║
         state.input.previous_mouse = rl.get_mouse_position()                                # ║
                                                                                             # ║
@@ -20,7 +19,7 @@ def handle_input(state):
     left_mouse_held = rl.is_mouse_button_down(rl.MOUSE_BUTTON_LEFT)                         # ║
     scroll_amount   = rl.get_mouse_wheel_move()                                             # ║
                                                                                             # ║
-    # ── Camera Orbit: (left-click drag) ────────────────────────────                       # ║
+    # ── Camera Orbit (left-click drag) ─────────────────────────────────────────────       # ║
     if left_mouse_held:                                                                     # ║
         if state.input.is_dragging:                                                         # ║
             delta_x = current_mouse.x - state.input.previous_mouse.x                        # ║
@@ -34,15 +33,15 @@ def handle_input(state):
     state.camera.update()                                                                   # ║
     state.input.previous_mouse = current_mouse                                              # ║
                                                                                             # ║
+    # ════════════════════════════════════════════════════════════════════════════════════════╝
+
 
     # ══ Keyboard ════════════════════════════════════════════════════════════════════════════╗
-                                                                                            # ║
     # ── Sim Controls ───────────────────────────────────────────────────────────────       # ║
-    if rl.is_key_pressed(rl.KEY_E):
-        state.hud.edit_mode = not state.hud.edit_mode
-        state.sim.is_paused = state.hud.edit_mode
-
-
+    if rl.is_key_pressed(rl.KEY_E):                                                         # ║
+        state.hud.edit_mode = not state.hud.edit_mode                                       # ║
+        state.sim.is_paused = state.hud.edit_mode                                           # ║
+                                                                                            # ║
     if rl.is_key_pressed(rl.KEY_R):                                                         # ║
         state.reset()                                                                       # ║
                                                                                             # ║
@@ -63,7 +62,7 @@ def handle_input(state):
     if rl.is_key_pressed(rl.KEY_EQUAL):                                                     # ║
         state.sim.time_scale = min(100.0, state.sim.time_scale * 1.25)                      # ║
     if rl.is_key_pressed(rl.KEY_MINUS):                                                     # ║
-        state.sim.time_scale = max(0.05, state.sim.time_scale / 1.25)                       # ║
+        state.sim.time_scale = max(0.05,  state.sim.time_scale / 1.25)                      # ║
                                                                                             # ║
     # ── Gravity Constant (G / Shift+G) ─────────────────────────────────────────────       # ║
     if rl.is_key_pressed(rl.KEY_G):                                                         # ║
@@ -76,6 +75,6 @@ def handle_input(state):
         else:                                                                               # ║
             state.sim.gravity_constant = min(20.0, state.sim.gravity_constant + 0.25)       # ║
                                                                                             # ║
-                                                                                            # ║
+    # ════════════════════════════════════════════════════════════════════════════════════════╝
 
     return state
