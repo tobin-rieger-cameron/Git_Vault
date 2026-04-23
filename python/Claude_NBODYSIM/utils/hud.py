@@ -94,8 +94,9 @@ def draw_hud(state, window_width, window_height):
     sp.text(f"timescale  {state.sim.time_scale:.2f}",      sp.padding, sp.padding+s(41), s(12))
     sp.text(f"G          {state.sim.gravity_constant:.2f}", sp.padding, sp.padding+s(57), s(12))
     sp.text("PAUSED" if state.sim.is_paused else "RUNNING", sp.padding, sp.padding+s(73), s(12))
-    sp.text(f"Width: {state.window.width:.1f} Height: {state.window.height:.1f}", sp.padding, sp.padding+s(82), s(12))
-    sp.text(f"HUDScale: {s(15)}", sp.padding, sp.padding+s(92), s(12))
+    sp.text(f"Monitor: {state.window.current_monitor:.2f}", sp.padding, sp.padding+s(82), s(12))
+    sp.text(f"Width: {state.window.width:.1f} Height: {state.window.height:.1f}", sp.padding, sp.padding+s(92), s(12))
+    sp.text(f"HUDScale: {s(15)}", sp.padding, sp.padding+s(102), s(12))
 
     # --- footer
     fp = make_footer_panel(state, s, window_width, window_height)

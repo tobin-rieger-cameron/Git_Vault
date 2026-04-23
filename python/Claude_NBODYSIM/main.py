@@ -21,6 +21,8 @@ state = SimState() # scripts/state.py
 # ══ Main Loop ═══════════════════════════════════════════════════════════════════════╗
 """Mutate state globals over time, draw objects"""                                  # ║
 while not rl.window_should_close():                                                 # ║
+    
+    state.window.update()
                                                                                     # ║
     # ── Input ─────────────────────────────────────────────────────────────        # ║
     """pass state through player input"""                                           # ║
@@ -60,7 +62,13 @@ while not rl.window_should_close():                                             
                                                                                     # ║
     # ── Render: 2D Pass ───────────────────────────────────────────────────        # ║
     if state.hud.edit_mode:
-        rl.draw_rectangle(0, 0, state.window.width, state.window.height, rl.Color(0, 0, 0, 120))
+        rl.draw_rectangle(
+            0, 0, 
+            state.window.width, 
+            state.window.height, 
+            rl.Color(0, 0, 0, 120)
+        )
+    
     flush_labels(state.font)                                                        # ║
     draw_hud(state, state.window.width, state.window.height)                        # ║ > utils/hud.py
                                                                                     # ║
