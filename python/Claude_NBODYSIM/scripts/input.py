@@ -58,6 +58,9 @@ def handle_input(state):
     if rl.is_key_pressed(rl.KEY_V):                                                         # ║
         state.render.show_vectors = not state.render.show_vectors                           # ║
                                                                                             # ║
+    if rl.is_key_pressed(rl.KEY_F):
+        rl.toggle_fullscreen()
+
     # ── Time Scale (+/-) ───────────────────────────────────────────────────────────       # ║
     if rl.is_key_pressed(rl.KEY_EQUAL):                                                     # ║
         state.sim.time_scale = min(100.0, state.sim.time_scale * 1.25)                      # ║
