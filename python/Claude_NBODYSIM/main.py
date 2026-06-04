@@ -5,6 +5,10 @@
  ╚══════════════════════════════════════════════════════════════╝
 """
 
+#TODO: - ensure hud adapts to window size/resolution
+#TODO: - make the hud pretty, and enable toggling
+#TODO: - run debug commands from inside the program
+
 import pyray as rl
 from utils.labels     import queue_label, flush_labels
 from utils.colors     import BACKGROUND

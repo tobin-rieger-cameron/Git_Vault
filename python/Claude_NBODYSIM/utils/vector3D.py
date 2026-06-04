@@ -50,8 +50,6 @@ class Vector3D:
             self.z - other.z
         )
 
-    #TODO: ADD INCREMENTAL SUBTRACTION, MULTIPLICATION
-
     # v1 * x
     def __mul__(self, scalar):
         return Vector3D(
