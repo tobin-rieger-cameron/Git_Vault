@@ -1,0 +1,206 @@
+{
+  "main": {
+    "id": "c6db6ec39eefe35b",
+    "type": "split",
+    "children": [
+      {
+        "id": "b81cd0fffa8c6b8b",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "7257f2e46a51c1fc",
+            "type": "leaf",
+            "state": {
+              "type": "vscode-editor",
+              "state": {
+                "file": "python/Claude_NBODYSIM/main.py"
+              },
+              "icon": "lucide-file",
+              "title": "main"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "7a700a5078b49875",
+    "type": "split",
+    "children": [
+      {
+        "id": "c6343bfbc561e60d",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "87f188e9341ed819",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "4a89cccf6331dc18",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "bcfd1f63cdf100ff",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "c4e8b5f16753abdb",
+    "type": "split",
+    "children": [
+      {
+        "id": "70cc6aa9138f1792",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "7a06605cf5ab99d1",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "python/Claude_NBODYSIM/main.py",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for main"
+            }
+          },
+          {
+            "id": "82266752d6ed1271",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "python/Claude_NBODYSIM/main.py",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from main"
+            }
+          },
+          {
+            "id": "56b26025c5a199ca",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "c39a30a8d91f66c1",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "3dcaf51e2634e858",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "python/Claude_NBODYSIM/main.py",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of main"
+            }
+          },
+          {
+            "id": "af77c7e53978d49f",
+            "type": "leaf",
+            "state": {
+              "type": "git-view",
+              "state": {},
+              "icon": "git-pull-request",
+              "title": "Source Control"
+            }
+          }
+        ],
+        "currentTab": 5
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false,
+      "vscode-editor:Create Code File": false,
+      "obsidian-git:Open Git source control": false
+    }
+  },
+  "active": "7257f2e46a51c1fc",
+  "lastOpenFiles": [
+    "python/math/1.1 Polynomial Review.md",
+    "python/Claude_NBODYSIM/main.py",
+    "python/obsidian python scripts/knowledge_notes/Mathematics.md",
+    "python/obsidian python scripts/knowledge_notes/Formal Sciences.md",
+    "python/obsidian python scripts/knowledge_notes/Knowledge.md",
+    "README.md"
+  ]
+}
