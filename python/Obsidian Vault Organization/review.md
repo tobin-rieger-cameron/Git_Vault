@@ -1,0 +1,2714 @@
+# Vault Reorganization Report
+_Generated 2026-06-03 15:10_
+
+## Duplicate Summary
+- Exact duplicate groups: **215**
+- Near-duplicate pairs: **2940**
+
+### Exact Duplicate Groups
+
+**Hash `b4763cab`**
+  - `/home/tizz/.cache/hyde/themepatcher/Catppuccin-Latte-HyDE-Project/README.md`
+  - `/home/tizz/.cache/hyde/themepatcher/Catppuccin-Mocha-HyDE-Project/README.md`
+  - `/home/tizz/.cache/hyde/themepatcher/Decay-Green-HyDE-Project/README.md`
+  - `/home/tizz/.cache/hyde/themepatcher/Edge-Runner-HyDE-Project/README.md`
+  - `/home/tizz/.cache/hyde/themepatcher/Frosted-Glass-HyDE-Project/README.md`
+  - `/home/tizz/.cache/hyde/themepatcher/Graphite-Mono-HyDE-Project/README.md`
+  - `/home/tizz/.cache/hyde/themepatcher/Gruvbox-Retro-HyDE-Project/README.md`
+  - `/home/tizz/.cache/hyde/themepatcher/Material-Sakura-HyDE-Project/README.md`
+  - `/home/tizz/.cache/hyde/themepatcher/Nordic-Blue-HyDE-Project/README.md`
+  - `/home/tizz/.cache/hyde/themepatcher/Rose-Pine-HyDE-Project/README.md`
+  - `/home/tizz/.cache/hyde/themepatcher/Synth-Wave-HyDE-Project/README.md`
+  - `/home/tizz/.cache/hyde/themepatcher/Tokyo-Night-HyDE-Project/README.md`
+
+**Hash `18a4795c`**
+  - `/home/tizz/.cache/virtualenv/wheel/3.14/image/1/CopyPipInstall/pip-26.0.1-py3-none-any/pip/_vendor/idna/LICENSE.md`
+  - `/home/tizz/.cache/virtualenv/wheel/3.14/image/1/CopyPipInstall/pip-26.0.1-py3-none-any/pip-26.0.1.dist-info/licenses/src/pip/_vendor/idna/LICENSE.md`
+  - `/home/tizz/.local/share/flatpak/app/org.inkscape.Inkscape/x86_64/stable/c8f105875e5f89fc7b2a627a26ef23c9fc8a44e20ff6dbd26825a3b32e7143e8/files/lib/python3.13/site-packages/idna-3.11.dist-info/licenses/LICENSE.md`
+  - `/home/tizz/.local/share/nvim/mason/packages/debugpy/venv/lib/python3.14/site-packages/pip/_vendor/idna/LICENSE.md`
+  - `/home/tizz/.local/share/nvim/mason/packages/debugpy/venv/lib/python3.14/site-packages/pip-26.0.1.dist-info/licenses/src/pip/_vendor/idna/LICENSE.md`
+  - `/home/tizz/.local/state/hyde/pip_env/lib/python3.14/site-packages/pip/_vendor/idna/LICENSE.md`
+  - `/home/tizz/.local/state/hyde/pip_env/lib/python3.14/site-packages/pip-26.1.1.dist-info/licenses/src/pip/_vendor/idna/LICENSE.md`
+  - `/home/tizz/Documents/Claude_Chatlog/venv/lib/python3.14/site-packages/pip/_vendor/idna/LICENSE.md`
+  - `/home/tizz/Documents/Claude_Chatlog/venv/lib/python3.14/site-packages/pip-26.1.1.dist-info/licenses/src/pip/_vendor/idna/LICENSE.md`
+  - `/home/tizz/dev/Git_Vault/python/python-venv/lib/python3.14/site-packages/pip/_vendor/idna/LICENSE.md`
+  - `/home/tizz/dev/Git_Vault/python/python-venv/lib/python3.14/site-packages/pip-26.0.1.dist-info/licenses/src/pip/_vendor/idna/LICENSE.md`
+  - `/home/tizz/dev/Obsidian Vault Organization/OVO/lib/python3.14/site-packages/pip/_vendor/idna/LICENSE.md`
+  - `/home/tizz/dev/Obsidian Vault Organization/OVO/lib/python3.14/site-packages/pip-26.1.2.dist-info/licenses/src/pip/_vendor/idna/LICENSE.md`
+
+**Hash `42ba757c`**
+  - `/home/tizz/.cache/yarn/v6/npm-@chemzqm-neovim-5.7.9-78cb54d07d8e24533177140371e3ac1d694ff5f7-integrity/node_modules/@chemzqm/neovim/README.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/@chemzqm/neovim/README.md`
+
+**Hash `55778133`**
+  - `/home/tizz/.cache/yarn/v6/npm-accepts-1.3.8-0bf0be125b67014adcb0b0921e62db7bffe16b2e-integrity/node_modules/accepts/HISTORY.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/accepts/HISTORY.md`
+
+**Hash `873e624d`**
+  - `/home/tizz/.cache/yarn/v6/npm-accepts-1.3.8-0bf0be125b67014adcb0b0921e62db7bffe16b2e-integrity/node_modules/accepts/README.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/accepts/README.md`
+
+**Hash `454ffc10`**
+  - `/home/tizz/.cache/yarn/v6/npm-after-0.8.2-fedb394f9f0e02aa9768e702bda23b505fae7e1f-integrity/node_modules/after/README.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/after/README.md`
+
+**Hash `dca7b2dd`**
+  - `/home/tizz/.cache/yarn/v6/npm-arraybuffer-slice-0.0.7-3bbc4275dd584cc1b10809b89d4e8b63a69e7675-integrity/node_modules/arraybuffer.slice/README.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/arraybuffer.slice/README.md`
+
+**Hash `a8a6bd4a`**
+  - `/home/tizz/.cache/yarn/v6/npm-backo2-1.0.2-31ab1ac8b129363463e35b3ebb69f4dfcfba7947-integrity/node_modules/backo2/History.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/backo2/History.md`
+
+**Hash `535189fe`**
+  - `/home/tizz/.cache/yarn/v6/npm-backo2-1.0.2-31ab1ac8b129363463e35b3ebb69f4dfcfba7947-integrity/node_modules/backo2/Readme.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/backo2/Readme.md`
+
+**Hash `13686c8c`**
+  - `/home/tizz/.cache/yarn/v6/npm-base64-arraybuffer-0.1.4-9818c79e059b1355f97e0428a017c838e90ba812-integrity/node_modules/base64-arraybuffer/README.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/base64-arraybuffer/README.md`
+
+**Hash `4410df7c`**
+  - `/home/tizz/.cache/yarn/v6/npm-base64id-2.0.0-2770ac6bc47d312af97a8bf9a634342e0cd25cb6-integrity/node_modules/base64id/CHANGELOG.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/base64id/CHANGELOG.md`
+
+**Hash `813a75b5`**
+  - `/home/tizz/.cache/yarn/v6/npm-base64id-2.0.0-2770ac6bc47d312af97a8bf9a634342e0cd25cb6-integrity/node_modules/base64id/README.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/base64id/README.md`
+
+**Hash `06828bae`**
+  - `/home/tizz/.cache/yarn/v6/npm-blob-0.0.5-d680eeef25f8cd91ad533f5b01eed48e64caf683-integrity/node_modules/blob/README.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/blob/README.md`
+
+**Hash `c862e7b0`**
+  - `/home/tizz/.cache/yarn/v6/npm-component-bind-1.0.0-00c608ab7dcd93897c0009651b1d3a8e1e73bbd1-integrity/node_modules/component-bind/History.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/component-bind/History.md`
+
+**Hash `0e461771`**
+  - `/home/tizz/.cache/yarn/v6/npm-component-bind-1.0.0-00c608ab7dcd93897c0009651b1d3a8e1e73bbd1-integrity/node_modules/component-bind/Readme.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/component-bind/Readme.md`
+
+**Hash `8ccdc25b`**
+  - `/home/tizz/.cache/yarn/v6/npm-component-emitter-1.2.1-137918d6d78283f7df7a6b7c5a63e140e69425e6-integrity/node_modules/component-emitter/History.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/socket.io-parser/node_modules/component-emitter/History.md`
+
+**Hash `cc0bcbc6`**
+  - `/home/tizz/.cache/yarn/v6/npm-component-emitter-1.2.1-137918d6d78283f7df7a6b7c5a63e140e69425e6-integrity/node_modules/component-emitter/Readme.md`
+  - `/home/tizz/.cache/yarn/v6/npm-component-emitter-1.3.0-16e4070fba8ae29b679f2215853ee181ab2eabc0-integrity/node_modules/component-emitter/Readme.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/component-emitter/Readme.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/socket.io-parser/node_modules/component-emitter/Readme.md`
+
+**Hash `82738c89`**
+  - `/home/tizz/.cache/yarn/v6/npm-component-emitter-1.3.0-16e4070fba8ae29b679f2215853ee181ab2eabc0-integrity/node_modules/component-emitter/History.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/component-emitter/History.md`
+
+**Hash `68ee7a32`**
+  - `/home/tizz/.cache/yarn/v6/npm-component-inherit-0.0.3-645fc4adf58b72b649d5cae65135619db26ff143-integrity/node_modules/component-inherit/History.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/component-inherit/History.md`
+
+**Hash `b1d133bf`**
+  - `/home/tizz/.cache/yarn/v6/npm-component-inherit-0.0.3-645fc4adf58b72b649d5cae65135619db26ff143-integrity/node_modules/component-inherit/Readme.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/component-inherit/Readme.md`
+
+**Hash `e0521638`**
+  - `/home/tizz/.cache/yarn/v6/npm-cookie-0.4.2-0e41f24de5ecf317947c82fc789e06a884824432-integrity/node_modules/cookie/HISTORY.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/cookie/HISTORY.md`
+
+**Hash `bfaa89df`**
+  - `/home/tizz/.cache/yarn/v6/npm-cookie-0.4.2-0e41f24de5ecf317947c82fc789e06a884824432-integrity/node_modules/cookie/README.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/cookie/README.md`
+
+**Hash `575764c7`**
+  - `/home/tizz/.cache/yarn/v6/npm-date-format-4.0.9-4788015ac56dedebe83b03bc361f00c1ddcf1923-integrity/node_modules/date-format/CHANGELOG.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/date-format/CHANGELOG.md`
+
+**Hash `0a7cb82f`**
+  - `/home/tizz/.cache/yarn/v6/npm-date-format-4.0.9-4788015ac56dedebe83b03bc361f00c1ddcf1923-integrity/node_modules/date-format/README.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/date-format/README.md`
+
+**Hash `28887cf8`**
+  - `/home/tizz/.cache/yarn/v6/npm-debug-3.1.0-5bb5a0672628b64149566ba16819e61518c67261-integrity/node_modules/debug/CHANGELOG.md`
+  - `/home/tizz/.cache/yarn/v6/npm-debug-4.1.1-3b72260255109c6b589cee050f1d516139664791-integrity/node_modules/debug/CHANGELOG.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/debug/CHANGELOG.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/engine.io/node_modules/debug/CHANGELOG.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/socket.io/node_modules/debug/CHANGELOG.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/socket.io-parser/node_modules/debug/CHANGELOG.md`
+
+**Hash `f701af82`**
+  - `/home/tizz/.cache/yarn/v6/npm-debug-3.1.0-5bb5a0672628b64149566ba16819e61518c67261-integrity/node_modules/debug/README.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/debug/README.md`
+
+**Hash `d1c06912`**
+  - `/home/tizz/.cache/yarn/v6/npm-debug-4.1.1-3b72260255109c6b589cee050f1d516139664791-integrity/node_modules/debug/README.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/engine.io/node_modules/debug/README.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/socket.io/node_modules/debug/README.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/socket.io-parser/node_modules/debug/README.md`
+
+**Hash `44d6d103`**
+  - `/home/tizz/.cache/yarn/v6/npm-debug-4.3.4-1319f6579357f2338d3337d2cdd4914bb5dcc865-integrity/node_modules/debug/README.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/log4js/node_modules/debug/README.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/streamroller/node_modules/debug/README.md`
+
+**Hash `2e6a6a3e`**
+  - `/home/tizz/.cache/yarn/v6/npm-engine-io-3.5.0-9d6b985c8a39b1fe87cd91eb014de0552259821b-integrity/node_modules/engine.io/CHANGELOG.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/engine.io/CHANGELOG.md`
+
+**Hash `dafbfee1`**
+  - `/home/tizz/.cache/yarn/v6/npm-engine-io-3.5.0-9d6b985c8a39b1fe87cd91eb014de0552259821b-integrity/node_modules/engine.io/README.md`
+  - `/home/tizz/.local/share/nvim/lazy/markdown-preview.nvim/app/node_modules/engine.io/README.md`
+
+### Near-Duplicate Pairs (top 20)
+| Similarity | Note A | Note B |
+|---|---|---|
+| 1.0 | `/home/tizz/.cache/hyde/themepatcher/Catppuccin-Latte-HyDE-Project/README.md` | `/home/tizz/.cache/hyde/themepatcher/Rose-Pine-HyDE-Project/README.md` |
+| 1.0 | `/home/tizz/.cache/hyde/themepatcher/Catppuccin-Latte-HyDE-Project/README.md` | `/home/tizz/.cache/hyde/themepatcher/Nordic-Blue-HyDE-Project/README.md` |
+| 1.0 | `/home/tizz/.cache/hyde/themepatcher/Catppuccin-Latte-HyDE-Project/README.md` | `/home/tizz/.cache/hyde/themepatcher/Catppuccin-Mocha-HyDE-Project/README.md` |
+| 1.0 | `/home/tizz/.cache/hyde/themepatcher/Catppuccin-Latte-HyDE-Project/README.md` | `/home/tizz/.cache/hyde/themepatcher/Graphite-Mono-HyDE-Project/README.md` |
+| 1.0 | `/home/tizz/.cache/hyde/themepatcher/Catppuccin-Latte-HyDE-Project/README.md` | `/home/tizz/.cache/hyde/themepatcher/Edge-Runner-HyDE-Project/README.md` |
+| 1.0 | `/home/tizz/.cache/hyde/themepatcher/Catppuccin-Latte-HyDE-Project/README.md` | `/home/tizz/.cache/hyde/themepatcher/Decay-Green-HyDE-Project/README.md` |
+| 1.0 | `/home/tizz/.cache/hyde/themepatcher/Catppuccin-Latte-HyDE-Project/README.md` | `/home/tizz/.cache/hyde/themepatcher/Frosted-Glass-HyDE-Project/README.md` |
+| 1.0 | `/home/tizz/.cache/hyde/themepatcher/Catppuccin-Latte-HyDE-Project/README.md` | `/home/tizz/.cache/hyde/themepatcher/Synth-Wave-HyDE-Project/README.md` |
+| 1.0 | `/home/tizz/.cache/hyde/themepatcher/Catppuccin-Latte-HyDE-Project/README.md` | `/home/tizz/.cache/hyde/themepatcher/Gruvbox-Retro-HyDE-Project/README.md` |
+| 1.0 | `/home/tizz/.cache/hyde/themepatcher/Catppuccin-Latte-HyDE-Project/README.md` | `/home/tizz/.cache/hyde/themepatcher/Material-Sakura-HyDE-Project/README.md` |
+| 1.0 | `/home/tizz/.cache/hyde/themepatcher/Catppuccin-Latte-HyDE-Project/README.md` | `/home/tizz/.cache/hyde/themepatcher/Tokyo-Night-HyDE-Project/README.md` |
+| 1.0 | `/home/tizz/.cache/hyde/themepatcher/Catppuccin-Mocha-HyDE-Project/README.md` | `/home/tizz/.cache/hyde/themepatcher/Rose-Pine-HyDE-Project/README.md` |
+| 1.0 | `/home/tizz/.cache/hyde/themepatcher/Catppuccin-Mocha-HyDE-Project/README.md` | `/home/tizz/.cache/hyde/themepatcher/Nordic-Blue-HyDE-Project/README.md` |
+| 1.0 | `/home/tizz/.cache/hyde/themepatcher/Catppuccin-Mocha-HyDE-Project/README.md` | `/home/tizz/.cache/hyde/themepatcher/Graphite-Mono-HyDE-Project/README.md` |
+| 1.0 | `/home/tizz/.cache/hyde/themepatcher/Catppuccin-Mocha-HyDE-Project/README.md` | `/home/tizz/.cache/hyde/themepatcher/Edge-Runner-HyDE-Project/README.md` |
+| 1.0 | `/home/tizz/.cache/hyde/themepatcher/Catppuccin-Mocha-HyDE-Project/README.md` | `/home/tizz/.cache/hyde/themepatcher/Decay-Green-HyDE-Project/README.md` |
+| 1.0 | `/home/tizz/.cache/hyde/themepatcher/Catppuccin-Mocha-HyDE-Project/README.md` | `/home/tizz/.cache/hyde/themepatcher/Frosted-Glass-HyDE-Project/README.md` |
+| 1.0 | `/home/tizz/.cache/hyde/themepatcher/Catppuccin-Mocha-HyDE-Project/README.md` | `/home/tizz/.cache/hyde/themepatcher/Synth-Wave-HyDE-Project/README.md` |
+| 1.0 | `/home/tizz/.cache/hyde/themepatcher/Catppuccin-Mocha-HyDE-Project/README.md` | `/home/tizz/.cache/hyde/themepatcher/Gruvbox-Retro-HyDE-Project/README.md` |
+| 1.0 | `/home/tizz/.cache/hyde/themepatcher/Catppuccin-Mocha-HyDE-Project/README.md` | `/home/tizz/.cache/hyde/themepatcher/Material-Sakura-HyDE-Project/README.md` |
+
+## Suggested Folder Structure
+
+**2513 notes** across **3 clusters**
+
+### 📁 `cluster-2/`
+**cluster-2** — 1586 notes
+__
+
+- `README.md` — all-MiniLM-L6-v2 _973w_
+- `PULL_REQUEST_TEMPLATE.md` — PULL_REQUEST_TEMPLATE _188w_
+- `CONTRIBUTING.md` — Contributing _170w_
+- `README.md` — Theme Gallery _2872w_
+- `README.md` — README _63w_
+- `README.md` — neovim-client _325w_
+- `HISTORY.md` — HISTORY _614w_
+- `README.md` — accepts _452w_
+- `README.md` — After [![Build Status][1]][2] _277w_
+- `Readme.md` — backo _72w_
+- `README.md` — base64-arraybuffer _64w_
+- `CHANGELOG.md` — [2.0.0](https://github.com/faeldt/base64id/compare/1.0.0...2.0.0) (2019-05-27) _32w_
+- `README.md` — README _54w_
+- `README.md` — Blob _48w_
+- `History.md` — History _36w_
+- `Readme.md` — bind _131w_
+- `History.md` — History _163w_
+- `Readme.md` — Emitter [![Build Status](https://travis-ci.org/component/emitter.png)](https://travis-ci.org/component/emitter) _182w_
+- `History.md` — History _182w_
+- `Readme.md` — Emitter [![Build Status](https://travis-ci.org/component/emitter.png)](https://travis-ci.org/component/emitter) _182w_
+- `History.md` — History _9w_
+- `Readme.md` — inherit _32w_
+- `HISTORY.md` — HISTORY _408w_
+- `README.md` — cookie _1261w_
+- `CHANGELOG.md` — date-format Changelog _371w_
+- `README.md` — README _301w_
+- `CHANGELOG.md` — CHANGELOG _1746w_
+- `README.md` — debug _1589w_
+- `CHANGELOG.md` — CHANGELOG _1746w_
+- `README.md` — debug _1803w_
+- `README.md` — debug _1929w_
+- `CHANGELOG.md` — [3.5.0](https://github.com/socketio/engine.io/compare/3.4.2...3.5.0) (2020-12-30) _55w_
+- `README.md` — Engine.IO: the realtime engine _2813w_
+- `CHANGELOG.md` — [3.5.0](https://github.com/socketio/engine.io-client/compare/3.4.4...3.5.0) (2020-12-30) _106w_
+- `README.md` — Engine.IO client _1539w_
+- `Readme.md` — engine.io-parser _781w_
+- `README.md` — event-lite.js [![npm version](https://badge.fury.io/js/event-lite.svg)](http://badge.fury.io/js/event-lite) [![Build Status](https://travis-ci.org/kawanet/event-lite.svg?branch=master)](https://travis-ci.org/kawanet/event-lite) _323w_
+- `README.md` — flatted _515w_
+- `SPECS.md` — Flatted Specifications _531w_
+- `README.md` — README _1114w_
+- `README.md` — graceful-fs _789w_
+- `History.md` — [1.0.0](https://github.com/darrachequesne/has-binary/compare/0.1.7...1.0.0) (2017-04-05) _101w_
+- `README.md` — README _12w_
+- `History.md` — History _44w_
+- `Readme.md` — has-cors _42w_
+- `README.md` — ieee754 [![travis][travis-image]][travis-url] [![npm][npm-image]][npm-url] [![downloads][downloads-image]][downloads-url] [![javascript style guide][standard-image]][standard-url] _156w_
+- `Readme.md` — indexOf _20w_
+- `README.md` — int64-buffer _823w_
+- `README.md` — isarray _226w_
+- `README.md` — isarray _217w_
+- `CHANGELOG.md` — CHANGELOG _817w_
+- `README.md` — README _690w_
+- `README.md` — log4js-node [![Build Status](https://secure.travis-ci.org/log4js-node/log4js-node.png?branch=master)](http://travis-ci.org/log4js-node/log4js-node) [![codecov](https://codecov.io/gh/log4js-node/log4js-node/branch/master/graph/badge.svg)](https://codecov.io/gh/log4js-node/log4js-node) _570w_
+- `HISTORY.md` — HISTORY _1398w_
+- `README.md` — mime-db _487w_
+- `HISTORY.md` — HISTORY _1125w_
+- `README.md` — mime-types _326w_
+- `readme.md` — ms _249w_
+- `readme.md` — ms _290w_
+- `readme.md` — ms _284w_
+- `README.md` — msgpack-lite [![npm version](https://badge.fury.io/js/msgpack-lite.svg)](http://badge.fury.io/js/msgpack-lite) [![Build Status](https://travis-ci.org/kawanet/msgpack-lite.svg?branch=master)](https://travis-ci.org/kawanet/msgpack-lite) _1774w_
+- `HISTORY.md` — HISTORY _344w_
+- `README.md` — negotiator _496w_
+- `README.md` — README _12w_
+- `History.md` — History _8w_
+- `README.md` — parseuri _8w_
+- `readme.md` — rfdc _447w_
+- `CHANGELOG.md` — [2.4.0](https://github.com/socketio/socket.io/compare/2.3.0...2.4.0) (2021-01-04) _26w_
+- `Readme.md` — socket.io _1092w_
+- `Readme.md` — socket.io-adapter _57w_
+- `CHANGELOG.md` — [2.4.0](https://github.com/Automattic/socket.io-client/compare/2.3.1...2.4.0) (2021-01-04) _103w_
+- `README.md` — socket.io-client _185w_
+- `CHANGELOG.md` — CHANGELOG _18w_
+- `Readme.md` — socket.io-parser _202w_
+- `CHANGELOG.md` — CHANGELOG _15w_
+- `Readme.md` — socket.io-parser _202w_
+- `CHANGELOG.md` — streamroller Changelog _988w_
+- `README.md` — README _672w_
+- `README.md` — to-array _38w_
+- `README.md` — tslib _389w_
+- `generator.md` — The `__generator` helper _3115w_
+- `README.md` — universalify _227w_
+- `README.md` — ws: a Node.js WebSocket library _1579w_
+- `README.md` — node-XMLHttpRequest # _320w_
+- `README.md` — yeast _348w_
+- `README.md` — Bitcode _321w_
+- `CHANGELOG.md` — Changelog _170w_
+- `README.md` — Adler-32 checksums for Rust _137w_
+- `RELEASE_PROCESS.md` — What to do to publish a new release _80w_
+- `DESIGN.md` — Basics _3930w_
+- `README.md` — README _715w_
+- `README.md` — Background _3119w_
+- `README.md` — aligned-vec _92w_
+- `README.md` — ANSI Escape Sequences provider & parser _296w_
+- `README.md` — anstream _121w_
+- `README.md` — anstyle _139w_
+- `README.md` — anstyle-parse _90w_
+- `README.md` — anstyle-query _24w_
+- `README.md` — README _700w_
+- `README.md` — Procedural macro derive that mimics `arg_enum!` from [clap](https://clap.rs) _123w_
+- `CHANGELOG.md` — CHANGELOG _1482w_
+- `README.md` — License _63w_
+- `README.md` — assert_cmd _329w_
+- `README.md` — README _385w_
+- `CHANGELOG.md` — CHANGELOG _202w_
+- `README.md` — av1-grain _50w_
+- `README.md` — AVIF image serializer (muxer) _89w_
+- `Changelog.md` — 0.10.2 – 2023-02-25 _188w_
+- `README.md` — bit_field _84w_
+- `CHANGELOG.md` — 1.3.2 _697w_
+- `README.md` — README _73w_
+- `CHANGELOG.md` — 2.5.0 _2175w_
+- `CONTRIBUTING.md` — Updating compile-fail test outputs _58w_
+- `README.md` — README _292w_
+- `SECURITY.md` — Security Policy _106w_
+- `spec.md` — Bitflags _1745w_
+- `README.md` — README _61w_
+- `README.md` — README _1141w_
+- `CHANGELOG.md` — Changelog _323w_
+- `README.md` — README _424w_
+- `CHANGELOG.md` — #[cfg(feature = "allocator_api")] _2783w_
+- `README.md` — `bumpalo` _1056w_
+- `README.md` — bytemuck _428w_
+- `changelog.md` — `bytemuck` changelog _1775w_
+- `CHANGELOG.md` — CHANGELOG _592w_
+- `README.md` — README _272w_
+- `README.md` — byteorder-lite _57w_
+- `CHANGELOG.md` — Change Log _329w_
+- `README.md` — `cast` _150w_
+- `README.md` — cc-rs _133w_
+- `README.md` — cfg-if _152w_
+- `README.md` — ciborium _607w_
+- `README.md` — ciborium-io _125w_
+- `README.md` — ciborium-ll _524w_
+- `README.md` — clap _82w_
+- `README.md` — Examples _94w_
+- `cargo-example-derive.md` — cargo-example-derive _110w_
+- `cargo-example.md` — cargo-example _110w_
+- `demo.md` — demo _65w_
+- `interop_tests.md` — interop_tests _452w_
+- `escaped-positional-derive.md` — escaped-positional-derive _168w_
+- `escaped-positional.md` — escaped-positional _168w_
+- `find.md` — find _150w_
+- `git-derive.md` — git-derive _408w_
+- `git.md` — git _393w_
+- `multicall-busybox.md` — multicall-busybox _128w_
+- `multicall-hostname.md` — multicall-hostname _32w_
+- `pacman.md` — pacman _255w_
+- `01_quick.md` — 01_quick _104w_
+- `02_app_settings.md` — 02_app_settings _35w_
+- `02_apps.md` — 02_apps _32w_
+- `02_crate.md` — 02_crate _40w_
+- `03_01_flag_bool.md` — 03_01_flag_bool _62w_
+- `03_01_flag_count.md` — 03_01_flag_count _45w_
+- `03_02_option.md` — 03_02_option _62w_
+- `03_02_option_mult.md` — 03_02_option_mult _62w_
+- `03_03_positional.md` — 03_03_positional _39w_
+- `03_03_positional_mult.md` — 03_03_positional_mult _46w_
+- `03_04_subcommands.md` — 03_04_subcommands _154w_
+- `03_05_default_values.md` — 03_05_default_values _41w_
+- `04_01_enum.md` — 04_01_enum _125w_
+- `04_01_possible.md` — 04_01_possible _69w_
+- `04_02_parse.md` — 04_02_parse _82w_
+- `04_02_validate.md` — 04_02_validate _82w_
+- `04_03_relations.md` — 04_03_relations _162w_
+- `04_04_custom.md` — 04_04_custom _150w_
+- `01_quick.md` — 01_quick _104w_
+- `02_app_settings.md` — 02_app_settings _35w_
+- `02_apps.md` — 02_apps _32w_
+- `02_crate.md` — 02_crate _40w_
+- `03_01_flag_bool.md` — 03_01_flag_bool _62w_
+- `03_01_flag_count.md` — 03_01_flag_count _45w_
+- `03_02_option.md` — 03_02_option _62w_
+- `03_02_option_mult.md` — 03_02_option_mult _62w_
+- `03_03_positional.md` — 03_03_positional _39w_
+- `03_03_positional_mult.md` — 03_03_positional_mult _46w_
+- `03_04_subcommands.md` — 03_04_subcommands _171w_
+- `03_05_default_values.md` — 03_05_default_values _41w_
+- `04_01_enum.md` — 04_01_enum _125w_
+- `04_02_parse.md` — 04_02_parse _82w_
+- `04_02_validate.md` — 04_02_validate _82w_
+- `04_03_relations.md` — 04_03_relations _162w_
+- `04_04_custom.md` — 04_04_custom _150w_
+- `typed-derive.md` — typed-derive _524w_
+- `README.md` — clap_complete _55w_
+- `README.md` — clap_lex _38w_
+- `CHANGELOG.md` — CHANGELOG _47w_
+- `README.md` — Color quantization library _44w_
+- `README.md` — colorchoice _106w_
+- `README.md` — crc32fast [![Build Status][travis-img]][travis] [![Crates.io][crates-img]][crates] [![Documentation][docs-img]][docs] _522w_
+- `CHANGELOG.md` — Changelog _3368w_
+- `CONTRIBUTING.md` — Contributing to Criterion.<span></span>rs _495w_
+- `README.md` — README _677w_
+- `CONTRIBUTING.md` — Contributing to Criterion.<span></span>rs _495w_
+- `README.md` — `criterion-plot` _147w_
+- `CHANGELOG.md` — Version 0.8.5 _460w_
+- `README.md` — Crossbeam Deque _139w_
+- `CHANGELOG.md` — Version 0.9.18 _767w_
+- `README.md` — Crossbeam Epoch _206w_
+- `CHANGELOG.md` — Version 0.8.19 _927w_
+- `README.md` — Crossbeam Utils _247w_
+- `README.md` — dlib _678w_
+- `README.md` — doc-comment [![][img_travis-ci]][travis-ci] [![][img_crates]][crates] [![][img_doc]][doc] _93w_
+- `CHANGELOG.md` — Changelog _238w_
+- `README.md` — downcast-rs _647w_
+- `README-crates.io.md` — README-crates.io _69w_
+- `CHANGELOG.md` — [Unreleased] _215w_
+- `README.md` — errno [![CI](https://github.com/lambda-fairy/rust-errno/actions/workflows/main.yml/badge.svg)](https://github.com/lambda-fairy/rust-errno/actions/workflows/main.yml) [![Cargo](https://img.shields.io/crates/v/errno.svg)](https://crates.io/crates/errno) _154w_
+- `bug_report.md` —  _55w_
+- `question.md` —  _33w_
+- `CONTRIBUTORS.md` — CONTRIBUTORS _65w_
+- `GUIDE.md` — Guide _3080w_
+- `README.md` — EXRS _1771w_
+- `README.md` — Examples _117w_
+- `releasing.md` — Release Checklist _158w_
+- `CHANGELOG.md` — CHANGELOG _1521w_
+- `README.md` — fast_image_resize _1126w_
+- `benchmarks-arm64.md` — benchmarks-arm64 _1135w_
+- `benchmarks-wasm32.md` — benchmarks-wasm32 _1030w_
+- `benchmarks-x86_64.md` — benchmarks-x86_64 _1250w_
+- `dev.md` — Preparation _170w_
+- `README.md` — fdeflate _126w_
+- `MAINTENANCE.md` — MAINTENANCE _146w_
+- `README.md` — flate2 _502w_
+- `CHANGELOG.md` — Changelog _369w_
+- `README.md` — Flume _335w_
+- `CHANGELOG.md` — Changelog _1664w_
+- `README.md` — getrandom _309w_
+- `SECURITY.md` — Security Policy _106w_
+- `README.md` — GIF en- and decoding library [![Build Status](https://github.com/image-rs/image-gif/workflows/Rust%20CI/badge.svg)](https://github.com/image-rs/image-gif/actions) _335w_
+- `CHANGELOG.md` — Changelog _2047w_
+- `README.md` — `f16` and `bf16` floating point types for Rust _534w_
+- `CHANGELOG.md` — unreleased _98w_
+- `README.md` — **heck** is a case conversion library _298w_
+- `bug_template.md` —  _43w_
+- `CHANGES.md` — Release Notes _4154w_
+- `README.md` — Image _1129w_
+- `README.md` — Getting started with benchmarking _24w_
+- `2019-04-23-memory-unsafety.md` — Advisory about potential memory unsafety issues _457w_
+- `README.md` — image-webp _13w_
+- `README.md` — 2D slice of a an image _436w_
+- `README.md` — Minimum Supported Rust Version (MSRV) _465w_
+- `README.md` — is_terminal_polyfill _80w_
+- `CHANGELOG.md` — Changelog _2567w_
+- `README.md` — Itertools _196w_
+- `CHANGELOG.md` — Changelog _3115w_
+- `README.md` — Itertools _196w_
+- `README.md` — README _155w_
+- `README.md` — jobserver-rs _87w_
+- `CHANGELOG.md` — Change Log _817w_
+- `README.md` — jpeg-decoder _133w_
+- `README.md` — keyframe _318w_
+- `README.md` — LEBE _334w_
+- `CONTRIBUTING.md` — Contributing to `libc` _797w_
+- `README.md` — libc - Raw FFI bindings to platforms' system libraries _529w_
+- `CHANGELOG.md` — Change Log _245w_
+- `CONTRIBUTING.md` — How to contribute _519w_
+- `README.md` — `libm` _169w_
+- `README.md` — Minimum Supported Rust Version (MSRV) _245w_
+- `CHANGELOG.md` — Change Log _1770w_
+- `README.md` — README _471w_
+- `CHANGELOG.md` — CHANGELOG _19w_
+- `README.md` — README _1324w_
+- `bug_report.md` — [BUG] _137w_
+- `custom.md` — [OTHER] _72w_
+- `documentation.md` — [DOC] _47w_
+- `feature_request.md` — [FEATURE] _110w_
+- `bug_fix.md` — [BUG] _136w_
+- `custom.md` — [OTHER] _93w_
+- `documentation.md` — [DOC] _88w_
+- `README.md` — Getting Started _642w_
+- `Readme.md` — miniz_oxide _357w_
+- `CHANGELOG.md` — Change Log _144w_
+- `README.md` — mint _202w_
+- `README.md` — new_debug_unreachable _100w_
+- `CHANGELOG.md` — Change Log _8891w_
+- `README.md` — nom, eating data byte by byte _1455w_
+- `nom_recipes.md` — Nom Recipes _1032w_
+- `README.md` — NoOp proc macro _41w_
+- `README.md` — num-bigint _375w_
+- `RELEASES.md` — Release 0.4.4 (2023-08-22) _1427w_
+- `README.md` — num-conv _34w_
+- `README.md` — num-derive _184w_
+- `RELEASES.md` — Release 0.4.2 (2024-02-06) _427w_
+- `README.md` — num-integer _151w_
+- `RELEASES.md` — Release 0.1.46 (2024-02-07) _430w_
+- `README.md` — num-rational _133w_
+- `RELEASES.md` — Release 0.4.1 (2022-06-23) _610w_
+- `README.md` — num-traits _194w_
+- `RELEASES.md` — Release 0.2.18 (2024-02-07) _1331w_
+- `CHANGELOG.md` — Changelog _835w_
+- `README.md` — Overview _207w_
+- `README.md` — oorandom _1683w_
+- `README.md` — README _522w_
+- `CHANGELOG.md` — Changelog _715w_
+- `README.md` — pkg-config-rs _320w_
+- `README.md` — plotters examples _176w_
+- `README.md` — plotters-backend - The base crate for implementing a backend for Plotters _63w_
+- `README.md` — plotters-svg - The SVG backend for Plotters _59w_
+- `CHANGES.md` — CHANGES _1024w_
+- `README.md` — PNG Decoder/Encoder _135w_
+- `README.md` — Getting started with benchmarking _26w_
+- `README.md` — `powerfmt` _274w_
+- `CHANGELOG.md` — Changelog _60w_
+- `README.md` — predicates-rs _108w_
+- `README.md` — predicates-core _64w_
+- `README.md` — predicates-tree _42w_
+- `README.md` — proc-macro2 _432w_
+- `README.md` — profiling _1314w_
+- `README.md` — profiling _1314w_
+- `README.md` — [qoi](https://crates.io/crates/qoi) _269w_
+- `README.md` — QOI - The “Quite OK Image Format” for fast, lossless image compression _409w_
+- `README.md` — quick-xml _666w_
+- `README.md` — Document descrptions _172w_
+- `README.md` — README _1199w_
+- `CHANGELOG.md` — Changelog _3558w_
+- `README.md` — Rand _833w_
+- `CHANGELOG.md` — Changelog _202w_
+- `README.md` — rand_chacha _172w_
+- `CHANGELOG.md` — Changelog _489w_
+- `README.md` — rand_core _388w_
+- `README.md` — rav1e [![Actions Status][actions badge]][actions] [![CodeCov][codecov badge]][codecov] _787w_
+- `README.md` — `ravif` — Pure Rust library for AVIF image encoding _54w_
+- `FAQ.md` — Rayon FAQ _1480w_
+- `README.md` — Rayon _739w_
+- `RELEASES.md` — Release rayon 1.10.0 (2024-03-23) _5080w_
+- `README.md` — Parallel Iterators _1988w_
+- `README.md` — README _118w_
+- `README.md` — Introduction: the sleep module _1902w_
+- `CHANGELOG.md` — CHANGELOG _8279w_
+- `README.md` — Unless you have a specific reason not to, it's good sense to enable standard _1665w_
+- `UNICODE.md` — Unicode conformance _1351w_
+- `README.md` — README _12w_
+- `README.md` — README _40w_
+- `README.md` — README _145w_
+- `README.md` — README _55w_
+- `README.md` — README _178w_
+- `README.md` — README _782w_
+- `README.md` — README _352w_
+- `README.md` — README _553w_
+- `README.md` — `struct RGB` for [Rust](https://www.rust-lang.org)  [![crate](https://img.shields.io/crates/v/rgb.svg)](https://lib.rs/crates/rgb) _323w_
+- `CONTRIBUTING.md` — Contributing to rustix _129w_
+- `README.md` — README _1079w_
+- `README.md` — Ryū _411w_
+- `README.md` — README _173w_
+- `README.md` — scoped-tls _92w_
+- `README.md` — scopeguard _358w_
+- `CHANGELOG.md` — Changelog _134w_
+- `README.md` — `sd-notify` _84w_
+- `README.md` — Serde &emsp; [![Build Status]][actions] [![Latest Version]][crates.io] [![serde msrv]][Rust 1.31] [![serde_derive msrv]][Rust 1.56] _452w_
+- `crates-io.md` — crates-io _270w_
+- `README.md` — Serde &emsp; [![Build Status]][actions] [![Latest Version]][crates.io] [![serde msrv]][Rust 1.31] [![serde_derive msrv]][Rust 1.56] _452w_
+- `crates-io.md` — crates-io _270w_
+- `CONTRIBUTING.md` — Contributing to Serde _258w_
+- `README.md` — Serde JSON &emsp; [![Build Status]][actions] [![Latest Version]][crates.io] [![Rustc Version 1.36+]][rustc] _1720w_
+- `CHANGELOG.md` — Changelog _30w_
+- `README.md` — README _552w_
+- `README.md` — Helpers to write more compact simd code _64w_
+- `CHANGELOG.md` — CHANGELOG _864w_
+- `README.md` — simplelog [![Build Status](https://github.com/drakulix/simplelog.rs/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/Drakulix/simplelog.rs/actions) [![Coverage Status](https://coveralls.io/repos/github/Drakulix/simplelog.rs/badge.svg?branch=master)](https://coveralls.io/github/Drakulix/simplelog.rs?branch=master) [![Crates.io](https://img.shields.io/crates/v/simplelog.svg)](https://crates.io/crates/simplelog) [![Crates.io](https://img.shields.io/crates/l/simplelog.svg)](https://crates.io/crates/simplelog) _421w_
+- `README.md` — README _95w_
+- `README.md` — README _693w_
+- `CHANGELOG.md` — Changelog _470w_
+- `README.md` — spin-rs _648w_
+- `CHANGELOG.md` — v1.2.0 _147w_
+- `README.md` — README _269w_
+- `CHANGELOG.md` — Change Log _675w_
+- `README.md` — strsim-rs _255w_
+- `SECURITY.md` — SECURITY _150w_
+- `README.md` — README _1387w_
+- `README.md` — README _549w_
+- `README.md` — README _130w_
+- `README.md` — termtree [![Main](https://github.com/rust-cli/termtree/actions/workflows/main.yml/badge.svg)](https://github.com/rust-cli/termtree/actions/workflows/main.yml) _136w_
+- `README.md` — README _841w_
+- `CHANGES.md` — Version 0.9.1 _1224w_
+- `README.md` — image-tiff _280w_
+- `README.md` — time _285w_
+- `CHANGELOG.md` — Changelog _221w_
+- `CONTRIBUTING.md` — Contributing to TinyTemplate _399w_
+- `README.md` — README _576w_
+- `README.md` — README _1808w_
+- `CHANGELOG.md` — CHANGELOG _124w_
+- `README.md` — v_frame _35w_
+- `README.md` — wait-timeout _27w_
+- `README.md` — The directory you want to recursively walk: _538w_
+- `CHANGELOG.md` — `wasm-bindgen` Change Log _7388w_
+- `CONTRIBUTING.md` — Contributing _10w_
+- `README.md` — README _428w_
+- `README.md` — Examples _30w_
+- `README.md` — Importing non-browser JS _43w_
+- `SUMMARY.md` — Summary _431w_
+- `describe.md` — Communicating types to `wasm-bindgen` _336w_
+- `exporting-rust-struct.md` — Exporting a struct to JS _744w_
+- `exporting-rust.md` — Exporting a function to JS _642w_
+- `importing-js-struct.md` — Importing a class from JS _870w_
+- `importing-js.md` — Importing a function from JS _373w_
+- `index.md` — Design of `wasm-bindgen` _484w_
+- `js-objects-in-rust.md` — Polyfill for "JS objects in wasm" _1241w_
+- `rust-type-conversions.md` — Rust Type conversions _675w_
+- `index.md` — Contributing to `wasm-bindgen` _138w_
+- `adding-more-apis.md` — Adding Support for More JavaScript Global APIs _199w_
+- `index.md` — `js-sys` _174w_
+- `testing.md` — Testing _43w_
+- `publishing.md` — Publishing New `wasm-bindgen` Releases _104w_
+- `team.md` — Team _119w_
+- `testing.md` — Running `wasm-bindgen`'s Tests _180w_
+- `index.md` — `web-sys` _104w_
+- `logging.md` — Logging _87w_
+- `overview.md` — `web-sys` Overview _186w_
+- `supporting-more-web-apis.md` — Supporting More Web APIs in `web-sys` _181w_
+- `testing.md` — Testing _52w_
+- `2d-canvas.md` — 2D Canvas _81w_
+- `add.md` — Small wasm files _233w_
+- `char.md` — Working with the `char` type _158w_
+- `closures.md` — web-sys: Closures _65w_
+- `console-log.md` — `console.log` _47w_
+- `dom.md` — web-sys: DOM hello world _94w_
+- `fetch.md` — The `fetch` API _69w_
+- `hello-world.md` — Hello, World! _163w_
+- `import-js.md` — Importing non-browser JS _97w_
+- `index.md` — Examples of using `wasm-bindgen`, `js-sys`, and `web-sys` _156w_
+- `julia.md` — Julia Set _72w_
+- `paint.md` — Paint Example _73w_
+- `performance.md` — web-sys: `performance.now` _52w_
+- `raytrace.md` — Parallel Raytracing _969w_
+- `request-animation-frame.md` — `web-sys`: A `requestAnimationFrame` Loop _88w_
+- `synchronous-instantiation.md` — Synchronous Instantiation _182w_
+- `todomvc.md` — TODO MVC using wasm-bingen and web-sys _109w_
+- `wasm-audio-worklet.md` — Wasm audio worklet _219w_
+- `wasm-in-wasm.md` — js-sys: WebAssembly in WebAssembly _42w_
+- `wasm-in-web-worker.md` — Wasm in Web Worker _324w_
+- `wasm2js.md` — Converting WebAssembly to JS _197w_
+- `weather_report.md` — web-sys: Weather report _60w_
+- `web-audio.md` — WebAudio _88w_
+- `webgl.md` — WebGL Example _83w_
+- `webrtc_datachannel.md` — WebRTC DataChannel Example _69w_
+- `websockets.md` — WebSockets Example _111w_
+- `without-a-bundler.md` — Without a Bundler _329w_
+- `introduction.md` — Introduction _285w_
+- `accessing-properties-of-untyped-js-values.md` — Accessing Properties of Untyped JavaScript Values _235w_
+- `arbitrary-data-with-serde.md` — Serializing and Deserializing Arbitrary Data Into and From `JsValue` with Serde _690w_
+- `index.md` — `#[wasm_bindgen]` Attributes _42w_
+- `catch.md` — `catch` _166w_
+- `constructor.md` — `constructor` _98w_
+- `extends.md` — `extends = Class` _171w_
+- `final.md` — `final` _812w_
+- `getter-and-setter.md` — `getter` and `setter` _329w_
+- `index.md` — `#[wasm_bindgen]` on JavaScript Imports _30w_
+- `indexing-getter-setter-deleter.md` — `indexing_getter`, `indexing_setter`, and `indexing_deleter` _311w_
+- `js_class.md` — `js_class = "Blah"` _101w_
+- `js_name.md` — `js_name = blah` _316w_
+- `js_namespace.md` — `js_namespace = blah` _263w_
+- `method.md` — `method` _87w_
+- `module.md` — `module = "blah"` _120w_
+- `no_deref.md` — `no_deref` _81w_
+- `raw_module.md` — `raw_module = "blah"` _116w_
+- `static_method_of.md` — `static_method_of = Blah` _138w_
+- `structural.md` — `structural` _211w_
+- `typescript_type.md` — typescript_type _135w_
+- `variadic.md` — Variadic Parameters _199w_
+- `vendor_prefix.md` — Vendor-prefixed APIs _118w_
+- `constructor.md` — `constructor` _201w_
+- `getter-and-setter.md` — `getter` and `setter` _232w_
+- `getter_with_clone.md` — `getter_with_clone` _67w_
+- `index.md` — `#[wasm_bindgen]` on Rust Exports _22w_
+- `inspectable.md` — `inspectable` _257w_
+- `js_class.md` — `js_class = Blah` _109w_
+- `js_name.md` — `js_name = Blah` _161w_
+- `main.md` — `main` _140w_
+- `readonly.md` — `readonly` _123w_
+- `skip.md` — `skip` _139w_
+- `skip_jsdoc.md` — `skip_jsdoc` _176w_
+- `skip_typescript.md` — `skip_typescript` _122w_
+- `start.md` — `start` _201w_
+- `typescript_custom_section.md` — `typescript_custom_section` _150w_
+- `browser-support.md` — Supported Browsers _212w_
+- `cli.md` — The `wasm-bindgen` Command Line Interface _608w_
+- `deployment.md` — Deploying Rust and WebAssembly _617w_
+- `index.md` — Reference _63w_
+- `iterating-over-js-values.md` — Iterating over JavaScript Values _417w_
+- `js-promises-and-rust-futures.md` — Working with a JS `Promise` and a Rust `Future` _636w_
+- `js-snippets.md` — JS Snippets _483w_
+- `optimize-size.md` — Optimizing for Size with `wasm-bindgen` _373w_
+- `passing-rust-closures-to-js.md` — Passing Rust Closures to Imported JavaScript Functions _456w_
+- `receiving-js-closures-in-rust.md` — Receiving JavaScript Closures in Exported Rust Functions _119w_
+- `reference-types.md` — Support for Reference Types _249w_
+- `rust-targets.md` — Supported Rust Targets _283w_
+- `static-js-objects.md` — Use of `static` to Access JS Objects _209w_
+- `bool.md` — `bool` _62w_
+- `boxed-number-slices.md` — Boxed Number Slices: `Box<[u8]>`, `Box<[i8]>`, `Box<[u16]>`, `Box<[i16]>`, `Box<[u32]>`, `Box<[i32]>`, `Box<[u64]>`, `Box<[i64]>`, `Box<[f32]>`, and `Box<[f64]>` _120w_
+- `boxed-slices.md` — `Box<[T]>` and `Vec<T>` _115w_
+- `char.md` — `char` _62w_
+- `exported-rust-types.md` — Exported `struct Whatever` Rust Types _100w_
+- `imported-js-types.md` — Imported `extern Whatever;` JavaScript Types _72w_
+- `jsvalue.md` — `JsValue` _61w_
+- `non-null.md` — `NonNull<T>` _62w_
+- `number-slices.md` — Number Slices: `[u8]`, `[i8]`, `[u16]`, `[i16]`, `[u32]`, `[i32]`, `[u64]`, `[i64]`, `[f32]`, and `[f64]` _89w_
+- `numbers.md` — Numbers: `u8`, `i8`, `u16`, `i16`, `u32`, `i32`, `u64`, `i64`, `isize`, `usize`, `f32`, and `f64` _75w_
+- `pointers.md` — `*const T` and `*mut T` _66w_
+- `result.md` — `Result<T, E>` _189w_
+- `str.md` — `str` _323w_
+- `string.md` — `String` _107w_
+- `types.md` — Supported Rust Types and their JavaScript Representations _34w_
+- `weak-references.md` — Support for Weak References _150w_
+- `working-with-duck-typed-interfaces.md` — Working with Duck-Typed Interfaces _76w_
+- `asynchronous-tests.md` — Writing Asynchronous Tests _198w_
+- `browsers.md` — Testing in Headless Browsers _711w_
+- `continuous-integration.md` — Setting Up Continuous Integration with `wasm-bindgen-test` _212w_
+- `index.md` — Testing on `wasm32-unknown-unknown` with `wasm-bindgen-test` _71w_
+- `usage.md` — Using `wasm-bindgen-test` _397w_
+- `cargo-features.md` — Cargo Features in `web-sys` _102w_
+- `function-overloads.md` — Function Overloads _109w_
+- `index.md` — The `web-sys` Crate _91w_
+- `inheritance.md` — Inheritance in `web-sys` _297w_
+- `type-translations.md` — Type Translations in `web-sys` _179w_
+- `unstable-apis.md` — Unstable APIs _183w_
+- `using-web-sys.md` — Using `web-sys` _173w_
+- `release-announcement-template.md` — Announcing `wasm-bindgen` $TODO_VERSION _105w_
+- `README.md` — `wasm-bindgen-macro` _168w_
+- `CHANGELOG.md` — CHANGELOG: wayland-backend _802w_
+- `README.md` — wayland-backend _194w_
+- `CHANGELOG.md` — CHANGELOG: wayland-client _440w_
+- `README.md` — wayland-client _101w_
+- `CHANGELOG.md` — CHANGELOG: wayland-protocols _308w_
+- `README.md` — wayland-protocols _102w_
+- `MEMBERS.md` — wayland-protocols members _67w_
+- `README.md` — Wayland protocols _1631w_
+- `engines.md` — security-context-v1 engines _80w_
+- `CHANGELOG.md` — CHANGELOG: wayland-protocols-wlr _46w_
+- `README.md` — wayland-protocols-wlr _62w_
+- `README.md` — wlr-protocols _44w_
+- `CHANGELOG.md` — CHANGELOG: wayland-scanner _153w_
+- `README.md` — wayland-scanner _58w_
+- `CHANGELOG.md` — CHANGELOG: wayland-sys _107w_
+- `README.md` — wayland-sys _133w_
+- `Changes.md` — Changes _284w_
+- `README.md` — weezl _118w_
+- `CHANGELOG.md` — CHANGELOG _69w_
+- `README.md` — README _48w_
+- `CHANGELOG.md` — CHANGELOG _140w_
+- `README.md` — zune-inflate _435w_
+- `Benches.md` — Benchmarks of popular jpeg libraries _358w_
+- `Changelog.md` — Changelog _279w_
+- `README.md` — Zune-JPEG _519w_
+- `README.md` — 💤 LazyVim _15w_
+- `README.md` — Spicetify Marketplace _95w_
+- `README.md` — Flow _36w_
+- `README.md` — 💤 LazyVim _15w_
+- `README.md` — Spicetify Marketplace _95w_
+- `README.md` — Flow _36w_
+- `README.md` — Supertonic 2 — Lightning Fast, On-Device TTS, Multilingual TTS _769w_
+- `README.md` — README _7w_
+- `RELEASE_NOTES.md` — Unreleased _19419w_
+- `README.md` — README _7w_
+- `RELEASE_NOTES.md` — Unreleased _19469w_
+- `README.md` — 💤 LazyVim _15w_
+- `README.md` — Spicetify Marketplace _95w_
+- `README.md` — Flow _36w_
+- `README.md` — Opusfile _80w_
+- `README.md` — Simple DirectMedia Layer (SDL) Version 2.0 _71w_
+- `README.md` — Opusfile _80w_
+- `README.md` — Simple DirectMedia Layer (SDL) Version 2.0 _71w_
+- `review.md` — Vault Reorganization Report _16360w_
+- `0517bfed-4eea-47b3-a208-b78b291ef991.md` — 0517bfed-4eea-47b3-a208-b78b291ef991 _844w_
+- `07179e59-3c94-4ae4-b8d7-47ba645b0d6f.md` — 1. Explicit native packages _1917w_
+- `075ffbda-9226-462d-a8dd-8c37a729df2e.md` — 075ffbda-9226-462d-a8dd-8c37a729df2e _289w_
+- `0c7c55bf-f4df-4e89-9b88-f43a1f0d7c20.md` — 0c7c55bf-f4df-4e89-9b88-f43a1f0d7c20 _630w_
+- `124bb989-d1ba-44fe-94b9-c0fc28917589.md` — 124bb989-d1ba-44fe-94b9-c0fc28917589 _385w_
+- `14b4291f-1bf4-4c1c-bf8b-5371780b4bb7.md` — 14b4291f-1bf4-4c1c-bf8b-5371780b4bb7 _1031w_
+- `188fd709-a864-4f32-9e30-af86cb2a5916.md` — First, update the chaotic-keyring package with signature checking disabled _6316w_
+- `1a61688d-853f-4669-92ce-7d2787dc3483.md` — Install spicetify-cli (Arch) _2118w_
+- `1f306fda-25d7-4d4a-9935-9ae94c86844b.md` — Restore default mode — delete flag and reload _7224w_
+- `245bf3a0-61b9-4bad-9fab-f98bd857d15a.md` — █░█░█ █ █▄░█ █▀▄ █▀█ █░█░█   █▀█ █░█ █░░ █▀▀ █▀ _5594w_
+- `2580aea1-82f1-4ff7-be89-3d22b4aaada6.md` — If you have the HyDE repo cloned _666w_
+- `25c2c922-3bab-4bbd-843b-c14f6f6a2c9a.md` — 25c2c922-3bab-4bbd-843b-c14f6f6a2c9a _529w_
+- `27b07e5b-1c36-466a-ba5f-8cf34fbc7c94.md` — 27b07e5b-1c36-466a-ba5f-8cf34fbc7c94 _260w_
+- `27ed51c4-e66b-4b4d-9409-7cf3a147b110.md` — Then manually clone any repo once to cache credentials _951w_
+- `28f9f8e1-7311-4f06-a4fa-3b4358742a5a.md` — Waybar performance _3463w_
+- `29ef7859-3753-4ba0-b020-f79d76bb7a4d.md` — For alice → GNOME _2901w_
+- `2a29b52b-f835-4f0c-87cb-5b9919b188fa.md` — OFF _4094w_
+- `320c5fcd-e894-444d-82b4-0cb1f3c9baf2.md` — 320c5fcd-e894-444d-82b4-0cb1f3c9baf2 _597w_
+- `3be2d884-e90b-4b3c-a857-e19ea60e0aeb.md` — // You can use the commands below or use the HyDE CLI to set the cursor globally _574w_
+- `3ef8db0b-28b0-4ec4-9c36-12a957a9b0a9.md` — or if you have the snap version _1616w_
+- `46a04f74-e032-4e34-9c5b-c962a168d5ca.md` — 46a04f74-e032-4e34-9c5b-c962a168d5ca _553w_
+- `4752aab3-61da-4ee1-9cf9-071f21585614.md` — If using yay: _2492w_
+- `4a988383-59d2-47a2-96fa-6a226ab5e540.md` — Check if point is on the line segment _3258w_
+- `52b7d857-9580-4152-9557-0d9cf68df0de.md` — Compile SolarSystem.cpp _4299w_
+- `536764de-b3ed-487e-b374-dd9acd183cc7.md` — Script to set up a local LLM environment on Arch Linux _1675w_
+- `56968454-d918-4f2d-a2a9-fc0e870d8fb1.md` — Fedora _4481w_
+- `5aae25d7-0ea4-4598-9962-5891254bc787.md` — 5aae25d7-0ea4-4598-9962-5891254bc787 _577w_
+- `5b699cf6-3044-44b6-a343-e0f2f7b01191.md` — See what's there _7399w_
+- `5ca44207-f97b-4e70-b183-e706ede221aa.md` — 5ca44207-f97b-4e70-b183-e706ede221aa _1258w_
+- `5d459cb0-046a-4268-8186-e2fb3ba1749b.md` — Draw instructions _731w_
+- `5d7b03ae-9bf0-4409-b3c8-e168e170c434.md` — █░█░█ █ █▄░█ █▀▄ █▀█ █░█░█   █▀█ █░█ █░░ █▀▀ █▀ _1239w_
+- `5dd3ece6-6217-4030-ba69-7f2d51e14a12.md` — Move games to new location _254w_
+- `62d8f2b6-076c-4ae1-a1f8-1d01063b1e7e.md` — Find the last commit before today _3099w_
+- `63bdd067-083b-407b-a768-6d28f49a4196.md` — Create a custom model with this system prompt _1867w_
+- `65bde5d9-51c2-4ce1-b0e4-bb2182a8d1dd.md` — Abstract Objects Layer _609w_
+- `666267a9-d1b7-42d8-8ce8-fb5682dc8ae8.md` — Try to tabulate if it's a list of dictionaries _4831w_
+- `66c9ec53-6894-4cfc-aaab-3859f79c86c4.md` — Remove the problematic packages _3481w_
+- `6b3fadbd-7bcb-4faf-a150-e3a3d1ee87eb.md` — Test specific champion _466w_
+- `6c04454f-80a4-4467-8fd7-be6efe3f3299.md` — 6c04454f-80a4-4467-8fd7-be6efe3f3299 _73w_
+- `6c1f01d5-d6d4-4fc4-b9b0-03dfb548e1bc.md` — 6c1f01d5-d6d4-4fc4-b9b0-03dfb548e1bc _958w_
+- `6d153bfe-a36d-4fe0-8ac5-fd3ec846676b.md` — 6d153bfe-a36d-4fe0-8ac5-fd3ec846676b _292w_
+- `6e62cc91-db7b-4b09-b158-cc5f21891a4b.md` — Read current fan speed on AC power _4151w_
+- `70f7e24f-b07c-45ca-943a-366af9b606c9.md` — /etc/pacman.conf _2974w_
+- `73c549e2-c089-422f-bfe0-7b3cd67e753d.md` — docker compose v2 is bundled with recent docker packages, check: _8023w_
+- `765fb86d-9ad0-4047-906b-88f799702e2f.md` — Check if Docker is running _4054w_
+- `7d79531e-9e62-4f22-a85f-ef87fc799504.md` — │ Type   │ Pre # │ Date                            │ User │ Cleanup │ Description               │ Userdata _2558w_
+- `7f53ab17-7659-4f81-ba2b-2aee285f4a5a.md` — Assuming you're in /home/tizz/Documents/C++/space4 _3154w_
+- `8348bf3c-81ee-4064-8d5b-c0a13872d905.md` — utils/vector3d.py _12140w_
+- `85ef630c-a4de-4349-bd00-45aace11929d.md` — Skip empty lines _2889w_
+- `8c2e4ee2-3997-4875-8303-6cbc02aa6cec.md` — Enable NVIDIA Container Runtime _1436w_
+- `8fb5610f-3f4a-43b2-8582-7487ff115119.md` — scripts/camera.py _6539w_
+- `9084eadc-3603-4db6-9a06-fb7fba3378e2.md` — 9084eadc-3603-4db6-9a06-fb7fba3378e2 _1122w_
+- `936e0eb8-1bae-4edb-945b-0ffd39a5db98.md` — ╔══════════════════════════════════════════════════════════════╗ _7014w_
+- `937ff16f-3b68-4bdd-95cd-25c7d0c3d199.md` — Ultimate Vimrc Configuration Guide _1288w_
+- `9aa2aaad-b83f-4dd1-87e3-e8e0d2cfb344.md` — Check what's being loaded _451w_
+- `9b0d2e94-ddde-4a1e-b04e-f5ced00be922.md` — 9b0d2e94-ddde-4a1e-b04e-f5ced00be922 _877w_
+- `9bf306cd-4dc6-4631-9601-49f2a8c41af9.md` — Common locations to check _1043w_
+- `9ff54bf2-15b8-493f-a751-4fa99dd96e0c.md` — scripts/body.py _1647w_
+- `a8729c7e-35d0-46e6-b576-ae0f71d5427a.md` — Create a virtual environment _353w_
+- `aa5ff503-b54a-4769-856d-d10a8ee2586f.md` — 🔧 Replace with your Steam API Key and Steam64 ID _5764w_
+- `ab13b8aa-45c9-47dc-af79-d6dd20b300de.md` — Fix just the Ori-specific directory _5535w_
+- `ab4d74b7-c77e-4d6d-bc30-e1850476d073.md` — ab4d74b7-c77e-4d6d-bc30-e1850476d073 _2172w_
+- `ac7265ca-0d89-441f-8651-13e151055b98.md` — recommended for screen sharing: _721w_
+- `af59be8e-3068-45bc-b1f9-e83e92dfbb53.md` — af59be8e-3068-45bc-b1f9-e83e92dfbb53 _1177w_
+- `b63f6001-dddf-4e42-b063-a11d03703056.md` — b63f6001-dddf-4e42-b063-a11d03703056 _1721w_
+- `b6bc3deb-f501-4a8e-9ae3-8f3dc79be838.md` — On macOS: _1160w_
+- `bd131ad3-1786-4cb2-a1e5-ee97a318187b.md` — Install 32-bit graphics libraries (Steam needs these) _692w_
+- `bd9640c3-cc3c-4003-9b7e-a450b4cba0c0.md` — bd9640c3-cc3c-4003-9b7e-a450b4cba0c0 _1284w_
+- `c2699990-d044-40d0-a639-e9db539aacbd.md` — c2699990-d044-40d0-a639-e9db539aacbd _1053w_
+- `c5a069c9-cb60-455b-ab50-5b3358a3e92b.md` — c5a069c9-cb60-455b-ab50-5b3358a3e92b _179w_
+- `c5eea1fc-43f0-488d-a2ad-362b08b7007d.md` — Create a snapshot of root (assumes snapper is configured for /) _642w_
+- `d07f505b-a9f9-4fed-9d79-ea0d733e0e5d.md` — Alternative title different from filename _602w_
+- `d1e2b753-5677-4f2a-ac24-ea83f9fc0617.md` — Find your root partition _862w_
+- `d7097a6d-c539-4511-8761-0eb765521580.md` — d7097a6d-c539-4511-8761-0eb765521580 _217w_
+- `d9240fca-b80f-45d7-95d2-245b2ed3813d.md` — d9240fca-b80f-45d7-95d2-245b2ed3813d _356w_
+- `da776680-9d69-47b7-ba5d-acbeb8c37e5c.md` — renice running build (find the ninja/make PID first) _1694w_
+- `dd587482-08eb-459f-9ec9-6f9f22b5346f.md` — dd587482-08eb-459f-9ec9-6f9f22b5346f _1632w_
+- `dd8b7efb-63cd-4e95-a782-9fef4e0e5bc1.md` — dd8b7efb-63cd-4e95-a782-9fef4e0e5bc1 _418w_
+- `e055a03f-20bf-4068-9d68-87efa0229d8c.md` — For yay _6210w_
+- `e1744133-e808-4c9d-bd03-c9633473e5db.md` — Update the package database _1497w_
+- `e336cf9e-d56d-4a57-9f99-3ed1e4314f63.md` — e336cf9e-d56d-4a57-9f99-3ed1e4314f63 _299w_
+- `e6c1eb07-a96b-44ce-9ff5-b0a7457b2fb7.md` — e6c1eb07-a96b-44ce-9ff5-b0a7457b2fb7 _440w_
+- `e8fed542-81e1-4f58-b4cc-1d7b49f8df7d.md` — ---- Definitions ---- _965w_
+- `ea8e1f98-bf06-45e5-a100-0465f1b3f848.md` — ea8e1f98-bf06-45e5-a100-0465f1b3f848 _207w_
+- `eaf813d1-ab86-4d57-bc5d-527ae4bf3ff3.md` — eaf813d1-ab86-4d57-bc5d-527ae4bf3ff3 _237w_
+- `ec16e8a8-3285-4d3d-8da7-b5f87ccbb823.md` — ec16e8a8-3285-4d3d-8da7-b5f87ccbb823 _994w_
+- `ec511a70-8183-4494-a975-c1b2a7bd95f2.md` — Install NVIDIA drivers _418w_
+- `ef6c9b25-603e-4379-ab47-79a7d752a03c.md` — The basic colors _6889w_
+- `f2ef2d82-8391-4759-bbc7-2817d85d17ec.md` — f2ef2d82-8391-4759-bbc7-2817d85d17ec _648w_
+- `f406950f-6fb0-41f7-96e7-060296c50620.md` — f406950f-6fb0-41f7-96e7-060296c50620 _127w_
+- `f79b59b7-a1e5-4444-9119-645876e2d5a1.md` — Static information about the filesystems. _823w_
+- `f8549703-3fac-4b3a-8933-80baea682115.md` — Option 1: Using AUR helper like yay _1539w_
+- `fc8eb544-3411-4049-9852-a69b29311c4c.md` — fc8eb544-3411-4049-9852-a69b29311c4c _521w_
+- `fcc3d902-1bd8-4b17-b084-55d2fca704a4.md` — fcc3d902-1bd8-4b17-b084-55d2fca704a4 _573w_
+- `README.md` — README _26w_
+- `README.md` — README _20w_
+- `README.md` — MaterialX Data Libraries _498w_
+- `README.md` — Running Tests _6w_
+- `README.md` — MaterialX Data Libraries _498w_
+- `README.md` — Test data for `test_zipfile`, `test_tarfile` (and even some others) _155w_
+- `README.md` — `legacy-decode` Sample _553w_
+- `README.md` — `legacy-encode` Sample _554w_
+- `README.md` — `legacy-vpp` Sample _562w_
+- `README.md` — `hello-decode` Sample _592w_
+- `README.md` — `hello-decvpp` Sample _650w_
+- `README.md` — `hello-encode` Sample _587w_
+- `README.md` — `hello-encode-jpeg` Sample _587w_
+- `README.md` — `hello-sharing-vaapi` Sample _694w_
+- `README.md` — `hello-transcode` Sample _565w_
+- `README.md` — `hello-vpp` Sample _606w_
+- `README.md` — `vpl-infer` Sample _1273w_
+- `LICENSE.md` — LICENSE _33w_
+- `LICENSE.md` — LICENSE _33w_
+- `PULL_REQUEST_TEMPLATE.md` — PULL_REQUEST_TEMPLATE _64w_
+- `CHANGELOG.md` — Changelog _21843w_
+- `CONTRIBUTING.md` — Contributing to LazyVim _374w_
+- `NEWS.md` — What's new? _1355w_
+- `README-CN.md` — README-CN _290w_
+- `README-DE.md` — README-DE _405w_
+- `README-ES.md` — README-ES _478w_
+- `README-FR.md` — README-FR _487w_
+- `README-IT.md` — README-IT _462w_
+- `README-JP.md` — README-JP _242w_
+- `README-KO.md` — README-KO _452w_
+- `README-PL.md` — README-PL _426w_
+- `README-PT.md` — README-PT _456w_
+- `README.md` — README _455w_
+- `README.md` — Better Digraphs _279w_
+- `README.md` — blink-copilot _1583w_
+- `CHANGELOG.md` — CHANGELOG _11707w_
+- `README.md` — README _307w_
+- `completion.md` — Completion _2250w_
+- `fuzzy.md` — Fuzzy _993w_
+- `general.md` — General _400w_
+- `keymap.md` — Keymap _1221w_
+- `reference.md` — Reference _4250w_
+- `signature.md` — Signature _164w_
+- `snippets.md` — Snippets _700w_
+- `sources.md` — Sources _859w_
+- `architecture.md` — Architecture _294w_
+- `lsp-tracker.md` — LSP Support Tracker _233w_
+- `source-boilerplate.md` — Source Boilerplate _883w_
+- `index.md` — Introduction _388w_
+- `installation.md` — Installation _1014w_
+- `cmdline.md` — Command line (cmdline) _616w_
+- `recipes.md` — Recipes _2334w_
+- `vimdoc.md` — Config _34w_
+- `CHANGELOG.md` — Changelog _531w_
+- `README.md` — README _1524w_
+- `PULL_REQUEST_TEMPLATE.md` — PULL_REQUEST_TEMPLATE _94w_
+- `CHANGELOG.md` — Changelog _1928w_
+- `README.md` — README _4295w_
+- `README.md` — README _447w_
+- `CHANGELOG.md` — Changelog _3611w_
+- `README.md` — conform.nvim _5649w_
+- `advanced_topics.md` — Advanced topics _486w_
+- `debugging.md` — Debugging _967w_
+- `formatter_options.md` — Formatter Options _403w_
+- `recipes.md` — Recipes _997w_
+- `block_quote.md` — block_quote _15w_
+- `combined_injections.md` — combined_injections _23w_
+- `list_item.md` — list_item _10w_
+- `simple.md` — simple _11w_
+- `CHANGELOG.md` — Changelog _2724w_
+- `CLAUDE.md` — CLAUDE.md _446w_
+- `README.md` — copilot.lua _2200w_
+- `SettingsOpts.md` — The following are config variables and their options for the copilot LSP which are set in the "settings" field of the client's startup _118w_
+- `CVE_Remediator.agent.md` — CVE_Remediator.agent _1476w_
+- `Debugger.agent.md` — Debugger.agent _1010w_
+- `README.md` — GitHub Copilot macOS Policy Configuration _602w_
+- `README.md` — GitHub Copilot Group Policy Templates for Windows _545w_
+- `bug_report.md` —  _117w_
+- `PULL_REQUEST_TEMPLATE.md` — PULL_REQUEST_TEMPLATE _70w_
+- `CHANGELOG.md` — Changelog _1151w_
+- `README.md` — Dressing.nvim _1359w_
+- `PULL_REQUEST_TEMPLATE.md` — PULL_REQUEST_TEMPLATE _54w_
+- `CHANGELOG.md` — Changelog _2577w_
+- `README.md` — ⚡flash.nvim _3192w_
+- `README.md` — Friendly Snippets _361w_
+- `AGENTS.md` — Repository Guidelines _274w_
+- `CHANGELOG.md` — Changelog _2347w_
+- `CONTRIBUTING.md` — CONTRIBUTING _113w_
+- `README.md` — gitsigns.nvim _1061w_
+- `commit-message.md` — Commit Message Guidelines _120w_
+- `pull-request.md` — Pull Request Guidelines _135w_
+- `testing.md` — Testing Guidelines _175w_
+- `CONTRIBUTING.md` — Contributing _164w_
+- `README.md` — grug-far.nvim _3677w_
+- `pull_request_template.md` — pull_request_template _134w_
+- `CHANGELOG.md` — Changelog _1195w_
+- `README.md` — Gruvbox Material _756w_
+- `sample.md` — H1 _249w_
+- `api.md` — Lua API Reference _994w_
+- `copilot-instructions.md` — Copilot Instructions for gruvbox.nvim _905w_
+- `README.md` — Prerequisites _401w_
+- `PULL_REQUEST_TEMPLATE.md` — PULL_REQUEST_TEMPLATE _54w_
+- `CHANGELOG.md` — Changelog _9848w_
+- `README.md` — README _301w_
+- `TODO.md` — ✅ TODO _594w_
+- `PULL_REQUEST_TEMPLATE.md` — PULL_REQUEST_TEMPLATE _54w_
+- `CHANGELOG.md` — Changelog _734w_
+- `README.md` — 💻 `lazydev.nvim` _790w_
+- `bug_report.md` —  _77w_
+- `README.md` — lazygit.nvim _1051w_
+- `bug_report.md` — Bug:  _238w_
+- `feature_request.md` — Feat:  _59w_
+- `CONTRIBUTING.md` — Contributing to lualine.nvim _429w_
+- `README.md` — lualine.nvim _4684w_
+- `THEMES.md` — Available themes _797w_
+- `README.md` — README _1560w_
+- `README.md` — neovim-client _325w_
+- `HISTORY.md` — HISTORY _614w_
+- `README.md` — accepts _452w_
+- `README.md` — After [![Build Status][1]][2] _277w_
+- `Readme.md` — backo _72w_
+- `README.md` — base64-arraybuffer _64w_
+- `CHANGELOG.md` — [2.0.0](https://github.com/faeldt/base64id/compare/1.0.0...2.0.0) (2019-05-27) _32w_
+- `README.md` — README _54w_
+- `README.md` — Blob _48w_
+- `History.md` — History _36w_
+- `Readme.md` — bind _131w_
+- `History.md` — History _182w_
+- `Readme.md` — Emitter [![Build Status](https://travis-ci.org/component/emitter.png)](https://travis-ci.org/component/emitter) _182w_
+- `History.md` — History _9w_
+- `Readme.md` — inherit _32w_
+- `HISTORY.md` — HISTORY _408w_
+- `README.md` — cookie _1261w_
+- `CHANGELOG.md` — date-format Changelog _371w_
+- `README.md` — README _301w_
+- `CHANGELOG.md` — CHANGELOG _1746w_
+- `README.md` — debug _1589w_
+- `CHANGELOG.md` — [3.5.0](https://github.com/socketio/engine.io/compare/3.4.2...3.5.0) (2020-12-30) _55w_
+- `README.md` — Engine.IO: the realtime engine _2813w_
+- `CHANGELOG.md` — CHANGELOG _1746w_
+- `README.md` — debug _1803w_
+- `readme.md` — ms _284w_
+- `CHANGELOG.md` — [3.5.0](https://github.com/socketio/engine.io-client/compare/3.4.4...3.5.0) (2020-12-30) _106w_
+- `README.md` — Engine.IO client _1539w_
+- `Readme.md` — engine.io-parser _781w_
+- `README.md` — event-lite.js [![npm version](https://badge.fury.io/js/event-lite.svg)](http://badge.fury.io/js/event-lite) [![Build Status](https://travis-ci.org/kawanet/event-lite.svg?branch=master)](https://travis-ci.org/kawanet/event-lite) _323w_
+- `README.md` — flatted _515w_
+- `SPECS.md` — Flatted Specifications _531w_
+- `README.md` — README _1114w_
+- `README.md` — graceful-fs _789w_
+- `History.md` — [1.0.0](https://github.com/darrachequesne/has-binary/compare/0.1.7...1.0.0) (2017-04-05) _101w_
+- `README.md` — README _12w_
+- `History.md` — History _44w_
+- `Readme.md` — has-cors _42w_
+- `README.md` — ieee754 [![travis][travis-image]][travis-url] [![npm][npm-image]][npm-url] [![downloads][downloads-image]][downloads-url] [![javascript style guide][standard-image]][standard-url] _156w_
+- `Readme.md` — indexOf _20w_
+- `README.md` — int64-buffer _823w_
+- `README.md` — isarray _217w_
+- `CHANGELOG.md` — CHANGELOG _817w_
+- `README.md` — README _690w_
+- `README.md` — log4js-node [![Build Status](https://secure.travis-ci.org/log4js-node/log4js-node.png?branch=master)](http://travis-ci.org/log4js-node/log4js-node) [![codecov](https://codecov.io/gh/log4js-node/log4js-node/branch/master/graph/badge.svg)](https://codecov.io/gh/log4js-node/log4js-node) _570w_
+- `README.md` — debug _1929w_
+- `readme.md` — ms _290w_
+- `HISTORY.md` — HISTORY _1398w_
+- `README.md` — mime-db _487w_
+- `HISTORY.md` — HISTORY _1125w_
+- `README.md` — mime-types _326w_
+- `readme.md` — ms _249w_
+- `README.md` — msgpack-lite [![npm version](https://badge.fury.io/js/msgpack-lite.svg)](http://badge.fury.io/js/msgpack-lite) [![Build Status](https://travis-ci.org/kawanet/msgpack-lite.svg?branch=master)](https://travis-ci.org/kawanet/msgpack-lite) _1774w_
+- `README.md` — isarray _226w_
+- `HISTORY.md` — HISTORY _344w_
+- `README.md` — negotiator _496w_
+- `README.md` — README _12w_
+- `History.md` — History _8w_
+- `README.md` — parseuri _8w_
+- `readme.md` — rfdc _447w_
+- `CHANGELOG.md` — [2.4.0](https://github.com/socketio/socket.io/compare/2.3.0...2.4.0) (2021-01-04) _26w_
+- `Readme.md` — socket.io _1092w_
+- `CHANGELOG.md` — CHANGELOG _1746w_
+- `README.md` — debug _1803w_
+- `readme.md` — ms _284w_
+- `Readme.md` — socket.io-adapter _57w_
+- `CHANGELOG.md` — [2.4.0](https://github.com/Automattic/socket.io-client/compare/2.3.1...2.4.0) (2021-01-04) _103w_
+- `README.md` — socket.io-client _185w_
+- `CHANGELOG.md` — CHANGELOG _18w_
+- `Readme.md` — socket.io-parser _202w_
+- `CHANGELOG.md` — CHANGELOG _15w_
+- `Readme.md` — socket.io-parser _202w_
+- `History.md` — History _163w_
+- `Readme.md` — Emitter [![Build Status](https://travis-ci.org/component/emitter.png)](https://travis-ci.org/component/emitter) _182w_
+- `CHANGELOG.md` — CHANGELOG _1746w_
+- `README.md` — debug _1803w_
+- `readme.md` — ms _284w_
+- `CHANGELOG.md` — streamroller Changelog _988w_
+- `README.md` — README _672w_
+- `README.md` — debug _1929w_
+- `readme.md` — ms _290w_
+- `README.md` — to-array _38w_
+- `README.md` — tslib _389w_
+- `generator.md` — The `__generator` helper _3115w_
+- `README.md` — universalify _227w_
+- `README.md` — ws: a Node.js WebSocket library _1579w_
+- `README.md` — node-XMLHttpRequest # _320w_
+- `README.md` — yeast _348w_
+- `test.md` — markdown-preview.vim _529w_
+- `CHANGELOG.md` — Changelog _1148w_
+- `README.md` — README _599w_
+- `CHANGELOG.md` — Changelog _1909w_
+- `CONTRIBUTING.md` — Contribution policy _306w_
+- `README.md` — README _1418w_
+- `SECURITY.md` — Security policy _39w_
+- `README.md` — ✨ mdmath.nvim _548w_
+- `README.md` — MathJax _1267w_
+- `README.md` — README _870w_
+- `README.md` — README _724w_
+- `README.md` — README _944w_
+- `PULL_REQUEST_TEMPLATE.md` — PULL_REQUEST_TEMPLATE _14w_
+- `CHANGELOG.md` — Version 0.18.0-dev _9027w_
+- `CONTRIBUTING.md` — Contributing _1922w_
+- `MAINTAINING.md` — Maintaining _3193w_
+- `README.md` — README _2007w_
+- `TESTING.md` — How to test with 'mini.test' _4965w_
+- `README.md` — Benchmarks for 'mini.starter' _357w_
+- `startup-summary.md` — startup-summary _131w_
+- `mini-ai.md` — mini-ai _870w_
+- `mini-align.md` — mini-align _970w_
+- `mini-animate.md` — mini-animate _1069w_
+- `mini-base16.md` — mini-base16 _762w_
+- `mini-basics.md` — mini-basics _869w_
+- `mini-bracketed.md` — mini-bracketed _1118w_
+- `mini-bufremove.md` — mini-bufremove _585w_
+- `mini-clue.md` — mini-clue _1309w_
+- `mini-cmdline.md` — mini-cmdline _730w_
+- `mini-colors.md` — mini-colors _895w_
+- `mini-comment.md` — mini-comment _803w_
+- `mini-completion.md` — mini-completion _1263w_
+- `mini-cursorword.md` — mini-cursorword _572w_
+- `mini-deps.md` — mini-deps _1536w_
+- `mini-diff.md` — mini-diff _1673w_
+- `mini-doc.md` — mini-doc _1007w_
+- `mini-extra.md` — mini-extra _627w_
+- `mini-files.md` — mini-files _1127w_
+- `mini-fuzzy.md` — mini-fuzzy _552w_
+- `mini-git.md` — mini-git _725w_
+- `mini-hipatterns.md` — mini-hipatterns _724w_
+- `mini-hues.md` — mini-hues _1252w_
+- `mini-icons.md` — mini-icons _944w_
+- `mini-indentscope.md` — mini-indentscope _949w_
+- `mini-jump.md` — mini-jump _711w_
+- `mini-jump2d.md` — mini-jump2d _960w_
+- `mini-keymap.md` — mini-keymap _930w_
+- `mini-map.md` — mini-map _933w_
+- `mini-misc.md` — mini-misc _692w_
+- `mini-move.md` — mini-move _759w_
+- `mini-notify.md` — mini-notify _695w_
+- `mini-operators.md` — mini-operators _746w_
+- `mini-pairs.md` — mini-pairs _856w_
+- `mini-pick.md` — mini-pick _1489w_
+- `mini-sessions.md` — mini-sessions _749w_
+- `mini-snippets.md` — mini-snippets _2447w_
+- `mini-splitjoin.md` — mini-splitjoin _909w_
+- `mini-starter.md` — mini-starter _891w_
+- `mini-statusline.md` — mini-statusline _703w_
+- `mini-surround.md` — mini-surround _1040w_
+- `mini-tabline.md` — mini-tabline _725w_
+- `mini-test.md` — mini-test _852w_
+- `mini-trailspace.md` — mini-trailspace _583w_
+- `mini-visits.md` — mini-visits _1247w_
+- `README.md` — README _856w_
+- `PULL_REQUEST_TEMPLATE.md` — PULL_REQUEST_TEMPLATE _54w_
+- `CHANGELOG.md` — Changelog _5643w_
+- `README.md` — 💥 Noice _(Nice, Noise, Notice)_ _4282w_
+- `CHANGELOG.md` — Changelog _2103w_
+- `README.md` — nui.nvim _836w_
+- `README.md` — Input _336w_
+- `README.md` — Layout _817w_
+- `README.md` — NuiLine _325w_
+- `README.md` — Popup _1701w_
+- `README.md` — Split _207w_
+- `README.md` — NuiTable _287w_
+- `README.md` — NuiText _567w_
+- `README.md` — NuiTree _796w_
+- `README.md` — nvim-lint _2579w_
+- `CONTRIBUTING.md` — Contributing to nvim-lspconfig _949w_
+- `README.md` — nvim-lspconfig _1191w_
+- `configs.md` — LSP configs _35993w_
+- `server_configurations.md` — This file was renamed to [configs.md](./configs.md). _7w_
+- `docs_template.md` — LSP configs _32w_
+- `new_language.md` — Name of language _135w_
+- `pull_request_template.md` — pull_request_template _22w_
+- `CONTRIBUTING.md` — Contributing to `nvim-treesitter` _2944w_
+- `README.md` — Quickstart _976w_
+- `SUPPORTED_LANGUAGES.md` — Supported languages _2837w_
+- `bug_report.md` —  _100w_
+- `CONTRIBUTING.md` — Contributing _170w_
+- `README.md` — nvim-treesitter-textobjects _1101w_
+- `README.md` — nvim-ts-autotag _523w_
+- `PULL_REQUEST_TEMPLATE.md` — PULL_REQUEST_TEMPLATE _54w_
+- `CHANGELOG.md` — Changelog _378w_
+- `README.md` — 💾 Persistence _278w_
+- `POPUP.md` — Popup tracking _357w_
+- `README.md` — plenary.nvim _1554w_
+- `TESTS_README.md` — Testing Guide _577w_
+- `CHANGELOG.md` — Change Log _4461w_
+- `README.md` — render-markdown.nvim _11429w_
+- `list_table.md` — Unordered List _99w_
+- `custom-handlers.md` — Custom Handlers _520w_
+- `limitations.md` — Limitations _1233w_
+- `markdown-ecosystem.md` — Markdown Ecosystem _243w_
+- `purpose.md` — Purpose _112w_
+- `todo.md` — TODOs _10w_
+- `troubleshooting.md` — Troubleshooting _590w_
+- `ft_override.md` — Mounting sda1 _17w_
+- `PULL_REQUEST_TEMPLATE.md` — PULL_REQUEST_TEMPLATE _54w_
+- `CHANGELOG.md` — Changelog _17111w_
+- `README.md` — 🍿 `snacks.nvim` _1976w_
+- `animate.md` — 🍿 animate _421w_
+- `bigfile.md` — 🍿 bigfile _209w_
+- `bufdelete.md` — 🍿 bufdelete _176w_
+- `dashboard.md` — 🍿 dashboard _2341w_
+- `debug.md` — 🍿 debug _431w_
+- `dim.md` — 🍿 dim _192w_
+- `explorer.md` — 🍿 explorer _715w_
+- `gh.md` — 🍿 gh _1120w_
+- `git.md` — 🍿 git _97w_
+- `gitbrowse.md` — 🍿 gitbrowse _361w_
+- `health.md` — 🍿 health _100w_
+- `image.md` — 🍿 image _1170w_
+- `indent.md` — 🍿 indent _468w_
+- `init.md` — 🍿 init _365w_
+- `input.md` — 🍿 input _379w_
+- `keymap.md` — 🍿 keymap _536w_
+- `layout.md` — 🍿 layout _351w_
+- `lazygit.md` — 🍿 lazygit _410w_
+- `meta.md` — 🍿 meta _85w_
+- `notifier.md` — 🍿 notifier _1012w_
+- `notify.md` — 🍿 notify _76w_
+- `picker.md` — 🍿 picker _9724w_
+- `profiler.md` — 🍿 profiler _1623w_
+- `quickfile.md` — 🍿 quickfile _86w_
+- `rename.md` — 🍿 rename _352w_
+- `scope.md` — 🍿 scope _716w_
+- `scratch.md` — 🍿 scratch _591w_
+- `scroll.md` — 🍿 scroll _177w_
+- `statuscolumn.md` — 🍿 statuscolumn _229w_
+- `styles.md` — 🍿 styles _938w_
+- `terminal.md` — 🍿 terminal _632w_
+- `toggle.md` — 🍿 toggle _329w_
+- `util.md` — 🍿 util _528w_
+- `win.md` — 🍿 win _1134w_
+- `words.md` — 🍿 words _198w_
+- `zen.md` — 🍿 zen _381w_
+- `test-mermaid.md` — test-mermaid _34w_
+- `test.md` — test _37w_
+- `CHANGELOG.md` — Changelog _2086w_
+- `README.md` — 🏯 Solarized Osaka _771w_
+- `README.md` — telescope-fzf-native.nvim _786w_
+- `README.md` — telescope-symbols.nvim _238w_
+- `PULL_REQUEST_TEMPLATE.md` — Description _179w_
+- `CONTRIBUTING.md` — Contributing _570w_
+- `README.md` — telescope.nvim _3096w_
+- `README.md` — tex2uni.nvim _87w_
+- `PULL_REQUEST_TEMPLATE.md` — PULL_REQUEST_TEMPLATE _54w_
+- `CHANGELOG.md` — Changelog _1021w_
+- `README.md` — ✅ Todo Comments _959w_
+- `PULL_REQUEST_TEMPLATE.md` — PULL_REQUEST_TEMPLATE _64w_
+- `CHANGELOG.md` — Changelog _3606w_
+- `CONTRIBUTING.md` — Contributing to Tokyo Night _1363w_
+- `NEWS.md` — What's New? _170w_
+- `README.md` — 🏙 Tokyo Night _1625w_
+- `README.md` — Tokyo Night for aider _199w_
+- `README.md` — README _56w_
+- `README.md` — Tokyo Night for Gemini CLI _140w_
+- `README.md` — README _46w_
+- `README.md` — README _25w_
+- `README.md` — Vim ColorScheme _28w_
+- `README.md` — Tokyo Night for Vivaldi Browser _173w_
+- `PULL_REQUEST_TEMPLATE.md` — PULL_REQUEST_TEMPLATE _54w_
+- `CHANGELOG.md` — Changelog _3592w_
+- `README.md` — 🚦 Trouble _3091w_
+- `examples.md` — Examples _429w_
+- `filter.md` — Filter _352w_
+- `PULL_REQUEST_TEMPLATE.md` — PULL_REQUEST_TEMPLATE _54w_
+- `CHANGELOG.md` — Changelog _213w_
+- `README.md` — 🚀 `ts-comments.nvim` _403w_
+- `README.md` — Vim transparent _504w_
+- `PULL_REQUEST_TEMPLATE.md` — PULL_REQUEST_TEMPLATE _54w_
+- `CHANGELOG.md` — Changelog _4442w_
+- `NEWS.md` — 💥 What's New in 3.0? _234w_
+- `README.md` — 💥 Which Key _2472w_
+- `TODO.md` — Todo _293w_
+- `PULL_REQUEST_TEMPLATE.md` — PULL_REQUEST_TEMPLATE _54w_
+- `CHANGELOG.md` — Changelog _376w_
+- `README.md` — 🧘  Zen Mode _1064w_
+- `CHANGELOG.md` — Bash Language Server _1821w_
+- `README.md` — Bash Language Server _857w_
+- `CHANGELOG.md` — domino x.x.x (not yet released) _1808w_
+- `CONTRIBUTING.md` — Contributing to Mixmark's Domino _33w_
+- `README.md` — Server-side DOM implementation based on Mozilla's dom.js _704w_
+- `README.md` — Document Object Model (DOM) Conformance Test Suites _100w_
+- `README.md` — @nodelib/fs.scandir _701w_
+- `README.md` — @nodelib/fs.stat _450w_
+- `README.md` — @nodelib/fs.walk _831w_
+- `README.md` — One INI _266w_
+- `README.md` — balanced-match _491w_
+- `README.md` — brace-expansion _485w_
+- `README.md` — braces [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=W8YFZ425KND68) [![NPM version](https://img.shields.io/npm/v/braces.svg?style=flat)](https://www.npmjs.com/package/braces) [![NPM monthly downloads](https://img.shields.io/npm/dm/braces.svg?style=flat)](https://npmjs.org/package/braces) [![NPM total downloads](https://img.shields.io/npm/dt/braces.svg?style=flat)](https://npmjs.org/package/braces) [![Linux Build Status](https://img.shields.io/travis/micromatch/braces.svg?style=flat&label=Travis)](https://travis-ci.org/micromatch/braces) _2629w_
+- `Readme.md` — Commander.js _5380w_
+- `README.md` — EditorConfig JavaScript Core _870w_
+- `README.md` — fast-glob _3109w_
+- `README.md` — fastq _958w_
+- `SECURITY.md` — Security Policy _56w_
+- `README.md` — fill-range [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=W8YFZ425KND68) [![NPM version](https://img.shields.io/npm/v/fill-range.svg?style=flat)](https://www.npmjs.com/package/fill-range) [![NPM monthly downloads](https://img.shields.io/npm/dm/fill-range.svg?style=flat)](https://npmjs.org/package/fill-range) [![NPM total downloads](https://img.shields.io/npm/dt/fill-range.svg?style=flat)](https://npmjs.org/package/fill-range) [![Linux Build Status](https://img.shields.io/travis/jonschlinkert/fill-range.svg?style=flat&label=Travis)](https://travis-ci.org/jonschlinkert/fill-range) _877w_
+- `CHANGELOG.md` — Release Notes _259w_
+- `README.md` — Fuzzy search _222w_
+- `CHANGELOG.md` — CHANGELOG _266w_
+- `README.md` — glob-parent _474w_
+- `README.md` — is-extglob [![NPM version](https://img.shields.io/npm/v/is-extglob.svg?style=flat)](https://www.npmjs.com/package/is-extglob) [![NPM downloads](https://img.shields.io/npm/dm/is-extglob.svg?style=flat)](https://npmjs.org/package/is-extglob) [![Build Status](https://img.shields.io/travis/jonschlinkert/is-extglob.svg?style=flat)](https://travis-ci.org/jonschlinkert/is-extglob) _317w_
+- `README.md` — is-glob [![NPM version](https://img.shields.io/npm/v/is-glob.svg?style=flat)](https://www.npmjs.com/package/is-glob) [![NPM monthly downloads](https://img.shields.io/npm/dm/is-glob.svg?style=flat)](https://npmjs.org/package/is-glob) [![NPM total downloads](https://img.shields.io/npm/dt/is-glob.svg?style=flat)](https://npmjs.org/package/is-glob) [![Build Status](https://img.shields.io/github/workflow/status/micromatch/is-glob/dev)](https://github.com/micromatch/is-glob/actions) _727w_
+- `README.md` — is-number [![NPM version](https://img.shields.io/npm/v/is-number.svg?style=flat)](https://www.npmjs.com/package/is-number) [![NPM monthly downloads](https://img.shields.io/npm/dm/is-number.svg?style=flat)](https://npmjs.org/package/is-number) [![NPM total downloads](https://img.shields.io/npm/dt/is-number.svg?style=flat)](https://npmjs.org/package/is-number) [![Linux Build Status](https://img.shields.io/travis/jonschlinkert/is-number.svg?style=flat&label=Travis)](https://travis-ci.org/jonschlinkert/is-number) _737w_
+- `README.md` — merge2 _388w_
+- `README.md` — micromatch [![NPM version](https://img.shields.io/npm/v/micromatch.svg?style=flat)](https://www.npmjs.com/package/micromatch) [![NPM monthly downloads](https://img.shields.io/npm/dm/micromatch.svg?style=flat)](https://npmjs.org/package/micromatch) [![NPM total downloads](https://img.shields.io/npm/dt/micromatch.svg?style=flat)](https://npmjs.org/package/micromatch)  [![Tests](https://github.com/micromatch/micromatch/actions/workflows/test.yml/badge.svg)](https://github.com/micromatch/micromatch/actions/workflows/test.yml) _4762w_
+- `README.md` — minimatch _2595w_
+- `README.md` — README _2367w_
+- `README.md` — .makeRe star _3689w_
+- `README.md` — queue-microtask [![ci][ci-image]][ci-url] [![npm][npm-image]][npm-url] [![downloads][downloads-image]][downloads-url] [![javascript style guide][standard-image]][standard-url] _667w_
+- `README.md` — reusify _476w_
+- `SECURITY.md` — Security Policy _56w_
+- `README.md` — run-parallel [![travis][travis-image]][travis-url] [![npm][npm-image]][npm-url] [![downloads][downloads-image]][downloads-url] [![javascript style guide][standard-image]][standard-url] _345w_
+- `README.md` — README _3452w_
+- `README.md` — to-regex-range [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=W8YFZ425KND68) [![NPM version](https://img.shields.io/npm/v/to-regex-range.svg?style=flat)](https://www.npmjs.com/package/to-regex-range) [![NPM monthly downloads](https://img.shields.io/npm/dm/to-regex-range.svg?style=flat)](https://npmjs.org/package/to-regex-range) [![NPM total downloads](https://img.shields.io/npm/dt/to-regex-range.svg?style=flat)](https://npmjs.org/package/to-regex-range) [![Linux Build Status](https://img.shields.io/travis/micromatch/to-regex-range.svg?style=flat&label=Travis)](https://travis-ci.org/micromatch/to-regex-range) _1300w_
+- `README.md` — Turndown _1323w_
+- `README.md` — VSCode JSON RPC _228w_
+- `README.md` — VSCode Language Server _55w_
+- `README.md` — VSCode Language Server - Protocol Module _126w_
+- `README.md` — Text Document implementation for a LSP Node server _72w_
+- `README.md` — VSCode Language Server Types _53w_
+- `README.md` — Web Tree-sitter _737w_
+- `README.md` — WebIDL Type Conversions on JavaScript Values _804w_
+- `README.md` — README _405w_
+- `README.md` — README _11411w_
+- `README.md` — README _161w_
+- `changelog.md` — changelog _9482w_
+- `README.md` — markdown-toc [![NPM version](https://img.shields.io/npm/v/markdown-toc.svg?style=flat)](https://www.npmjs.com/package/markdown-toc) [![NPM monthly downloads](https://img.shields.io/npm/dm/markdown-toc.svg?style=flat)](https://npmjs.org/package/markdown-toc)  [![NPM total downloads](https://img.shields.io/npm/dt/markdown-toc.svg?style=flat)](https://npmjs.org/package/markdown-toc) [![Linux Build Status](https://img.shields.io/travis/jonschlinkert/markdown-toc.svg?style=flat&label=Travis)](https://travis-ci.org/jonschlinkert/markdown-toc) [![Windows Build Status](https://img.shields.io/appveyor/ci/jonschlinkert/markdown-toc.svg?style=flat&label=AppVeyor)](https://ci.appveyor.com/project/jonschlinkert/markdown-toc) _1358w_
+- `readme.md` — ansi-red [![NPM version](https://badge.fury.io/js/ansi-red.svg)](http://badge.fury.io/js/ansi-red) _149w_
+- `README.md` — ansi-wrap [![NPM version](https://badge.fury.io/js/ansi-wrap.svg)](http://badge.fury.io/js/ansi-wrap) _188w_
+- `CHANGELOG.md` — CHANGELOG _443w_
+- `README.md` — subcommands', _1056w_
+- `README.md` — Autolinker.js _1716w_
+- `readme.md` — Buffer From _250w_
+- `readme.md` — concat-stream _512w_
+- `README.md` — README _191w_
+- `README.md` — core-util-is _9w_
+- `README.md` — diacritics-map [![NPM version](https://img.shields.io/npm/v/diacritics-map.svg?style=flat)](https://www.npmjs.com/package/diacritics-map) [![NPM monthly downloads](https://img.shields.io/npm/dm/diacritics-map.svg?style=flat)](https://npmjs.org/package/diacritics-map)  [![NPM total downloads](https://img.shields.io/npm/dt/diacritics-map.svg?style=flat)](https://npmjs.org/package/diacritics-map) _227w_
+- `README.md` — README _187w_
+- `README.md` — expand-range [![NPM version](https://img.shields.io/npm/v/expand-range.svg?style=flat)](https://www.npmjs.com/package/expand-range) [![NPM downloads](https://img.shields.io/npm/dm/expand-range.svg?style=flat)](https://npmjs.org/package/expand-range) [![Build Status](https://img.shields.io/travis/jonschlinkert/expand-range.svg?style=flat)](https://travis-ci.org/jonschlinkert/expand-range) _488w_
+- `README.md` — extend-shallow [![NPM version](https://badge.fury.io/js/extend-shallow.svg)](http://badge.fury.io/js/extend-shallow)  [![Build Status](https://travis-ci.org/jonschlinkert/extend-shallow.svg)](https://travis-ci.org/jonschlinkert/extend-shallow) _205w_
+- `README.md` — fill-range [![NPM version](https://img.shields.io/npm/v/fill-range.svg?style=flat)](https://www.npmjs.com/package/fill-range) [![NPM monthly downloads](https://img.shields.io/npm/dm/fill-range.svg?style=flat)](https://npmjs.org/package/fill-range) [![NPM total downloads](https://img.shields.io/npm/dt/fill-range.svg?style=flat)](https://npmjs.org/package/fill-range) [![Linux Build Status](https://img.shields.io/travis/jonschlinkert/fill-range.svg?style=flat&label=Travis)](https://travis-ci.org/jonschlinkert/fill-range) _1089w_
+- `README.md` — for-in [![NPM version](https://img.shields.io/npm/v/for-in.svg?style=flat)](https://www.npmjs.com/package/for-in) [![NPM monthly downloads](https://img.shields.io/npm/dm/for-in.svg?style=flat)](https://npmjs.org/package/for-in)  [![NPM total downloads](https://img.shields.io/npm/dt/for-in.svg?style=flat)](https://npmjs.org/package/for-in) [![Linux Build Status](https://img.shields.io/travis/jonschlinkert/for-in.svg?style=flat&label=Travis)](https://travis-ci.org/jonschlinkert/for-in) _370w_
+- `README.md` — gray-matter [![NPM version](https://img.shields.io/npm/v/gray-matter.svg?style=flat)](https://www.npmjs.com/package/gray-matter) [![NPM monthly downloads](https://img.shields.io/npm/dm/gray-matter.svg?style=flat)](https://npmjs.org/package/gray-matter)  [![NPM total downloads](https://img.shields.io/npm/dt/gray-matter.svg?style=flat)](https://npmjs.org/package/gray-matter) [![Linux Build Status](https://img.shields.io/travis/jonschlinkert/gray-matter.svg?style=flat&label=Travis)](https://travis-ci.org/jonschlinkert/gray-matter) _1240w_
+- `README.md` — gulp-header [![NPM version](https://badge.fury.io/js/gulp-header.png)](http://badge.fury.io/js/gulp-header) [![Build Status](https://travis-ci.org/tracker1/gulp-header.svg?branch=master)](https://travis-ci.org/tracker1/gulp-header) _290w_
+- `changelog.md` — Changelog _38w_
+- `README.md` — README _222w_
+- `README.md` — is-buffer [![travis][travis-image]][travis-url] [![npm][npm-image]][npm-url] [![downloads][downloads-image]][downloads-url] [![javascript style guide][standard-image]][standard-url] _137w_
+- `README.md` — is-extendable [![NPM version](https://badge.fury.io/js/is-extendable.svg)](http://badge.fury.io/js/is-extendable) _310w_
+- `README.md` — is-number [![NPM version](https://badge.fury.io/js/is-number.svg)](http://badge.fury.io/js/is-number)  [![Build Status](https://travis-ci.org/jonschlinkert/is-number.svg)](https://travis-ci.org/jonschlinkert/is-number) _327w_
+- `README.md` — is-plain-object [![NPM version](https://img.shields.io/npm/v/is-plain-object.svg?style=flat)](https://www.npmjs.com/package/is-plain-object) [![NPM monthly downloads](https://img.shields.io/npm/dm/is-plain-object.svg?style=flat)](https://npmjs.org/package/is-plain-object) [![NPM total downloads](https://img.shields.io/npm/dt/is-plain-object.svg?style=flat)](https://npmjs.org/package/is-plain-object) [![Linux Build Status](https://img.shields.io/travis/jonschlinkert/is-plain-object.svg?style=flat&label=Travis)](https://travis-ci.org/jonschlinkert/is-plain-object) _365w_
+- `README.md` — isobject [![NPM version](https://img.shields.io/npm/v/isobject.svg?style=flat)](https://www.npmjs.com/package/isobject) [![NPM monthly downloads](https://img.shields.io/npm/dm/isobject.svg?style=flat)](https://npmjs.org/package/isobject)  [![NPM total downloads](https://img.shields.io/npm/dt/isobject.svg?style=flat)](https://npmjs.org/package/isobject) [![Linux Build Status](https://img.shields.io/travis/jonschlinkert/isobject.svg?style=flat&label=Travis)](https://travis-ci.org/jonschlinkert/isobject) _392w_
+- `README.md` — isarray _226w_
+- `README.md` — isobject [![NPM version](https://img.shields.io/npm/v/isobject.svg?style=flat)](https://www.npmjs.com/package/isobject) [![NPM downloads](https://img.shields.io/npm/dm/isobject.svg?style=flat)](https://npmjs.org/package/isobject) [![Build Status](https://img.shields.io/travis/jonschlinkert/isobject.svg?style=flat)](https://travis-ci.org/jonschlinkert/isobject) _267w_
+- `README.md` — README _1357w_
+- `README.md` — kind-of [![NPM version](https://img.shields.io/npm/v/kind-of.svg?style=flat)](https://www.npmjs.com/package/kind-of) [![NPM monthly downloads](https://img.shields.io/npm/dm/kind-of.svg?style=flat)](https://npmjs.org/package/kind-of) [![NPM total downloads](https://img.shields.io/npm/dt/kind-of.svg?style=flat)](https://npmjs.org/package/kind-of) [![Linux Build Status](https://img.shields.io/travis/jonschlinkert/kind-of.svg?style=flat&label=Travis)](https://travis-ci.org/jonschlinkert/kind-of) _982w_
+- `README.md` — lazy-cache [![NPM version](https://img.shields.io/npm/v/lazy-cache.svg?style=flat)](https://www.npmjs.com/package/lazy-cache) [![NPM monthly downloads](https://img.shields.io/npm/dm/lazy-cache.svg?style=flat)](https://npmjs.org/package/lazy-cache)  [![NPM total downloads](https://img.shields.io/npm/dt/lazy-cache.svg?style=flat)](https://npmjs.org/package/lazy-cache) [![Linux Build Status](https://img.shields.io/travis/jonschlinkert/lazy-cache.svg?style=flat&label=Travis)](https://travis-ci.org/jonschlinkert/lazy-cache) _835w_
+- `README.md` — list-item [![NPM version](https://img.shields.io/npm/v/list-item.svg)](https://www.npmjs.com/package/list-item) [![Build Status](https://img.shields.io/travis/jonschlinkert/list-item.svg)](https://travis-ci.org/jonschlinkert/list-item) _572w_
+- `README.md` — lodash._reinterpolate v3.0.0 _48w_
+- `README.md` — lodash.template v4.18.1 _47w_
+- `README.md` — lodash.templatesettings v4.2.0 _47w_
+- `README.md` — markdown-link [![NPM version](https://badge.fury.io/js/markdown-link.svg)](http://badge.fury.io/js/markdown-link) _173w_
+- `readme.md` — math-random _54w_
+- `CHANGELOG.md` — Changelog _1246w_
+- `README.md` — minimist <sup>[![Version Badge][npm-version-svg]][package-url]</sup> _424w_
+- `README.md` — mixin-deep [![NPM version](https://img.shields.io/npm/v/mixin-deep.svg?style=flat)](https://www.npmjs.com/package/mixin-deep) [![NPM monthly downloads](https://img.shields.io/npm/dm/mixin-deep.svg?style=flat)](https://npmjs.org/package/mixin-deep) [![NPM total downloads](https://img.shields.io/npm/dt/mixin-deep.svg?style=flat)](https://npmjs.org/package/mixin-deep) [![Linux Build Status](https://img.shields.io/travis/jonschlinkert/mixin-deep.svg?style=flat&label=Travis)](https://travis-ci.org/jonschlinkert/mixin-deep) _362w_
+- `README.md` — is-extendable [![NPM version](https://img.shields.io/npm/v/is-extendable.svg?style=flat)](https://www.npmjs.com/package/is-extendable) [![NPM monthly downloads](https://img.shields.io/npm/dm/is-extendable.svg?style=flat)](https://npmjs.org/package/is-extendable) [![NPM total downloads](https://img.shields.io/npm/dt/is-extendable.svg?style=flat)](https://npmjs.org/package/is-extendable) [![Linux Build Status](https://img.shields.io/travis/jonschlinkert/is-extendable.svg?style=flat&label=Travis)](https://travis-ci.org/jonschlinkert/is-extendable) _454w_
+- `README.md` — object.pick [![NPM version](https://img.shields.io/npm/v/object.pick.svg?style=flat)](https://www.npmjs.com/package/object.pick) [![NPM monthly downloads](https://img.shields.io/npm/dm/object.pick.svg?style=flat)](https://npmjs.org/package/object.pick)  [![NPM total downloads](https://img.shields.io/npm/dt/object.pick.svg?style=flat)](https://npmjs.org/package/object.pick) [![Linux Build Status](https://img.shields.io/travis/jonschlinkert/object.pick.svg?style=flat&label=Travis)](https://travis-ci.org/jonschlinkert/object.pick) _324w_
+- `README.md` — isobject [![NPM version](https://img.shields.io/npm/v/isobject.svg?style=flat)](https://www.npmjs.com/package/isobject) [![NPM monthly downloads](https://img.shields.io/npm/dm/isobject.svg?style=flat)](https://npmjs.org/package/isobject)  [![NPM total downloads](https://img.shields.io/npm/dt/isobject.svg?style=flat)](https://npmjs.org/package/isobject) [![Linux Build Status](https://img.shields.io/travis/jonschlinkert/isobject.svg?style=flat&label=Travis)](https://travis-ci.org/jonschlinkert/isobject) _392w_
+- `readme.md` — readme _40w_
+- `README.md` — randomatic [![NPM version](https://img.shields.io/npm/v/randomatic.svg?style=flat)](https://www.npmjs.com/package/randomatic) [![NPM monthly downloads](https://img.shields.io/npm/dm/randomatic.svg?style=flat)](https://npmjs.org/package/randomatic) [![NPM total downloads](https://img.shields.io/npm/dt/randomatic.svg?style=flat)](https://npmjs.org/package/randomatic) [![Linux Build Status](https://img.shields.io/travis/jonschlinkert/randomatic.svg?style=flat&label=Travis)](https://travis-ci.org/jonschlinkert/randomatic) _861w_
+- `README.md` — is-number [![NPM version](https://img.shields.io/npm/v/is-number.svg?style=flat)](https://www.npmjs.com/package/is-number) [![NPM monthly downloads](https://img.shields.io/npm/dm/is-number.svg?style=flat)](https://npmjs.org/package/is-number) [![NPM total downloads](https://img.shields.io/npm/dt/is-number.svg?style=flat)](https://npmjs.org/package/is-number) [![Linux Build Status](https://img.shields.io/travis/jonschlinkert/is-number.svg?style=flat&label=Travis)](https://travis-ci.org/jonschlinkert/is-number) _509w_
+- `CHANGELOG.md` — Release history _490w_
+- `README.md` — kind-of [![NPM version](https://img.shields.io/npm/v/kind-of.svg?style=flat)](https://www.npmjs.com/package/kind-of) [![NPM monthly downloads](https://img.shields.io/npm/dm/kind-of.svg?style=flat)](https://npmjs.org/package/kind-of) [![NPM total downloads](https://img.shields.io/npm/dt/kind-of.svg?style=flat)](https://npmjs.org/package/kind-of) [![Linux Build Status](https://img.shields.io/travis/jonschlinkert/kind-of.svg?style=flat&label=Travis)](https://travis-ci.org/jonschlinkert/kind-of) _1453w_
+- `GOVERNANCE.md` — GOVERNANCE _887w_
+- `README.md` — readable-stream _266w_
+- `2015-01-30.md` — streams WG Meeting 2015-01-30 _293w_
+- `CHANGELOG.md` — CHANGELOG _561w_
+- `README.md` — remarkable _1052w_
+- `README.md` — repeat-element [![NPM version](https://img.shields.io/npm/v/repeat-element.svg?style=flat)](https://www.npmjs.com/package/repeat-element) [![NPM monthly downloads](https://img.shields.io/npm/dm/repeat-element.svg?style=flat)](https://npmjs.org/package/repeat-element) [![NPM total downloads](https://img.shields.io/npm/dt/repeat-element.svg?style=flat)](https://npmjs.org/package/repeat-element) [![Linux Build Status](https://img.shields.io/travis/jonschlinkert/repeat-element.svg?style=flat&label=Travis)](https://travis-ci.org/jonschlinkert/repeat-element) _303w_
+- `README.md` — repeat-string [![NPM version](https://img.shields.io/npm/v/repeat-string.svg?style=flat)](https://www.npmjs.com/package/repeat-string) [![NPM monthly downloads](https://img.shields.io/npm/dm/repeat-string.svg?style=flat)](https://npmjs.org/package/repeat-string)  [![NPM total downloads](https://img.shields.io/npm/dt/repeat-string.svg?style=flat)](https://npmjs.org/package/repeat-string) [![Linux Build Status](https://img.shields.io/travis/jonschlinkert/repeat-string.svg?style=flat&label=Travis)](https://travis-ci.org/jonschlinkert/repeat-string) _395w_
+- `README.md` — safe-buffer [![travis][travis-image]][travis-url] [![npm][npm-image]][npm-url] [![downloads][downloads-image]][downloads-url] [![javascript style guide][standard-image]][standard-url] _2638w_
+- `README.md` — set-getter [![NPM version](https://img.shields.io/npm/v/set-getter.svg?style=flat)](https://www.npmjs.com/package/set-getter) [![NPM monthly downloads](https://img.shields.io/npm/dm/set-getter.svg?style=flat)](https://npmjs.org/package/set-getter) [![NPM total downloads](https://img.shields.io/npm/dt/set-getter.svg?style=flat)](https://npmjs.org/package/set-getter) [![Linux Build Status](https://img.shields.io/travis/doowb/set-getter.svg?style=flat&label=Travis)](https://travis-ci.org/doowb/set-getter) _359w_
+- `CHANGELOG.md` — Change Log _1169w_
+- `README.md` — Source Map _2791w_
+- `README.md` — sprintf.js _787w_
+- `README.md` — string_decoder _206w_
+- `README.md` — strip-color [![NPM version](https://badge.fury.io/js/strip-color.svg)](http://badge.fury.io/js/strip-color) _156w_
+- `README.md` — through2 _690w_
+- `README.md` — to-object-path [![NPM version](https://badge.fury.io/js/to-object-path.svg)](http://badge.fury.io/js/to-object-path) _235w_
+- `CHANGELOG.md` — CHANGELOG _339w_
+- `README.md` — README _320w_
+- `History.md` — History _34w_
+- `README.md` — README _248w_
+- `README.md` — xtend _93w_
+- `CHANGELOG.md` — Changelog _674w_
+- `README.md` — markdownlint-cli2 _3018w_
+- `README.md` — @nodelib/fs.scandir _701w_
+- `README.md` — @nodelib/fs.stat _450w_
+- `README.md` — @nodelib/fs.walk _831w_
+- `readme.md` — merge-streams _156w_
+- `README.md` — Installation _220w_
+- `README.md` — Installation _54w_
+- `README.md` — Installation _207w_
+- `README.md` — Installation _438w_
+- `readme.md` — ansi-regex _317w_
+- `CHANGELOG.md` — Changelog _653w_
+- `README.md` — README _295w_
+- `README.md` — braces [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=W8YFZ425KND68) [![NPM version](https://img.shields.io/npm/v/braces.svg?style=flat)](https://www.npmjs.com/package/braces) [![NPM monthly downloads](https://img.shields.io/npm/dm/braces.svg?style=flat)](https://npmjs.org/package/braces) [![NPM total downloads](https://img.shields.io/npm/dt/braces.svg?style=flat)](https://npmjs.org/package/braces) [![Linux Build Status](https://img.shields.io/travis/micromatch/braces.svg?style=flat&label=Travis)](https://travis-ci.org/micromatch/braces) _2629w_
+- `readme.md` — character-entities _335w_
+- `readme.md` — character-entities-legacy _358w_
+- `readme.md` — character-reference-invalid _370w_
+- `Readme.md` — Commander.js _4576w_
+- `README.md` — debug _1924w_
+- `readme.md` — decode-named-character-reference _251w_
+- `readme.md` — dequal [![CI](https://github.com/lukeed/dequal/workflows/CI/badge.svg)](https://github.com/lukeed/dequal/actions) _532w_
+- `readme.md` — devlop _1109w_
+- `readme.md` — entities [![NPM version](https://img.shields.io/npm/v/entities.svg)](https://npmjs.org/package/entities) [![Downloads](https://img.shields.io/npm/dm/entities.svg)](https://npmjs.org/package/entities) [![Node.js CI](https://github.com/fb55/entities/actions/workflows/nodejs-test.yml/badge.svg)](https://github.com/fb55/entities/actions/workflows/nodejs-test.yml) _660w_
+- `README.md` — fast-glob _3109w_
+- `README.md` — fastq _958w_
+- `SECURITY.md` — Security Policy _56w_
+- `README.md` — fill-range [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=W8YFZ425KND68) [![NPM version](https://img.shields.io/npm/v/fill-range.svg?style=flat)](https://www.npmjs.com/package/fill-range) [![NPM monthly downloads](https://img.shields.io/npm/dm/fill-range.svg?style=flat)](https://npmjs.org/package/fill-range) [![NPM total downloads](https://img.shields.io/npm/dt/fill-range.svg?style=flat)](https://npmjs.org/package/fill-range) [![Linux Build Status](https://img.shields.io/travis/jonschlinkert/fill-range.svg?style=flat&label=Travis)](https://travis-ci.org/jonschlinkert/fill-range) _877w_
+- `readme.md` — get-east-asian-width _226w_
+- `CHANGELOG.md` — CHANGELOG _266w_
+- `README.md` — glob-parent _474w_
+- `readme.md` — globby _1676w_
+- `README.md` — ignore _1720w_
+- `readme.md` — is-alphabetical _314w_
+- `readme.md` — is-alphanumerical _318w_
+- `readme.md` — is-decimal _310w_
+- `README.md` — is-extglob [![NPM version](https://img.shields.io/npm/v/is-extglob.svg?style=flat)](https://www.npmjs.com/package/is-extglob) [![NPM downloads](https://img.shields.io/npm/dm/is-extglob.svg?style=flat)](https://npmjs.org/package/is-extglob) [![Build Status](https://img.shields.io/travis/jonschlinkert/is-extglob.svg?style=flat)](https://travis-ci.org/jonschlinkert/is-extglob) _317w_
+- `README.md` — is-glob [![NPM version](https://img.shields.io/npm/v/is-glob.svg?style=flat)](https://www.npmjs.com/package/is-glob) [![NPM monthly downloads](https://img.shields.io/npm/dm/is-glob.svg?style=flat)](https://npmjs.org/package/is-glob) [![NPM total downloads](https://img.shields.io/npm/dt/is-glob.svg?style=flat)](https://npmjs.org/package/is-glob) [![Build Status](https://img.shields.io/github/workflow/status/micromatch/is-glob/dev)](https://github.com/micromatch/is-glob/actions) _727w_
+- `readme.md` — is-hexadecimal _318w_
+- `README.md` — is-number [![NPM version](https://img.shields.io/npm/v/is-number.svg?style=flat)](https://www.npmjs.com/package/is-number) [![NPM monthly downloads](https://img.shields.io/npm/dm/is-number.svg?style=flat)](https://npmjs.org/package/is-number) [![NPM total downloads](https://img.shields.io/npm/dt/is-number.svg?style=flat)](https://npmjs.org/package/is-number) [![Linux Build Status](https://img.shields.io/travis/jonschlinkert/is-number.svg?style=flat&label=Travis)](https://travis-ci.org/jonschlinkert/is-number) _737w_
+- `readme.md` — is-path-inside _163w_
+- `README.md` — README _1160w_
+- `CHANGELOG.md` — CHANGELOG _386w_
+- `README.md` — jsonc-parser _2054w_
+- `README.md` — JSON Pointer for Node.js _141w_
+- `README.md` — README _543w_
+- `README.md` — Auto-render extension _45w_
+- `README.md` — Copy-tex extension _216w_
+- `README.md` — `math/tex` Custom Script Type Extension _161w_
+- `README.md` — mhchem extension _175w_
+- `README.md` — README _543w_
+- `README.md` — README _134w_
+- `README.md` — README _770w_
+- `README.md` — markdown-it <!-- omit in toc --> _1064w_
+- `CHANGELOG.md` — Changelog _1470w_
+- `CONTRIBUTING.md` — Contributing _701w_
+- `README.md` — markdownlint _4407w_
+- `CustomRules.md` — Custom Rules _1142w_
+- `Prettier.md` — Using `markdownlint` with Prettier _94w_
+- `ReleaseProcess.md` — Release Process _85w_
+- `Rules.md` — Rules _10500w_
+- `md001.md` — `MD001` - Heading levels should only increment by one level at a time _213w_
+- `md003.md` — `MD003` - Heading style _203w_
+- `md004.md` — `MD004` - Unordered list style _194w_
+- `md005.md` — `MD005` - Inconsistent indentation for list items at the same level _167w_
+- `md007.md` — `MD007` - Unordered list indentation _259w_
+- `md009.md` — `MD009` - Trailing spaces _289w_
+- `md010.md` — `MD010` - Hard tabs _271w_
+- `md011.md` — `MD011` - Reversed link syntax _88w_
+- `md012.md` — `MD012` - Multiple consecutive blank lines _120w_
+- `md013.md` — `MD013` - Line length _389w_
+- `md014.md` — `MD014` - Dollar signs used before commands without showing output _171w_
+- `md018.md` — `MD018` - No space after hash on atx style heading _82w_
+- `md019.md` — `MD019` - Multiple spaces after hash on atx style heading _95w_
+- `md020.md` — `MD020` - No space inside hashes on closed atx style heading _100w_
+- `md021.md` — `MD021` - Multiple spaces inside hashes on closed atx style heading _115w_
+- `md022.md` — `MD022` - Headings should be surrounded by blank lines _245w_
+- `md023.md` — `MD023` - Headings must start at the beginning of the line _116w_
+- `md024.md` — `MD024` - Multiple headings with the same content _126w_
+- `md025.md` — `MD025` - Multiple top-level headings in the same document _257w_
+- `md026.md` — `MD026` - Trailing punctuation in heading _182w_
+- `md027.md` — `MD027` - Multiple spaces after blockquote symbol _115w_
+- `md028.md` — `MD028` - Blank line inside blockquote _156w_
+- `md029.md` — `MD029` - Ordered list item prefix _290w_
+- `md030.md` — `MD030` - Spaces after list markers _294w_
+- `md031.md` — `MD031` - Fenced code blocks should be surrounded by blank lines _173w_
+- `md032.md` — `MD032` - Lists should be surrounded by blank lines _212w_
+- `md033.md` — `MD033` - Inline HTML _154w_
+- `md034.md` — `MD034` - Bare URL used _207w_
+- `md035.md` — `MD035` - Horizontal rule style _93w_
+- `md036.md` — `MD036` - Emphasis used instead of a heading _160w_
+- `md037.md` — `MD037` - Spaces inside emphasis markers _143w_
+- `md038.md` — `MD038` - Spaces inside code span elements _161w_
+- `md039.md` — `MD039` - Spaces inside link text _63w_
+- `md040.md` — `MD040` - Fenced code blocks should have a language specified _191w_
+- `md041.md` — `MD041` - First line in a file should be a top-level heading _306w_
+- `md042.md` — `MD042` - No empty links _74w_
+- `md043.md` — `MD043` - Required heading structure _291w_
+- `md044.md` — `MD044` - Proper names should have the correct capitalization _210w_
+- `md045.md` — `MD045` - Images should have alternate text (alt text) _140w_
+- `md046.md` — `MD046` - Code block style _122w_
+- `md047.md` — `MD047` - Files should end with a single newline character _114w_
+- `md048.md` — `MD048` - Code fence style _122w_
+- `md049.md` — `MD049` - Emphasis style _125w_
+- `md050.md` — `MD050` - Strong style _125w_
+- `md051.md` — `MD051` - Link fragments should be valid _457w_
+- `md052.md` — `MD052` - Reference links and images should use a label that is defined _276w_
+- `md053.md` — `MD053` - Link and image reference definitions should be needed _233w_
+- `md054.md` — `MD054` - Link and image style _420w_
+- `md055.md` — `MD055` - Table pipe style _254w_
+- `md056.md` — `MD056` - Table column count _175w_
+- `md058.md` — `MD058` - Tables should be surrounded by blank lines _196w_
+- `md059.md` — `MD059` - Link text should be descriptive _145w_
+- `md060.md` — `MD060` - Table column style _472w_
+- `README.md` — markdownlint-rule-helpers _145w_
+- `ValidatingConfiguration.md` — Validating Configuration _87w_
+- `README.md` — markdownlint-cli2-formatter-default _257w_
+- `README.md` — mdurl _404w_
+- `README.md` — merge2 _388w_
+- `readme.md` — micromark _1397w_
+- `readme.md` — micromark-core-commonmark _387w_
+- `readme.md` — micromark-extension-directive _1295w_
+- `readme.md` — micromark-extension-gfm-autolink-literal _1484w_
+- `readme.md` — micromark-extension-gfm-footnote _2281w_
+- `readme.md` — micromark-extension-gfm-table _1533w_
+- `readme.md` — micromark-extension-math _1470w_
+- `readme.md` — micromark-factory-destination _491w_
+- `readme.md` — micromark-factory-label _479w_
+- `readme.md` — micromark-factory-space _510w_
+- `readme.md` — micromark-factory-title _475w_
+- `readme.md` — micromark-factory-whitespace _454w_
+- `readme.md` — micromark-util-character _1186w_
+- `readme.md` — micromark-util-chunked _536w_
+- `readme.md` — micromark-util-classify-character _445w_
+- `readme.md` — micromark-util-combine-extensions _409w_
+- `readme.md` — micromark-util-decode-numeric-character-reference _410w_
+- `readme.md` — micromark-util-encode _380w_
+- `readme.md` — micromark-util-html-tag-name _475w_
+- `readme.md` — micromark-util-normalize-identifier _433w_
+- `readme.md` — micromark-util-resolve-all _554w_
+- `readme.md` — micromark-util-sanitize-uri _496w_
+- `readme.md` — micromark-util-subtokenize _381w_
+- `readme.md` — micromark-util-symbol _376w_
+- `readme.md` — micromark-util-types _316w_
+- `README.md` — micromatch [![NPM version](https://img.shields.io/npm/v/micromatch.svg?style=flat)](https://www.npmjs.com/package/micromatch) [![NPM monthly downloads](https://img.shields.io/npm/dm/micromatch.svg?style=flat)](https://npmjs.org/package/micromatch) [![NPM total downloads](https://img.shields.io/npm/dt/micromatch.svg?style=flat)](https://npmjs.org/package/micromatch)  [![Tests](https://github.com/micromatch/micromatch/actions/workflows/test.yml/badge.svg)](https://github.com/micromatch/micromatch/actions/workflows/test.yml) _4762w_
+- `readme.md` — ms _284w_
+- `readme.md` — parse-entities _760w_
+- `README.md` — .makeRe star _3689w_
+- `README.md` — Punycode.js [![punycode on npm](https://img.shields.io/npm/v/punycode)](https://www.npmjs.com/package/punycode) [![](https://data.jsdelivr.com/v1/package/npm/punycode/badge)](https://www.jsdelivr.com/package/npm/punycode) _583w_
+- `README.md` — queue-microtask [![ci][ci-image]][ci-url] [![npm][npm-image]][npm-url] [![downloads][downloads-image]][downloads-url] [![javascript style guide][standard-image]][standard-url] _667w_
+- `README.md` — reusify _476w_
+- `SECURITY.md` — Security Policy _56w_
+- `README.md` — run-parallel [![travis][travis-image]][travis-url] [![npm][npm-image]][npm-url] [![downloads][downloads-image]][downloads-url] [![javascript style guide][standard-image]][standard-url] _345w_
+- `readme.md` — slash _100w_
+- `README.md` — smol-toml _1466w_
+- `readme.md` — string-width _225w_
+- `readme.md` — strip-ansi _118w_
+- `README.md` — to-regex-range [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=W8YFZ425KND68) [![NPM version](https://img.shields.io/npm/v/to-regex-range.svg?style=flat)](https://www.npmjs.com/package/to-regex-range) [![NPM monthly downloads](https://img.shields.io/npm/dm/to-regex-range.svg?style=flat)](https://npmjs.org/package/to-regex-range) [![NPM total downloads](https://img.shields.io/npm/dt/to-regex-range.svg?style=flat)](https://npmjs.org/package/to-regex-range) [![Linux Build Status](https://img.shields.io/travis/micromatch/to-regex-range.svg?style=flat&label=Travis)](https://travis-ci.org/micromatch/to-regex-range) _1300w_
+- `README.md` — uc.micro _50w_
+- `readme.md` — unicorn-magic _67w_
+- `ValidatingConfiguration.md` — Validating Configuration _79w_
+- `README.md` — Static Type Checker for Python _294w_
+- `README.md` — typeshed _892w_
+- `CHANGELOG.md` — Changelog _1729w_
+- `README.md` — Vue 3 + Vite _49w_
+- `README.md` — @babel/helper-string-parser _34w_
+- `README.md` — @babel/helper-validator-identifier _31w_
+- `CHANGELOG.md` — Changelog _4705w_
+- `README.md` — @babel/parser _39w_
+- `README.md` — @babel/types _46w_
+- `README.md` — @jridgewell/sourcemap-codec _1179w_
+- `README.md` — Oxc Types _9w_
+- `README.md` — `@rolldown/binding-linux-x64-gnu` _9w_
+- `README.md` — @rolldown/pluginutils _306w_
+- `README.md` — @vitejs/plugin-vue [![npm](https://img.shields.io/npm/v/@vitejs/plugin-vue.svg)](https://npmjs.com/package/@vitejs/plugin-vue) _952w_
+- `README.md` — @vue/compiler-sfc _538w_
+- `README.md` — @vue/reactivity _113w_
+- `README.md` — @vue/runtime-core _96w_
+- `README.md` — @vue/runtime-dom _24w_
+- `README.md` — @vue/server-renderer _461w_
+- `README.md` — @vue/shared _11w_
+- `README.md` — CSSType _1384w_
+- `README.md` — detect-libc _461w_
+- `readme.md` — entities [![NPM version](https://img.shields.io/npm/v/entities.svg)](https://npmjs.org/package/entities) [![Downloads](https://img.shields.io/npm/dm/entities.svg)](https://npmjs.org/package/entities) [![Node.js CI](https://github.com/fb55/entities/actions/workflows/nodejs-test.yml/badge.svg)](https://github.com/fb55/entities/actions/workflows/nodejs-test.yml) _821w_
+- `CHANGELOG.md` — changelog _199w_
+- `README.md` — estree-walker _233w_
+- `README.md` — README _318w_
+- `README.md` — ⚡️ Lightning CSS _768w_
+- `README.md` — README _11w_
+- `README.md` — magic-string _1691w_
+- `README.md` — Nano ID _162w_
+- `README.md` — picocolors _79w_
+- `README.md` — .makeRe star (*) _3698w_
+- `README.md` — PostCSS _103w_
+- `README.md` — Rolldown _100w_
+- `README.md` — @rolldown/pluginutils _362w_
+- `README.md` — Source Map JS _3037w_
+- `README.md` — tinyglobby _90w_
+- `README.md` — Vite ⚡ _130w_
+- `README.md` — vue _517w_
+- `better-digraphs.nvim.md` — Better Digraphs _284w_
+- `blink-copilot.md` — blink-copilot _1588w_
+- `clangd_extensions.nvim.md` — clangd_extensions.nvim _452w_
+- `friendly-snippets.md` — Friendly Snippets _366w_
+- `gruvbox-material.md` — Gruvbox Material _761w_
+- `lazygit.nvim.md` — lazygit.nvim _1056w_
+- `markdown-preview.nvim.md` — markdown-preview.nvim _1565w_
+- `mdmath.nvim.md` — ✨ mdmath.nvim _553w_
+- `nui.nvim-lua-nui-input.md` — Input _341w_
+- `nui.nvim-lua-nui-layout.md` — Layout _822w_
+- `nui.nvim-lua-nui-line.md` — NuiLine _330w_
+- `nui.nvim-lua-nui-popup.md` — Popup _1706w_
+- `nui.nvim-lua-nui-split.md` — Split _212w_
+- `nui.nvim-lua-nui-table.md` — NuiTable _292w_
+- `nui.nvim-lua-nui-text.md` — NuiText _572w_
+- `nui.nvim-lua-nui-tree.md` — NuiTree _801w_
+- `nui.nvim.md` — nui.nvim _841w_
+- `nvim-ts-autotag.md` — nvim-ts-autotag _528w_
+- `telescope-fzf-native.nvim.md` — telescope-fzf-native.nvim _791w_
+- `telescope-symbols.nvim.md` — telescope-symbols.nvim _243w_
+- `tex2uni.nvim.md` — tex2uni.nvim _92w_
+- `vim-transparent.md` — Vim transparent _509w_
+- `%home%tizz%dev%Git_Vault%python%Claude_NBODYSIM%nbodysim_obs%main python script.md` — %home%tizz%dev%Git_Vault%python%Claude_NBODYSIM%nbodysim_obs%main python script _1395w_
+- `README.md` — For VS Code _7298w_
+- `README.md` — 🎭 Playwright _1209w_
+- `playwright-test-coverage.prompt.md` — playwright-test-coverage.prompt _170w_
+- `playwright-test-generate.prompt.md` — playwright-test-generate.prompt _23w_
+- `playwright-test-generator.agent.md` — For each test you generate _403w_
+- `playwright-test-heal.prompt.md` — playwright-test-heal.prompt _16w_
+- `playwright-test-healer.agent.md` — playwright-test-healer.agent _408w_
+- `playwright-test-plan.prompt.md` — playwright-test-plan.prompt _27w_
+- `README.md` — playwright-core _10w_
+- `SKILL.md` — Browser Automation with playwright-cli _1263w_
+- `element-attributes.md` — Inspecting Element Attributes _96w_
+- `playwright-tests.md` — Running Playwright Tests _264w_
+- `request-mocking.md` — Request Mocking _257w_
+- `running-code.md` — Running Custom Playwright Code _679w_
+- `session-management.md` — Browser Session Management _715w_
+- `spec-driven-testing.md` — Spec-driven testing (plan → generate → heal) _1672w_
+- `storage-state.md` — Storage Management _620w_
+- `test-generation.md` — Test Generation _578w_
+- `tracing.md` — Tracing _501w_
+- `video-recording.md` — Video Recording _687w_
+- `SKILL.md` — Playwright Trace CLI _695w_
+- `README.md` — Cargo _626w_
+- `README.md` — Clippy _1383w_
+- `README.md` — README _280w_
+- `releases.md` — releases _71425w_
+- `README.md` — rustfmt [![linux](https://github.com/rust-lang/rustfmt/actions/workflows/linux.yml/badge.svg?event=push)](https://github.com/rust-lang/rustfmt/actions/workflows/linux.yml) [![mac](https://github.com/rust-lang/rustfmt/actions/workflows/mac.yml/badge.svg?event=push)](https://github.com/rust-lang/rustfmt/actions/workflows/mac.yml) [![windows](https://github.com/rust-lang/rustfmt/actions/workflows/windows.yml/badge.svg?event=push)](https://github.com/rust-lang/rustfmt/actions/workflows/windows.yml) [![crates.io](https://img.shields.io/crates/v/rustfmt-nightly.svg)](https://crates.io/crates/rustfmt-nightly) _1275w_
+- `README.md` — go wrapper for the AUR JSON API _243w_
+- `README.md` — README _50w_
+- `README.md` — go-alpm _80w_
+- `README.md` — README _6w_
+- `README.md` — README _14w_
+- `README.md` — votar _164w_
+- `README.md` — go-srcinfo _327w_
+- `CONTRIBUTING.md` — Contributing to this project _753w_
+- `README.md` — README _772w_
+- `README.md` — golang-set _806w_
+- `README.md` — errwrap _384w_
+- `README.md` — go-multierror _620w_
+- `CHANGELOG.md` — Changelog _3082w_
+- `README.md` — gojq _1462w_
+- `CHANGELOG.md` — Changelog _135w_
+- `README.md` — timefmt-go _288w_
+- `PULL_REQUEST_TEMPLATE.md` — Before creating your Pull Request... _124w_
+- `README.md` — Gotext _929w_
+- `README.md` — xgotext _102w_
+- `CHANGELOG.md` — CHANGELOG _488w_
+- `README.md` — mapstructure [![Godoc](https://godoc.org/github.com/mitchellh/mapstructure?status.svg)](https://godoc.org/github.com/mitchellh/mapstructure) _241w_
+- `CHANGELOG.md` — Changelog _2593w_
+- `README.md` — [![{}j](assets/ojg_comet.svg)](https://github.com/ohler55/ojg) _547w_
+- `benchmarks.md` — OjG Benchmarks _686w_
+- `results.md` — results _566w_
+- `design.md` — A Journey building a fast JSON parser and full JSONPath, Oj for Go _4015w_
+- `discover.md` — OjG Discover _558w_
+- `sen.md` — Simple Encoding Notation _199w_
+- `CONTRIBUTING.md` — Contributing to Go _135w_
+- `README.md` — Go Networking _68w_
+- `README.md` — h2i _330w_
+- `README.md` — README _34w_
+- `CONTRIBUTING.md` — Contributing to Go _135w_
+- `README.md` — sys _73w_
+- `README.md` — Building `sys/unix` _1369w_
+- `CONTRIBUTING.md` — Contributing to Go _135w_
+- `README.md` — Go terminal/console support _71w_
+- `bug_report.md` —  _146w_
+- `CONTRIBUTING.md` — Contributing to yay _310w_
+- `README.md` — Yay _1046w_
+- `SECURITY.md` — Security Policy _79w_
+- `PULL_REQUEST_TEMPLATE.md` — Pull Request _323w_
+- `CHANGELOG.md` — Changelog _1729w_
+- `COMMIT_MESSAGE_GUIDELINES.md` — Commit Message Guidelines _608w_
+- `CONTRIBUTING.md` — Contributing to Community Standards _684w_
+- `CONTRIBUTORS.md` — Contributors _176w_
+- `CREDITS.md` — Credits _186w_
+- `Hyprdots-to-HyDE.md` — Hi! 👋 Khing here _501w_
+- `KEYBINDINGS.md` — KEYBINDINGS _1773w_
+- `README.md` — Download and run (will auto-detect missing packages) _1094w_
+- `RELEASE_POLICY.md` — FLOWCHART _1301w_
+- `README.md` — HydeVM - Simplified VM Tool for HyDE Contributors _1406w_
+- `KEYBINDINGS.ar.md` — KEYBINDINGS.ar _1721w_
+- `KEYBINDINGS.de.md` — KEYBINDINGS.de _1753w_
+- `KEYBINDINGS.es.md` — KEYBINDINGS.es _1969w_
+- `KEYBINDINGS.fr.md` — KEYBINDINGS.fr _1912w_
+- `KEYBINDINGS.nl.md` — KEYBINDINGS.nl _1673w_
+- `KEYBINDINGS.pt-br.md` — KEYBINDINGS.pt-br _1975w_
+- `KEYBINDINGS.zh.md` — KEYBINDINGS.zh _1507w_
+- `Hyprdots-to-HyDE.de.md` — Hallo! 👋 Delphin hier _489w_
+- `Hyprdots-to-HyDE.es.md` — ¡Hola! 👋 Aquí Khing _527w_
+- `Hyprdots-to-HyDE.fr.md` — Bonjour ! 👋 C'est Khing qui vous parle _579w_
+- `Hyprdots-to-HyDE.zh.md` — 嗨! 👋 这里是 Khing _219w_
+- `README.ar.md` — README.ar _730w_
+- `README.de.md` — README.de _807w_
+- `README.es.md` — Descargar y ejecutar (detectará automáticamente los paquetes faltantes) _1102w_
+- `README.fr.md` — README.fr _833w_
+- `README.nl.md` — README.nl _702w_
+- `README.pt-br.md` — README.pt-br _834w_
+- `README.tr.md` — İndirin ve çalıştırın (eksik paketleri otomatik olarak algılar) _798w_
+- `README.zh.md` — README.zh _532w_
+- `TESTING.md` — Testers Guide _668w_
+- `README.md` — Git Cheatsheet _164w_
+- `foundry.md` — Anthropic Foundry _245w_
+- `datasetcard_template.md` — For reference on dataset card metadata, see the spec: https://github.com/huggingface/hub-docs/blob/main/datasetcard.md?plain=1 _731w_
+- `modelcard_template.md` — For reference on model card metadata, see the spec: https://github.com/huggingface/hub-docs/blob/main/modelcard.md?plain=1 _915w_
+- `model_card_template.md` — For reference on model card metadata, see the spec: https://github.com/huggingface/hub-docs/blob/main/modelcard.md?plain=1 _1367w_
+- `model_card_template.md` — For reference on model card metadata, see the spec: https://github.com/huggingface/hub-docs/blob/main/modelcard.md?plain=1 _1375w_
+- `README.md` — README _5w_
+- `README.md` — README _5w_
+- `README.md` — README _23w_
+- `SKILL.md` — Typer _851w_
+- `README.md` — vault-organizer _309w_
+- `bug_report.md` —  _118w_
+- `feature_request.md` —  _45w_
+- `README.md` — Chroma — A general purpose syntax highlighter in pure Go _1516w_
+- `README.hermit.md` — Hermit environment _37w_
+- `README.md` — Lexer tests _283w_
+- `architecture_structure.md` — Codebase Architecture and Structure _213w_
+- `code_style_conventions.md` — Code Style and Conventions _172w_
+- `project_overview.md` — cclog Project Overview _129w_
+- `suggested_commands.md` — Essential Development Commands _177w_
+- `task_completion_checklist.md` — Task Completion Checklist _208w_
+- `tdd_guidelines.md` — TDD Development Guidelines _226w_
+- `tech_stack.md` — Tech Stack and Dependencies _105w_
+- `AGENTS.md` — Repository Guidelines _338w_
+- `CLAUDE.md` — CLAUDE.md _924w_
+- `README.md` — cclog - Claude Code Conversation Log Viewer & Converter _848w_
+- `requirements.md` — Requirements Document - Code Cleanup _357w_
+- `README.md` — Clipboard for Go _93w_
+- `README.md` — go-osc52 _240w_
+- `CHANGELOG.md` — Douceur Changelog _46w_
+- `README.md` — douceur [![Build Status](https://secure.travis-ci.org/aymerick/douceur.svg?branch=master)](http://travis-ci.org/aymerick/douceur) _346w_
+- `bug_report.md` —  _137w_
+- `README.md` — Bubbles _768w_
+- `bug_report.md` —  _131w_
+- `README.md` — Bubble Tea _1875w_
+- `bug_report.md` —  _131w_
+- `README.md` — Colorprofile _318w_
+- `README.md` — Glamour _317w_
+- `README.md` — Glamour Style Guide _1264w_
+- `code_block.md` — code_block _7w_
+- `emoji.md` — emoji _5w_
+- `44.md` — 44 _62w_
+- `46_2.md` — 46_2 _134w_
+- `48.md` — 48 _39w_
+- `bug_report.md` —  _137w_
+- `README.md` — Lip Gloss _2428w_
+- `README.md` — regexp2 - full featured regular expressions for Go _1077w_
+- `README.md` — README _8w_
+- `CHANGELOG.md` — Changelog _204w_
+- `README.md` — README _3032w_
+- `README.md` — go-isatty _75w_
+- `README.md` — README _38w_
+- `CREDITS.md` — CREDITS _33w_
+- `README.md` — bluemonday [![GoDoc](https://godoc.org/github.com/microcosm-cc/bluemonday?status.png)](https://godoc.org/github.com/microcosm-cc/bluemonday) [![Sourcegraph](https://sourcegraph.com/github.com/microcosm-cc/bluemonday/-/badge.svg)](https://sourcegraph.com/github.com/microcosm-cc/bluemonday?badge) _2630w_
+- `SECURITY.md` — Security Policy _97w_
+- `README.md` — ansi _49w_
+- `README.md` — CancelReader _217w_
+- `README.md` — reflow _423w_
+- `README.md` — README _1967w_
+- `ansi_compat.md` — ansi_compat _161w_
+- `README.md` — README _1435w_
+- `README.md` — README _107w_
+- `README.md` — teacup _98w_
+- `README.md` — Unicode Text Segmentation for Go _846w_
+- `README.md` — About terminfo [![GoDoc][1]][2] _379w_
+- `README.md` — README _156w_
+- `ISSUE_TEMPLATE.md` — ISSUE_TEMPLATE _191w_
+- `README.md` — document title _2228w_
+- `_data.md` — Introduction _25033w_
+- `CONTRIBUTING.md` — Contributing to Go _135w_
+- `README.md` — Go Networking _87w_
+- `README.md` — h2i _330w_
+- `CONTRIBUTING.md` — Contributing to Go _135w_
+- `README.md` — Go Sync _81w_
+- `CONTRIBUTING.md` — Contributing to Go _135w_
+- `README.md` — sys _73w_
+- `README.md` — Building `sys/unix` _1369w_
+- `CONTRIBUTING.md` — Contributing to Go _135w_
+- `README.md` — Go terminal/console support _71w_
+- `README.md` — Odysseus _1520w_
+- `ROADMAP.md` — Roadmap / Help Wanted _446w_
+- `SECURITY.md` — Security Policy _258w_
+- `MODULE_SUMMARY.md` — Module Organization Summary _428w_
+- `README.md` — README _1816w_
+- `bug_report.md` —  _136w_
+- `CHANGELOG.md` — CHANGELOG _3713w_
+- `README.md` — ATTENTION: This project has been renamed `awww` and moved to [Codeberg](https://codeberg.org/LGFae/awww) _1281w_
+- `bug_report.md` —  _136w_
+- `CHANGELOG.md` — CHANGELOG _3713w_
+- `README.md` — ATTENTION: This project has been renamed `awww` and moved to [Codeberg](https://codeberg.org/LGFae/awww) _1281w_
+- `CHANGELOG.md` — CHANGELOG _2704w_
+- `README.md` — A Solution to your Wayland Wallpaper Woes _1162w_
+- `CHANGELOG.md` — CHANGELOG _2704w_
+- `README.md` — A Solution to your Wayland Wallpaper Woes _1162w_
+- `CHANGELOG.md` — CHANGELOG _2704w_
+- `README.md` — A Solution to your Wayland Wallpaper Woes _1162w_
+- `CHANGELOG.md` — CHANGELOG _2704w_
+- `README.md` — A Solution to your Wayland Wallpaper Woes _1162w_
+
+### 📁 `cluster-0/`
+**cluster-0** — 700 notes
+__
+
+- `README.md` — README _24w_
+- `README.md` — README _24w_
+- `README.md` — README _24w_
+- `README.md` — README _24w_
+- `README.md` — README _24w_
+- `README.md` — README _24w_
+- `README.md` — README _24w_
+- `README.md` — README _24w_
+- `README.md` — README _24w_
+- `README.md` — README _24w_
+- `README.md` — README _24w_
+- `README.md` — README _24w_
+- `History.md` — History _22w_
+- `CODE_OF_CONDUCT.md` — Contributor Covenant Code of Conduct _447w_
+- `CODE_OF_CONDUCT.md` — Contributor Covenant Code of Conduct _447w_
+- `README.md` — Deranged _11w_
+- `feature_request.md` —  _54w_
+- `other.md` —  _12w_
+- `feature_request.md` —  _111w_
+- `question.md` —  _80w_
+- `CODE_OF_CONDUCT.md` — Contributor Covenant Code of Conduct _468w_
+- `README.md` — 9 neighboring pixels iterator _37w_
+- `question.md` — [QUESTION] _40w_
+- `CODE_OF_CONDUCT.md` — Code of Conduct _1430w_
+- `CODE_OF_CONDUCT.md` — Contributor Covenant Code of Conduct _468w_
+- `New protocol.md` — New protocol _32w_
+- `GOVERNANCE.md` — wayland-protocols governance _1125w_
+- `README.md` — Blackout _157w_
+- `README.md` — BLOSSOM _24w_
+- `README.md` — BurntSienna _20w_
+- `CODE_OF_CONDUCT.md` — Contributor Covenant Code of Conduct _724w_
+- `CONTRIBUTING.md` — Contributing guidelines _501w_
+- `README.md` — Default _33w_
+- `README.md` — Dreary _89w_
+- `README.md` — Dribbblish _437w_
+- `README.md` — Matte _257w_
+- `README.md` — Nightlight _13w_
+- `README.md` — Onepunch _165w_
+- `README.md` — spicetify community themes _323w_
+- `README.md` — SharkBlue _12w_
+- `README.md` — Sleek _101w_
+- `README.md` — StarryNight _240w_
+- `THEMES.md` — Themes preview _578w_
+- `README.md` — Turntable _247w_
+- `README.md` — Ziro _79w_
+- `README.md` — Extras _36w_
+- `README.md` — SpotifyNoControl _187w_
+- `README.md` — text _534w_
+- `README.md` — Blackout _157w_
+- `README.md` — BLOSSOM _24w_
+- `README.md` — BurntSienna _20w_
+- `CODE_OF_CONDUCT.md` — Contributor Covenant Code of Conduct _724w_
+- `CONTRIBUTING.md` — Contributing guidelines _501w_
+- `README.md` — Default _33w_
+- `README.md` — Dreary _89w_
+- `README.md` — Dribbblish _437w_
+- `README.md` — Matte _257w_
+- `README.md` — Nightlight _13w_
+- `README.md` — Onepunch _165w_
+- `README.md` — spicetify community themes _323w_
+- `README.md` — SharkBlue _12w_
+- `README.md` — Sleek _101w_
+- `README.md` — StarryNight _240w_
+- `THEMES.md` — Themes preview _578w_
+- `README.md` — Turntable _247w_
+- `README.md` — Ziro _79w_
+- `README.md` — Extras _36w_
+- `README.md` — SpotifyNoControl _187w_
+- `README.md` — text _534w_
+- `README.md` — Dcol and Wallbash _469w_
+- `config.md` — config _2281w_
+- `README.md` — Dcol and Wallbash _469w_
+- `config.md` — config _2281w_
+- `README.md` — Dcol and Wallbash _469w_
+- `config.md` — config _2281w_
+- `README.md` — Dcol and Wallbash _469w_
+- `config.md` — config _2281w_
+- `README.md` — Dcol and Wallbash _469w_
+- `config.md` — config _2281w_
+- `README.md` — Dcol and Wallbash _469w_
+- `config.md` — config _2281w_
+- `README.md` — Dcol and Wallbash _469w_
+- `config.md` — config _2281w_
+- `README.md` — Dcol and Wallbash _469w_
+- `README.md` — Blackout _157w_
+- `README.md` — BLOSSOM _24w_
+- `README.md` — BurntSienna _20w_
+- `CODE_OF_CONDUCT.md` — Contributor Covenant Code of Conduct _724w_
+- `CONTRIBUTING.md` — Contributing guidelines _501w_
+- `README.md` — Default _33w_
+- `README.md` — Dreary _89w_
+- `README.md` — Dribbblish _437w_
+- `README.md` — Matte _257w_
+- `README.md` — Nightlight _13w_
+- `README.md` — Onepunch _165w_
+- `README.md` — spicetify community themes _323w_
+- `README.md` — SharkBlue _12w_
+- `README.md` — Sleek _101w_
+- `README.md` — StarryNight _240w_
+- `THEMES.md` — Themes preview _578w_
+- `README.md` — Turntable _247w_
+- `README.md` — Ziro _79w_
+- `README.md` — Extras _36w_
+- `README.md` — SpotifyNoControl _187w_
+- `README.md` — text _534w_
+- `01748f45-2fc3-4340-8f05-db8182a70bc1.md` — 01748f45-2fc3-4340-8f05-db8182a70bc1 _199w_
+- `01d76ec3-9e81-4c39-8b95-3fb6dda7a689.md` — Install .NET SDK if you haven't already _2630w_
+- `0350b5fd-c9ca-426e-af9e-68f5025fbdcc.md` — main.py _16587w_
+- `055bc427-4ccd-4f1b-9bed-d469a64fe281.md` — Euclid's Elements - Comprehensive Study Notes _861w_
+- `0663ba05-71d6-4693-90df-5b70fc07c94c.md` — 0663ba05-71d6-4693-90df-5b70fc07c94c _295w_
+- `070cc517-c4d5-4d51-9593-bd46cc106fb6.md` — VPython example - this actually works great for molecular dynamics _1978w_
+- `0a856721-6eb1-4f6f-8abc-a395371953be.md` — 0a856721-6eb1-4f6f-8abc-a395371953be _315w_
+- `0b8de063-3a70-455e-a026-ef446908d907.md` — 0b8de063-3a70-455e-a026-ef446908d907 _559w_
+- `0cbea98e-7d18-4662-add3-fa8f285da752.md` — Get mouse position _760w_
+- `0d930c1f-3477-48d5-a63e-36247f793159.md` — 0d930c1f-3477-48d5-a63e-36247f793159 _772w_
+- `0db99cbe-b71c-4100-ae57-d3fe65ef761d.md` — Main code to run a Solar System simulation _847w_
+- `0eba27b6-f9fd-4fb3-aa4e-30f1151deaa4.md` — 0eba27b6-f9fd-4fb3-aa4e-30f1151deaa4 _379w_
+- `10d30f14-40ec-434a-ada1-a1de8c878beb.md` — 10d30f14-40ec-434a-ada1-a1de8c878beb _580w_
+- `12d63971-833f-4cac-9305-b995885acc41.md` — 12d63971-833f-4cac-9305-b995885acc41 _59w_
+- `13470e74-0472-4c08-8e86-d3090b6af5a2.md` — Draw lines _178w_
+- `1383935b-a89f-4f53-b099-ece4bd75ce80.md` — 1383935b-a89f-4f53-b099-ece4bd75ce80 _216w_
+- `13a2283e-f585-473d-9191-4014fbbdabf2.md` — Install optional dependencies for better analysis _2959w_
+- `140b5718-a580-4381-8697-ba1cde0fb956.md` — 140b5718-a580-4381-8697-ba1cde0fb956 _1159w_
+- `142e9c5b-4fe9-4650-a169-db35d13c0f58.md` — 142e9c5b-4fe9-4650-a169-db35d13c0f58 _3094w_
+- `16413fdd-976b-43ce-b6ee-aa8f91d5c93e.md` — Parse tree → Create files → Add cross-references _1486w_
+- `16916bae-ab36-4175-b14c-938572f62813.md` — Initialize pygame _5435w_
+- `16c6ac01-6cb2-42a9-a408-393f95ec6477.md` — line = mx + b _1061w_
+- `179aeb77-a5b8-4c33-a409-ccc1b52c02a8.md` — 179aeb77-a5b8-4c33-a409-ccc1b52c02a8 _647w_
+- `1a066784-901c-4d4d-a8e7-09fb981ef0e9.md` — HTML Documentation _1560w_
+- `1aee16df-3d4d-4a3b-8106-753b39a1a2b3.md` — 1aee16df-3d4d-4a3b-8106-753b39a1a2b3 _74w_
+- `1b24d28d-eba0-4608-9a7b-62a5ccf92ece.md` — Interactive Molecular Water Simulation - Improved Prompt _1274w_
+- `1cb6d1e5-345a-4d84-b76e-58f5390a639a.md` — 1cb6d1e5-345a-4d84-b76e-58f5390a639a _444w_
+- `1df47d1f-ce24-4303-bf33-b3efb0f5b19b.md` — Lid close/open handling _506w_
+- `1e0f01ad-c735-4401-b3f4-c62232aeb4b5.md` — Camera position calculated from spherical coordinates _1658w_
+- `1e64ca10-b0af-4a32-835e-2ffe64c2227c.md` — 1e64ca10-b0af-4a32-835e-2ffe64c2227c _2483w_
+- `1e9c0c2c-9358-4d98-b64c-85d2cac843ff.md` — Maximizing AI Potential: A Comprehensive Research Framework _1821w_
+- `1e9c84cd-496e-4676-b64f-1487c3fe348c.md` — Bad — states the obvious _651w_
+- `22da80ad-219e-4e4a-9127-634394a683f8.md` — 22da80ad-219e-4e4a-9127-634394a683f8 _140w_
+- `235b570f-52c5-4b4a-820f-54156d8a6737.md` — 235b570f-52c5-4b4a-820f-54156d8a6737 _980w_
+- `26385ecd-7e40-433d-bc06-ebbe0c4380dd.md` — 26385ecd-7e40-433d-bc06-ebbe0c4380dd _212w_
+- `28ae7418-dd73-4b76-a001-203ebe370e19.md` — 28ae7418-dd73-4b76-a001-203ebe370e19 _462w_
+- `293c3569-6038-4c0c-af56-34da5abfe273.md` — --- Initialize window --- _6075w_
+- `2a384baf-2021-456b-ae49-6464256cbcfe.md` — move overlapping bodies away from each other _1153w_
+- `2a88caf2-311d-4083-9bde-1a94a3747552.md` — 2a88caf2-311d-4083-9bde-1a94a3747552 _1894w_
+- `2ab67040-093a-4840-bdda-601f0a96d945.md` — 2ab67040-093a-4840-bdda-601f0a96d945 _129w_
+- `2b9eb4d5-3e8f-467c-9c8a-48e57f706b2b.md` — 2b9eb4d5-3e8f-467c-9c8a-48e57f706b2b _414w_
+- `2bc3e76a-8bbd-42e7-b96f-1cb9eef05f18.md` — Analyze your vault and get organization suggestions _1528w_
+- `2c223fc4-63ed-451f-bf67-43d06794f23b.md` — or _502w_
+- `2c7b2eab-4a6d-4d23-995b-41b016e7389a.md` — 2c7b2eab-4a6d-4d23-995b-41b016e7389a _742w_
+- `2c941ccf-2491-405a-b4be-29f016e5edf9.md` — Mount EFI partition if needed, usually at /boot/efi or /efi _1673w_
+- `2d160c1b-afb7-40db-82f7-6e80737d8e60.md` — 2d160c1b-afb7-40db-82f7-6e80737d8e60 _284w_
+- `2daa8b3f-0ca2-4b63-a3e4-738ff8ea164b.md` — 2daa8b3f-0ca2-4b63-a3e4-738ff8ea164b _1829w_
+- `2e0a4685-27ff-419b-ba0b-de472653b466.md` — scripts/physics.py _4173w_
+- `2fd25542-3ebe-4ae9-841d-4d04a3a8e51a.md` — Markdown Formatting Guidelines _318w_
+- `30dad484-050f-417b-87ca-65cbde133ddd.md` — 30dad484-050f-417b-87ca-65cbde133ddd _267w_
+- `317a5cc0-9adb-46f8-bb00-f201b65ebc68.md` — --- Translation --- _2324w_
+- `344333f1-51c5-4910-ad88-4ea5aeda907a.md` — Initialize window _2268w_
+- `373869f1-ac83-4acc-ba0d-87d5a926576a.md` — 373869f1-ac83-4acc-ba0d-87d5a926576a _1690w_
+- `387dbd0c-cafe-41c4-9184-bdd45e9481ec.md` — Create the Sun _932w_
+- `39845abd-13ca-490d-8087-30ff9c8b2d57.md` — 39845abd-13ca-490d-8087-30ff9c8b2d57 _180w_
+- `39cc3fb4-5095-460c-8196-68bbd264b725.md` — 39cc3fb4-5095-460c-8196-68bbd264b725 _1026w_
+- `3a502cde-db13-4c9b-9c54-30abda15d814.md` — Average rate of change formula _731w_
+- `3a52740b-7877-46e5-aadc-cfa2a9a64a38.md` — saves to C:\Users\you\.ssh\id_ed25519 _2998w_
+- `3ad888a6-9438-471e-8694-27ff5f7fbdda.md` — 3ad888a6-9438-471e-8694-27ff5f7fbdda _10w_
+- `3bc1d20e-3d90-4f39-9067-3a8c6276a7a2.md` — 3bc1d20e-3d90-4f39-9067-3a8c6276a7a2 _344w_
+- `3d055b77-c037-4d94-a5a0-d50fb59c11a4.md` — 3d055b77-c037-4d94-a5a0-d50fb59c11a4 _461w_
+- `3d8a8318-68ce-4418-bd15-a88ed290ff60.md` — 3d8a8318-68ce-4418-bd15-a88ed290ff60 _292w_
+- `3db4880b-1e3d-4410-b1d6-6ab5bc9d4b05.md` — 3db4880b-1e3d-4410-b1d6-6ab5bc9d4b05 _1168w_
+- `3f2b3ad6-b092-4b87-91bb-f1b1e6ccba41.md` — Physics _5683w_
+- `425e14f0-a158-4df6-ae4d-b852aed5efca.md` — Main code to run a Solar System simulation _366w_
+- `4379b212-88dd-414c-86f8-3ae68c3acd66.md` — scripts/body.py _12544w_
+- `4450ca3a-6c7f-4c94-ac16-6b8b44744e16.md` — 4450ca3a-6c7f-4c94-ac16-6b8b44744e16 _603w_
+- `445cb896-3d85-42aa-b980-f727f9b26d41.md` — 445cb896-3d85-42aa-b980-f727f9b26d41 _1104w_
+- `453df4ea-64d7-4052-98e4-8aca39512bab.md` — 453df4ea-64d7-4052-98e4-8aca39512bab _18w_
+- `470e00f6-e752-4ef9-9819-7ecfed403d75.md` — Sample solar system data _1298w_
+- `476d353a-fac7-4543-9648-b37c67d35713.md` — 476d353a-fac7-4543-9648-b37c67d35713 _26w_
+- `477c7294-99e8-48ac-864d-975dbd113b1a.md` — Initialize pygame _1002w_
+- `47844bb5-2653-4d5a-9113-fbf261136e54.md` — 47844bb5-2653-4d5a-9113-fbf261136e54 _425w_
+- `4ad111c5-e6d0-42ad-a6b9-89e29f52b233.md` — 4ad111c5-e6d0-42ad-a6b9-89e29f52b233 _478w_
+- `4cedeb9c-e6df-4261-8401-3507cf100363.md` — Create the Sun _4455w_
+- `4ed3a214-ecc0-41c6-8fcc-5751446483b9.md` — 4ed3a214-ecc0-41c6-8fcc-5751446483b9 _439w_
+- `4ed7d5c4-9ced-44e3-99df-f3b985afa1b7.md` — Position and motion state _6259w_
+- `50645ffc-4ea8-487a-9257-75a7b7d51d40.md` — In a real implementation, this would query a spatial database _1219w_
+- `508c4b5e-fa44-49e2-8330-64b543a15caa.md` — 508c4b5e-fa44-49e2-8330-64b543a15caa _1155w_
+- `52aa7ca0-a8b3-46c6-bd85-760f874ec4ad.md` — 52aa7ca0-a8b3-46c6-bd85-760f874ec4ad _2302w_
+- `5659c806-b4c3-4bdd-92f9-73a5b5fde380.md` — Create sliders for mass, velocity _1530w_
+- `5839e7b2-62b0-4505-8c6a-6fd4937acb09.md` — 5839e7b2-62b0-4505-8c6a-6fd4937acb09 _339w_
+- `59e9ba4f-1891-47c0-9bc6-9da6be418152.md` — main.py _10560w_
+- `5b68f430-511e-4fd7-81d8-1e6ebe0ea58a.md` — 5b68f430-511e-4fd7-81d8-1e6ebe0ea58a _692w_
+- `5d9a50cd-7673-4157-9567-440af99c674e.md` — 5d9a50cd-7673-4157-9567-440af99c674e _576w_
+- `5e7cd9bb-5113-43ef-a2bc-04eef56d195d.md` — 5e7cd9bb-5113-43ef-a2bc-04eef56d195d _265w_
+- `61b84eeb-2e61-410e-a619-4e1c54b6336b.md` — 61b84eeb-2e61-410e-a619-4e1c54b6336b _303w_
+- `63f1914c-1bce-4edd-a16f-7f028dbe9560.md` — Steam and gaming related packages _1060w_
+- `66a021f9-4198-4a57-b868-1b197ec22009.md` — 66a021f9-4198-4a57-b868-1b197ec22009 _10w_
+- `671016b7-66c7-4392-8fdb-b4283b1befb5.md` — Screen dimensions _1027w_
+- `67235c62-4c4b-4716-b49e-6869d2adb7f8.md` — Sample solar system data _1740w_
+- `67e5dc40-8a0f-4a3b-81e0-64e9ca0326b1.md` — 67e5dc40-8a0f-4a3b-81e0-64e9ca0326b1 _2042w_
+- `682eaf18-71f4-4ae3-b4ad-dc1b86d49477.md` — 682eaf18-71f4-4ae3-b4ad-dc1b86d49477 _710w_
+- `6c7eb27e-b0ac-4e22-864f-4de9c146e957.md` — First, find your root partition (look for the largest one, usually) _3436w_
+- `6e998ddc-78d5-4387-8c72-4496219ffdd3.md` — Stop charging at 80% _7349w_
+- `6e9b5ac6-5ad5-456a-b9b8-f6b413ee5279.md` — Install required packages _2969w_
+- `6f807b16-72c3-4389-88c2-d1ece1765d36.md` — 6f807b16-72c3-4389-88c2-d1ece1765d36 _14w_
+- `707da7c9-088b-49c7-9d65-2e24daa7f6fb.md` — Remove current theme _3178w_
+- `74a2d73f-0b41-431d-a545-f6116f55ee02.md` — 74a2d73f-0b41-431d-a545-f6116f55ee02 _787w_
+- `75745388-9de6-4092-88a6-d44ab7e94576.md` — ══ Data Classes ════════════════════════════════════════════════════════════╗ _7689w_
+- `76245cc3-433b-4687-be6e-fbcda096adfe.md` — 76245cc3-433b-4687-be6e-fbcda096adfe _1567w_
+- `7668cf8e-b927-49a0-947b-93f43af75f13.md` — Create mount point _1042w_
+- `775d3451-3b00-471d-9384-95d0d048a01d.md` — In a real implementation, this would query a spatial database _694w_
+- `794a2f1a-10b5-4496-a539-9543007fd4a8.md` — 794a2f1a-10b5-4496-a539-9543007fd4a8 _857w_
+- `798494fe-81e5-4172-a7c3-39230b5d1362.md` — 798494fe-81e5-4172-a7c3-39230b5d1362 _841w_
+- `7a2f749c-d468-42f1-8ec2-201649abb860.md` — 7a2f749c-d468-42f1-8ec2-201649abb860 _2118w_
+- `7b24dd37-abec-4286-9f61-6587b7719629.md` — 7b24dd37-abec-4286-9f61-6587b7719629 _290w_
+- `7c3e5e2a-eb66-4d2c-98af-f6eec80623b1.md` — str _2888w_
+- `7cae7e76-19be-403a-b909-5ef72a37297f.md` — 7cae7e76-19be-403a-b909-5ef72a37297f _258w_
+- `7ff80748-326e-4691-ac12-78f5c8882951.md` — Initialize window _801w_
+- `8201099b-5e73-461c-8a93-f60c07aebf1b.md` — Subtraction Curriculum _3413w_
+- `82ec66ef-a3c4-433d-85e2-f3196b4f7721.md` — 82ec66ef-a3c4-433d-85e2-f3196b4f7721 _314w_
+- `8392b50c-e838-4c9f-a2ed-e1a4d6cc360d.md` — Terminal emulator _1253w_
+- `85636300-4cb2-4970-9c16-2ea86e18f140.md` — Initialize _1286w_
+- `8670d40d-cc5d-4939-8052-682f9cd9915c.md` — 8670d40d-cc5d-4939-8052-682f9cd9915c _681w_
+- `86ab933b-2d9c-4845-a12a-f27925d73cb9.md` — 86ab933b-2d9c-4845-a12a-f27925d73cb9 _449w_
+- `88fcdb1b-e1d7-416b-83dc-bf71dae581f5.md` — 88fcdb1b-e1d7-416b-83dc-bf71dae581f5 _4333w_
+- `89b969be-8d27-49d6-a670-d276cbabad5a.md` — 89b969be-8d27-49d6-a670-d276cbabad5a _176w_
+- `89dfecb4-57df-44b4-808d-6dd787483528.md` — 89dfecb4-57df-44b4-808d-6dd787483528 _10w_
+- `8b6bd764-58cb-41e1-b197-b441e7594ac3.md` — Search for files and directories containing "invoice" (case-insensitive) _235w_
+- `90e80fdc-3e77-4ede-97fb-63d0cc2ce739.md` — CompTIA Security+ Social Engineering Overview _3355w_
+- `93e935cd-25a8-4d66-b2b0-7a3610bba7d3.md` — 93e935cd-25a8-4d66-b2b0-7a3610bba7d3 _142w_
+- `949f8cd3-90cc-4418-bf8b-6589b982e92c.md` — Main code to run a Solar System simulation (eventually) _550w_
+- `9578bf59-a3d7-4f4e-8183-0a087ecf2342.md` — exec = gsettings set org.gnome.desktop.interface cursor-theme 'Cursor-Windowss' #sakcs _13308w_
+- `9757774e-ec89-4ef2-a2e0-642b6c50a81f.md` — 9757774e-ec89-4ef2-a2e0-642b6c50a81f _565w_
+- `979e1bfb-5469-4009-be21-5d45e023f69c.md` — In WSL2 terminal, find your Linux partition _1424w_
+- `9849a97d-73f9-4b24-9113-603eff80a5cf.md` — 9849a97d-73f9-4b24-9113-603eff80a5cf _1099w_
+- `9b375251-a5c4-48c9-9c9b-a9afe633209f.md` — Create rotation matrices for each axis _1601w_
+- `9c8a7615-5d0d-4f1b-853b-a0aadb323499.md` — 9c8a7615-5d0d-4f1b-853b-a0aadb323499 _159w_
+- `9eda737c-7ceb-4752-91cc-fe5ba2ca3d3c.md` — Tobin Cameron _1749w_
+- `9f06d06e-9d8d-427b-b47b-695fcd448d14.md` — Check if point is on the line segment _5023w_
+- `9f118f15-14b7-4767-ac1e-f2e35079ecfd.md` — 9f118f15-14b7-4767-ac1e-f2e35079ecfd _306w_
+- `9f407cc6-4086-46d3-8678-8eb8b62fbcc3.md` — pip install pyray _1826w_
+- `a0597bba-43bb-4123-8913-580da3fc173b.md` — a0597bba-43bb-4123-8913-580da3fc173b _1697w_
+- `a16c84e8-bddc-426c-bc13-d6b1eead2c75.md` — a16c84e8-bddc-426c-bc13-d6b1eead2c75 _241w_
+- `a1ca7a72-5c3e-4c18-8ebb-dd167be5ca43.md` — Your drawing code here _338w_
+- `a24c929d-35e4-44de-ba3c-d6370147082b.md` — a24c929d-35e4-44de-ba3c-d6370147082b _278w_
+- `a582fbaf-dfbb-4acf-9587-5d8d62259d76.md` — a582fbaf-dfbb-4acf-9587-5d8d62259d76 _285w_
+- `a7bfd00a-adaa-4e9e-b9e7-0aa5f1743e1d.md` — a7bfd00a-adaa-4e9e-b9e7-0aa5f1743e1d _10w_
+- `ac3f3851-7a2b-497e-b257-b15dbf560aff.md` — ac3f3851-7a2b-497e-b257-b15dbf560aff _549w_
+- `b0292582-d1d0-4dd4-b6fb-a50c75f8f09a.md` — Initialize Pygame _2028w_
+- `b11f7fc2-d8a2-4f0e-b9dd-13fbc2d186b6.md` — b11f7fc2-d8a2-4f0e-b9dd-13fbc2d186b6 _313w_
+- `b19648e3-a1c8-4a76-aa58-c77cc288b820.md` — b19648e3-a1c8-4a76-aa58-c77cc288b820 _213w_
+- `b1cc4ead-7ba8-4ae1-a7c0-8a785e67834c.md` — b1cc4ead-7ba8-4ae1-a7c0-8a785e67834c _2273w_
+- `b51996eb-13ca-4db9-aa20-c4959ec227b5.md` — In a real implementation, this would query a spatial database _1326w_
+- `b5645163-b54b-442b-b8c2-d1357c839b56.md` — b5645163-b54b-442b-b8c2-d1357c839b56 _672w_
+- `b8153d31-c0be-4079-883d-4c32f7184fe2.md` — main.py _3549w_
+- `bb766220-5bff-4bd8-aa3a-d597fc70bf19.md` — Create a main development folder _268w_
+- `c356cff9-9c5a-4cd1-9579-1873089f46d9.md` — CSS Spacing Elements Visual Guide _1975w_
+- `c544105d-d660-4014-8b6d-d0acba491ede.md` — c544105d-d660-4014-8b6d-d0acba491ede _270w_
+- `c6ee5c36-d417-4eac-a456-5a8b677dfd85.md` — c6ee5c36-d417-4eac-a456-5a8b677dfd85 _205w_
+- `c8967468-7e3a-44f7-8787-b3ac75a2849e.md` — c8967468-7e3a-44f7-8787-b3ac75a2849e _1498w_
+- `c953efd7-0d8c-4cc9-8199-c025e91a2e69.md` — c953efd7-0d8c-4cc9-8199-c025e91a2e69 _2450w_
+- `cb467bce-f463-4a1f-9ee9-424f1cff2d43.md` — Extract frontmatter if present _3673w_
+- `cbbca1df-0195-4fb8-b9d5-5d0c5d9fd552.md` — ---- Definitions ---- _2806w_
+- `cbe041cc-5872-4db5-8ceb-82245b85f3ad.md` — Boot from Arch live USB _3917w_
+- `cd76bab3-e6ba-4167-9cd1-b44148ead759.md` — cd76bab3-e6ba-4167-9cd1-b44148ead759 _181w_
+- `ce132c22-5b2c-4d9b-b893-d6c733bb909b.md` — // You can use the commands below or use the HyDE CLI to set the cursor globally _569w_
+- `cefc0b64-9b45-4884-9ab5-ca587cbfe83c.md` — cefc0b64-9b45-4884-9ab5-ca587cbfe83c _329w_
+- `cfba6a07-5870-4967-93f5-b9fdef4191a7.md` — cfba6a07-5870-4967-93f5-b9fdef4191a7 _374w_
+- `d0efb928-0ddd-4d96-a9c3-49a7d9bd8b6b.md` — d0efb928-0ddd-4d96-a9c3-49a7d9bd8b6b _266w_
+- `d23f3ee6-00a0-4159-94f3-41bfacb257fd.md` — d23f3ee6-00a0-4159-94f3-41bfacb257fd _677w_
+- `d2700619-830d-47c3-943c-65a4d1d2b8c1.md` — Prompt for Markdown Formatter with Obsidian Features _476w_
+- `d3d577f6-3e8d-4240-a315-4c33cd270472.md` — d3d577f6-3e8d-4240-a315-4c33cd270472 _565w_
+- `d5b6cba8-c038-459e-b793-9a3bc0eb7d3c.md` — d5b6cba8-c038-459e-b793-9a3bc0eb7d3c _516w_
+- `d5c7024a-a4cf-49d5-b738-085e4b62bcc5.md` — d5c7024a-a4cf-49d5-b738-085e4b62bcc5 _307w_
+- `da599bbe-0750-4167-9b7f-793764051ab1.md` — da599bbe-0750-4167-9b7f-793764051ab1 _253w_
+- `daadbd72-f1d8-41c4-8ae7-ac273a35d416.md` — Check common locations: _2757w_
+- `dc5bb5bb-cfcd-4f46-ab80-aeb8a49ca15b.md` — dc5bb5bb-cfcd-4f46-ab80-aeb8a49ca15b _456w_
+- `dee4d6bd-6d91-4fd8-bb8e-c63e37697281.md` — Kinematics Learning Roadmap _1289w_
+- `dfa5a993-a7ee-47bc-9434-b1955b2321bd.md` — --- Class-level Constants _1419w_
+- `e0886400-3dd9-4113-98cc-5a3deef290f9.md` — Galaxy and Solar System Generation Pseudocode _4418w_
+- `e16f2988-22c8-4ce3-8a77-ea8f42cd66a2.md` — 1. Scan all your vault roots _1355w_
+- `e4d9b31a-7808-4bfb-b218-4bd75b7e7d21.md` — e4d9b31a-7808-4bfb-b218-4bd75b7e7d21 _1058w_
+- `e4fdca51-e2e5-43ce-8c26-170941e41920.md` — You'd typically store the previous frame's input state _1214w_
+- `e5bf442f-cd0d-4d58-9899-6b2a063609d9.md` — e5bf442f-cd0d-4d58-9899-6b2a063609d9 _1461w_
+- `e5f8b593-501b-4234-b43d-a191857d899d.md` — e5f8b593-501b-4234-b43d-a191857d899d _471w_
+- `e7968197-8019-45a6-9480-cd831f300b5c.md` — Create rotation matrices for each axis _1747w_
+- `e85d66b8-eddd-4d94-8f36-adb92d8e307c.md` — Try to tabulate if it's a list of dictionaries _5744w_
+- `e8abd8ab-447d-4efb-a16b-06fd39d875a2.md` — e8abd8ab-447d-4efb-a16b-06fd39d875a2 _917w_
+- `e94af682-3f6a-4a00-babc-f69377bffc6d.md` — Create a figure with subplots _1423w_
+- `ebad8e9a-2fed-4334-81ee-48d9cb286b44.md` — Install nvidia-settings if not already installed _6654w_
+- `ec9cfe30-567b-4e22-83f2-7d8fba6d4369.md` — I can share code in formatted blocks like this _4389w_
+- `ed17ea5d-7d49-41ff-b38d-543a2093b6f1.md` — str _2879w_
+- `ee832ad1-a8a9-41cd-9958-199452a87b16.md` — ee832ad1-a8a9-41cd-9958-199452a87b16 _600w_
+- `efd88c5e-d25c-4c95-ad15-c5697a234585.md` — Elementary Algebra Study Guide _2068w_
+- `f1797ecd-19be-42e9-8b31-9f6bf45f11b0.md` — f1797ecd-19be-42e9-8b31-9f6bf45f11b0 _969w_
+- `f18cb09b-6da8-410a-9647-6a93fd0a950b.md` — f18cb09b-6da8-410a-9647-6a93fd0a950b _872w_
+- `f3ad3061-afd8-427c-a460-9a964ce7db5b.md` — f3ad3061-afd8-427c-a460-9a964ce7db5b _253w_
+- `f44f1d0f-d54a-49f7-93f1-3225cb1fdfa8.md` — f44f1d0f-d54a-49f7-93f1-3225cb1fdfa8 _468w_
+- `f6f8d266-b97c-49dd-966a-f3150964cf04.md` — f6f8d266-b97c-49dd-966a-f3150964cf04 _1126w_
+- `f894622e-312c-4f6a-b940-aa7c2ecf04ea.md` — f894622e-312c-4f6a-b940-aa7c2ecf04ea _353w_
+- `f92d9438-0707-47bc-b932-20b312d037ff.md` — f92d9438-0707-47bc-b932-20b312d037ff _503w_
+- `fbe1f075-f00c-4e2d-b616-f6ea9988ffb0.md` — Create the Sun _4470w_
+- `fc5b2cdf-91c8-4c87-a612-86431236e8f6.md` — fc5b2cdf-91c8-4c87-a612-86431236e8f6 _929w_
+- `fd617daf-e884-44f3-9a2b-56e959eaf226.md` — Solve the system of equations: _3826w_
+- `ff2074fe-eabf-4e3b-bab6-0908a2176bcd.md` — ff2074fe-eabf-4e3b-bab6-0908a2176bcd _468w_
+- `README.md` — Transition tutorial _1497w_
+- `README.md` — Classical Tibetan syllable spellchecker for Hunspell _205w_
+- `LICENSE.md` — Licencia _99w_
+- `README.md` — Classical Tibetan syllable spellchecker for Hunspell _205w_
+- `LICENSE.md` — Licencia _99w_
+- `README.md` — Classical Tibetan syllable spellchecker for Hunspell _205w_
+- `LICENSE.md` — Licencia _99w_
+- `README.md` — Classical Tibetan syllable spellchecker for Hunspell _205w_
+- `LICENSE.md` — Licencia _99w_
+- `config.md` — config _2300w_
+- `appearance.md` — Appearance _290w_
+- `term.md` — Terminal (term) _14w_
+- `feature_request.md` —  _96w_
+- `Plan.agent.md` — Plan.agent _446w_
+- `feature_request.md` —  _79w_
+- `History.md` — History _22w_
+- `CODE_OF_CONDUCT.md` — Contributor Code of Conduct _727w_
+- `README.md` — Menu _579w_
+- `pull_request_template.md` —  _12w_
+- `feature_request.md` —  _90w_
+- `test.md` — H1 _83w_
+- `feature_request.md` —  _90w_
+- `language-request.md` —  _34w_
+- `BUILTIN_TEXTOBJECTS.md` — BUILTIN_TEXTOBJECTS _5153w_
+- `box_dash_quote.md` — Checkbox / Dash / Quote _32w_
+- `callout.md` — Note _57w_
+- `heading_code.md` — Heading 1 _39w_
+- `latex.md` — LaTeX _9w_
+- `big.md` — big _63252w_
+- `math.md` — math _79w_
+- `test2.md` — test _5w_
+- `feature_request.md` —  _90w_
+- `developers.md` — Developers _2480w_
+- `README.md` — README _30w_
+- `README.md` — Tokyo Night for Tailwind CSS v4 _111w_
+- `README.md` — README _236w_
+- `README.md` — README _62w_
+- `nui.nvim-lua-nui-menu.md` — Menu _584w_
+- `%home%tizz%dev%Git_Vault%python%math%1.1 Polynomial Review.md` — %home%tizz%dev%Git_Vault%python%math%1.1 Polynomial Review _3963w_
+- `playwright-test-planner.agent.md` — playwright-test-planner.agent _321w_
+- `CODE_OF_CONDUCT.md` — Contributor Covenant Code of Conduct _461w_
+- `ISSUE_TEMPLATE.md` — Please describe your issue _37w_
+- `CODE_OF_CONDUCT.md` — Contributor Covenant Code of Conduct _446w_
+- `CONTRIBUTING.md` — CONTRIBUTING _130w_
+- `feature_request.md` —  _105w_
+- `odysseus-setup-wiki.md` — Odysseus Setup Guide — Arch Linux (Docker + GPU) _1216w_
+- `README.md` — Dcol and Wallbash _469w_
+- `config.md` — config _2300w_
+- `TEAM_ROLES.md` — Team Roles and Responsibilities _468w_
+- `1.1 Polynomial Review.md` — 1.1 Polynomial Review _249w_
+- `3D Modeling.md` — 3D Modeling _42w_
+- `Acting.md` — Acting _43w_
+- `Aesthetics.md` — Aesthetics _41w_
+- `Algebra.md` — Algebra _41w_
+- `Algorithms.md` — Algorithms _45w_
+- `Analysis.md` — Analysis _37w_
+- `Analytical Chemistry.md` — Analytical Chemistry _44w_
+- `Analytical Mechanics.md` — Analytical Mechanics _54w_
+- `Anatomy.md` — Anatomy _39w_
+- `Ancient History.md` — Ancient History _42w_
+- `Ancient Philosophy.md` — Ancient Philosophy _42w_
+- `Animation.md` — Animation _43w_
+- `Anthropology.md` — Anthropology _61w_
+- `Applied Arts.md` — Applied Arts _61w_
+- `Applied Computer Science.md` — Applied Computer Science _81w_
+- `Applied Mathematics.md` — Applied Mathematics _63w_
+- `Applied Physics.md` — Applied Physics _66w_
+- `Applied Sciences.md` — Applied Sciences _41w_
+- `Archaeological Anthropology.md` — Archaeological Anthropology _40w_
+- `Architecture.md` — Architecture _43w_
+- `Artificial Intelligence.md` — Artificial Intelligence _50w_
+- `Astrobiology.md` — Astrobiology _45w_
+- `Astronomy.md` — Astronomy _82w_
+- `Atmospheric Chemistry.md` — Atmospheric Chemistry _38w_
+- `Atmospheric Physics.md` — Atmospheric Physics _38w_
+- `Atmospheric Sciences.md` — Atmospheric Sciences _56w_
+- `Behavioral Economics.md` — Behavioral Economics _40w_
+- `Behavioral Neuroscience.md` — Behavioral Neuroscience _42w_
+- `Behavioral Psychology.md` — Behavioral Psychology _46w_
+- `Biochemistry.md` — Biochemistry _45w_
+- `Biological Oceanography.md` — Biological Oceanography _40w_
+- `Biology.md` — Biology _79w_
+- `Biotechnology.md` — Biotechnology _41w_
+- `Black Holes.md` — Black Holes _40w_
+- `Cell Biology.md` — Cell Biology _42w_
+- `Chemical Engineering.md` — Chemical Engineering _51w_
+- `Chemical Oceanography.md` — Chemical Oceanography _40w_
+- `Chemistry.md` — Chemistry _76w_
+- `Choreography.md` — Choreography _41w_
+- `Chronological History.md` — Chronological History _60w_
+- `Civil Engineering.md` — Civil Engineering _60w_
+- `Classical Composition.md` — Classical Composition _36w_
+- `Classical Dance.md` — Classical Dance _40w_
+- `Classical Physics.md` — Classical Physics _48w_
+- `Climatology.md` — Climatology _39w_
+- `Clinical Medicine.md` — Clinical Medicine _38w_
+- `Clinical Practice.md` — Clinical Practice _42w_
+- `Clinical Psychology.md` — Clinical Psychology _46w_
+- `Cognitive Neuroscience.md` — Cognitive Neuroscience _42w_
+- `Cognitive Psychology.md` — Cognitive Psychology _46w_
+- `Communication Design.md` — Communication Design _44w_
+- `Comparative Literature.md` — Comparative Literature _46w_
+- `Comparative Politics.md` — Comparative Politics _48w_
+- `Comparative Religion.md` — Comparative Religion _46w_
+- `Composition.md` — Composition _52w_
+- `Computational Complexity.md` — Computational Complexity _44w_
+- `Computational Neuroscience.md` — Computational Neuroscience _42w_
+- `Computational Physics.md` — Computational Physics _46w_
+- `Computer Architecture.md` — Computer Architecture _36w_
+- `Computer Engineering.md` — Computer Engineering _51w_
+- `Computer Networks.md` — Computer Networks _50w_
+- `Computer Science.md` — Computer Science _50w_
+- `Conducting.md` — Conducting _35w_
+- `Conservation Science.md` — Conservation Science _40w_
+- `Contemporary Dance.md` — Contemporary Dance _40w_
+- `Contemporary History.md` — Contemporary History _42w_
+- `Contemporary Philosophy.md` — Contemporary Philosophy _42w_
+- `Continuum Mechanics.md` — Continuum Mechanics _40w_
+- `Control Systems.md` — Control Systems _38w_
+- `Cosmology.md` — Cosmology _45w_
+- `Counterpoint.md` — Counterpoint _37w_
+- `Creative Expression.md` — Creative Expression _57w_
+- `Creative Nonfiction.md` — Creative Nonfiction _42w_
+- `Creative Problem Solving.md` — Creative Problem Solving _41w_
+- `Criminology.md` — Criminology _47w_
+- `Cultural Anthropology.md` — Cultural Anthropology _40w_
+- `Cultural History.md` — Cultural History _48w_
+- `Dance.md` — Dance _60w_
+- `Database Systems.md` — Database Systems _50w_
+- `Design.md` — Design _60w_
+- `Developmental Biology.md` — Developmental Biology _44w_
+- `Developmental Psychology.md` — Developmental Psychology _46w_
+- `Diffraction.md` — Diffraction _41w_
+- `Digital Arts.md` — Digital Arts _61w_
+- `Digital Painting.md` — Digital Painting _42w_
+- `Directing.md` — Directing _43w_
+- `Drama.md` — Drama _43w_
+- `Drawing.md` — Drawing _37w_
+- `Dynamics.md` — Dynamics _41w_
+- `Earth Sciences.md` — Earth Sciences _56w_
+- `Ecology.md` — Ecology _41w_
+- `Econometrics.md` — Econometrics _41w_
+- `Economic History.md` — Economic History _48w_
+- `Economics.md` — Economics _61w_
+- `Electrical Engineering.md` — Electrical Engineering _54w_
+- `Electromagnetic Induction.md` — Electromagnetic Induction _42w_
+- `Electromagnetic Waves.md` — Electromagnetic Waves _42w_
+- `Electromagnetism.md` — Electromagnetism _64w_
+- `Electronic Music.md` — Electronic Music _36w_
+- `Electronics.md` — Electronics _39w_
+- `Electrostatics.md` — Electrostatics _43w_
+- `Embedded Systems.md` — Embedded Systems _36w_
+- `Engineering Physics.md` — Engineering Physics _46w_
+- `Engineering.md` — Engineering _70w_
+- `Entrepreneurship.md` — Entrepreneurship _43w_
+- `Entropy.md` — Entropy _39w_
+- `Environmental Chemistry.md` — Environmental Chemistry _40w_
+- `Environmental Design.md` — Environmental Design _44w_
+- `Environmental Engineering.md` — Environmental Engineering _42w_
+- `Environmental Physics.md` — Environmental Physics _40w_
+- `Environmental Science.md` — Environmental Science _59w_
+- `Epistemology.md` — Epistemology _47w_
+- `Ethics.md` — Ethics _41w_
+- `Ethnomusicology.md` — Ethnomusicology _37w_
+- `Evolutionary Biology.md` — Evolutionary Biology _42w_
+- `Fashion Design.md` — Fashion Design _42w_
+- `Fiction.md` — Fiction _43w_
+- `Fine Arts.md` — Fine Arts _52w_
+- `Fluid Mechanics.md` — Fluid Mechanics _38w_
+- `Folk Dance.md` — Folk Dance _40w_
+- `Formal Methods.md` — Formal Methods _44w_
+- `Formal Sciences.md` — Formal Sciences _41w_
+- `Fuzzy Logic.md` — Fuzzy Logic _46w_
+- `Galactic Astronomy.md` — Galactic Astronomy _46w_
+- `General Relativity.md` — General Relativity _57w_
+- `Genetics.md` — Genetics _43w_
+- `Genre Studies.md` — Genre Studies _46w_
+- `Geology.md` — Geology _64w_
+- `Geometric Optics.md` — Geometric Optics _40w_
+- `Geometry.md` — Geometry _41w_
+- `Geophysics.md` — Geophysics _39w_
+- `Geotechnical Engineering.md` — Geotechnical Engineering _42w_
+- `Graphic Design.md` — Graphic Design _42w_
+- `Gravitational Waves.md` — Gravitational Waves _40w_
+- `Hardware Design.md` — Hardware Design _36w_
+- `Harmony.md` — Harmony _37w_
+- `Healthcare Systems.md` — Healthcare Systems _42w_
+- `Heat Transfer.md` — Heat Transfer _38w_
+- `Historical Philosophy.md` — Historical Philosophy _60w_
+- `History.md` — History _50w_
+- `Human-Computer Interaction.md` — Human-Computer Interaction _50w_
+- `Humanities.md` — Humanities _52w_
+- `Industrial Design.md` — Industrial Design _42w_
+- `Information Technology.md` — Information Technology _40w_
+- `Innovation.md` — Innovation _57w_
+- `Inorganic Chemistry.md` — Inorganic Chemistry _44w_
+- `Instrumental Music.md` — Instrumental Music _34w_
+- `Interactive Media.md` — Interactive Media _42w_
+- `Interference.md` — Interference _41w_
+- `International Economics.md` — International Economics _40w_
+- `International Relations.md` — International Relations _48w_
+- `Kinematics.md` — Kinematics _41w_
+- `Knowledge.md` — Knowledge _59w_
+- `Language and Literature.md` — Language and Literature _37w_
+- `Length Contraction.md` — Length Contraction _36w_
+- `Life Sciences.md` — Life Sciences _44w_
+- `Linguistic Anthropology.md` — Linguistic Anthropology _40w_
+- `Linguistics.md` — Linguistics _69w_
+- `Literary Theory.md` — Literary Theory _46w_
+- `Literature (Creative).md` — Literature (Creative) _55w_
+- `Literature.md` — Literature _72w_
+- `Local History.md` — Local History _36w_
+- `Logic.md` — Logic _47w_
+- `Loop Quantum Gravity.md` — Loop Quantum Gravity _53w_
+- `Machine Learning.md` — Machine Learning _50w_
+- `Macroeconomics.md` — Macroeconomics _41w_
+- `Magnetostatics.md` — Magnetostatics _43w_
+- `Manufacturing.md` — Manufacturing _39w_
+- `Marine Geology.md` — Marine Geology _40w_
+- `Mass-Energy Equivalence.md` — Mass-Energy Equivalence _36w_
+- `Materials Chemistry.md` — Materials Chemistry _46w_
+- `Materials Science.md` — Materials Science _38w_
+- `Mathematical Logic.md` — Mathematical Logic _46w_
+- `Mathematical Physics.md` — Mathematical Physics _44w_
+- `Mathematics.md` — Mathematics _49w_
+- `Maxwell's Equations.md` — Maxwell's Equations _42w_
+- `Mechanical Engineering.md` — Mechanical Engineering _54w_
+- `Mechanics.md` — Mechanics _61w_
+- `Medical Physics.md` — Medical Physics _46w_
+- `Medical Research.md` — Medical Research _42w_
+- `Medical Technology.md` — Medical Technology _42w_
+- `Medicine (Applied).md` — Medicine (Applied) _62w_
+- `Medicine.md` — Medicine _73w_
+- `Medieval History.md` — Medieval History _42w_
+- `Medieval Philosophy.md` — Medieval Philosophy _42w_
+- `Metaphysics.md` — Metaphysics _47w_
+- `Meteorology.md` — Meteorology _39w_
+- `Microeconomics.md` — Microeconomics _41w_
+- `Military History.md` — Military History _48w_
+- `Mineralogy.md` — Mineralogy _39w_
+- `Modal Logic.md` — Modal Logic _46w_
+- `Modern History.md` — Modern History _42w_
+- `Modern Philosophy.md` — Modern Philosophy _42w_
+- `Modern Physics.md` — Modern Physics _39w_
+- `Molecular Biology.md` — Molecular Biology _42w_
+- `Morphology.md` — Morphology _37w_
+- `Music Theory.md` — Music Theory _50w_
+- `Music.md` — Music _48w_
+- `Nanotechnology.md` — Nanotechnology _41w_
+- `National Histories.md` — National Histories _36w_
+- `National Literatures.md` — National Literatures _46w_
+- `Natural Sciences.md` — Natural Sciences _47w_
+- `Neuroanatomy.md` — Neuroanatomy _43w_
+- `Neurophysiology.md` — Neurophysiology _43w_
+- `Neuroscience.md` — Neuroscience _64w_
+- `Number Theory.md` — Number Theory _40w_
+- `Numerical Analysis.md` — Numerical Analysis _44w_
+- `Observational Astronomy.md` — Observational Astronomy _46w_
+- `Oceanography.md` — Oceanography _61w_
+- `Operations Research.md` — Operations Research _44w_
+- `Optics.md` — Optics _61w_
+- `Organic Chemistry.md` — Organic Chemistry _44w_
+- `Painting.md` — Painting _37w_
+- `Paleontology.md` — Paleontology _39w_
+- `Pathology.md` — Pathology _39w_
+- `Performance.md` — Performance _49w_
+- `Performing Arts.md` — Performing Arts _40w_
+- `Period Studies.md` — Period Studies _46w_
+- `Petrology.md` — Petrology _39w_
+- `Pharmacology.md` — Pharmacology _39w_
+- `Phase Transitions.md` — Phase Transitions _38w_
+- `Philosophy of Mind.md` — Philosophy of Mind _45w_
+- `Philosophy of Religion.md` — Philosophy of Religion _39w_
+- `Philosophy of Science.md` — Philosophy of Science _45w_
+- `Philosophy.md` — Philosophy _50w_
+- `Phonetics.md` — Phonetics _37w_
+- `Phonology.md` — Phonology _37w_
+- `Physical Anthropology.md` — Physical Anthropology _40w_
+- `Physical Chemistry.md` — Physical Chemistry _44w_
+- `Physical Oceanography.md` — Physical Oceanography _40w_
+- `Physical Sciences.md` — Physical Sciences _44w_
+- `Physics.md` — Physics _61w_
+- `Physiology.md` — Physiology _43w_
+- `Planetary Science.md` — Planetary Science _46w_
+- `Playwriting.md` — Playwriting _43w_
+- `Poetry.md` — Poetry _43w_
+- `Polarization.md` — Polarization _41w_
+- `Political History.md` — Political History _48w_
+- `Political Philosophy.md` — Political Philosophy _40w_
+- `Political Science.md` — Political Science _71w_
+- `Political Sociology.md` — Political Sociology _46w_
+- `Political Theory.md` — Political Theory _48w_
+- `Popular Music.md` — Popular Music _36w_
+- `Power Systems.md` — Power Systems _38w_
+- `Practical Philosophy.md` — Practical Philosophy _57w_
+- `Pragmatics.md` — Pragmatics _37w_
+- `Predicate Logic.md` — Predicate Logic _46w_
+- `Printmaking.md` — Printmaking _37w_
+- `Probability.md` — Probability _45w_
+- `Process Design.md` — Process Design _36w_
+- `Product Design.md` — Product Design _44w_
+- `Programming Language Theory.md` — Programming Language Theory _43w_
+- `Propositional Logic.md` — Propositional Logic _46w_
+- `Psychiatry.md` — Psychiatry _39w_
+- `Psychology.md` — Psychology _70w_
+- `Public Administration.md` — Public Administration _48w_
+- `Public Health.md` — Public Health _40w_
+- `Public Policy.md` — Public Policy _48w_
+- `Pure Mathematics.md` — Pure Mathematics _72w_
+- `Quantum Entanglement.md` — Quantum Entanglement _48w_
+- `Quantum Field Theory.md` — Quantum Field Theory _53w_
+- `Quantum Mechanics.md` — Quantum Mechanics _83w_
+- `Quantum States.md` — Quantum States _48w_
+- `Reaction Engineering.md` — Reaction Engineering _36w_
+- `Regional History.md` — Regional History _51w_
+- `Relativity.md` — Relativity _43w_
+- `Religious Anthropology.md` — Religious Anthropology _46w_
+- `Religious History.md` — Religious History _46w_
+- `Religious Philosophy.md` — Religious Philosophy _46w_
+- `Religious Studies.md` — Religious Studies _66w_
+- `Renewable Energy.md` — Renewable Energy _40w_
+- `Robotics.md` — Robotics _41w_
+- `Schrödinger Equation.md` — Schrödinger Equation _48w_
+- `Screenwriting.md` — Screenwriting _43w_
+- `Sculpture.md` — Sculpture _37w_
+- `Semantics.md` — Semantics _37w_
+- `Separation Processes.md` — Separation Processes _36w_
+- `Set Theory.md` — Set Theory _40w_
+- `Social History.md` — Social History _48w_
+- `Social Innovation.md` — Social Innovation _42w_
+- `Social Psychology.md` — Social Psychology _46w_
+- `Social Research Methods.md` — Social Research Methods _45w_
+- `Social Sciences.md` — Social Sciences _53w_
+- `Social Theory.md` — Social Theory _46w_
+- `Sociolinguistics.md` — Sociolinguistics _37w_
+- `Sociology.md` — Sociology _70w_
+- `Software Engineering.md` — Software Engineering _50w_
+- `Spacetime Curvature.md` — Spacetime Curvature _40w_
+- `Special Relativity.md` — Special Relativity _51w_
+- `Stage Design.md` — Stage Design _42w_
+- `Statics.md` — Statics _41w_
+- `Statistical Mechanics.md` — Statistical Mechanics _38w_
+- `Statistics.md` — Statistics _45w_
+- `Stellar Astronomy.md` — Stellar Astronomy _46w_
+- `Stratigraphy.md` — Stratigraphy _39w_
+- `String Theory.md` — String Theory _54w_
+- `Structural Engineering.md` — Structural Engineering _42w_
+- `Structural Geology.md` — Structural Geology _38w_
+- `Surgery.md` — Surgery _39w_
+- `Syntax.md` — Syntax _37w_
+- `Technology Innovation.md` — Technology Innovation _42w_
+- `Technology.md` — Technology _61w_
+- `Telecommunications.md` — Telecommunications _39w_
+- `Theater History.md` — Theater History _42w_
+- `Theater.md` — Theater _63w_
+- `Thematic History.md` — Thematic History _69w_
+- `Theology.md` — Theology _47w_
+- `Theoretical Astronomy.md` — Theoretical Astronomy _46w_
+- `Theoretical Computer Science.md` — Theoretical Computer Science _63w_
+- `Theoretical Philosophy.md` — Theoretical Philosophy _66w_
+- `Theoretical Physics.md` — Theoretical Physics _78w_
+- `Theory of Everything.md` — Theory of Everything _53w_
+- `Thermodynamics.md` — Thermodynamics _39w_
+- `Time Dilation.md` — Time Dilation _36w_
+- `Topology.md` — Topology _41w_
+- `Transportation Engineering.md` — Transportation Engineering _42w_
+- `Uncertainty Principle.md` — Uncertainty Principle _48w_
+- `Urban Sociology.md` — Urban Sociology _46w_
+- `User Experience Design.md` — User Experience Design _43w_
+- `Visual Arts.md` — Visual Arts _49w_
+- `Vocal Music.md` — Vocal Music _34w_
+- `Wave Optics.md` — Wave Optics _40w_
+- `Wave-Particle Duality.md` — Wave-Particle Duality _48w_
+- `World History.md` — World History _36w_
+- `README.md` — README _9w_
+- `model_card_template.md` — For reference on model card metadata, see the spec: https://github.com/huggingface/hub-docs/blob/main/modelcard.md?plain=1 _1299w_
+- `model_card_template.md` — For reference on model card metadata, see the spec: https://github.com/huggingface/hub-docs/blob/main/modelcard.md?plain=1 _1396w_
+- `feature_request.md` —  _90w_
+- `README.md` — Frequently Asked Questions _276w_
+- `feature_request.md` —  _90w_
+- `feature_request.md` —  _90w_
+- `block_quote.md` — block_quote _8w_
+- `enumeration.md` — enumeration _6w_
+- `heading.md` — h1 _6w_
+- `list.md` — list _10w_
+- `ordered_list.md` — ordered_list _21w_
+- `table.md` — table _20w_
+- `task.md` — task _9w_
+- `README.md` — Glamour Style Section _25w_
+- `example.md` — example _263w_
+- `42.md` — 42 _35w_
+- `43.md` — 43 _21w_
+- `46_1.md` — 46_1 _11w_
+- `feature_request.md` —  _90w_
+- `README.md` — README _65w_
+- `README.md` — README _65w_
+- `README.md` — README _65w_
+- `README.md` — README _65w_
+
+### 📁 `cluster-1/`
+**cluster-1** — 227 notes
+__
+
+- `LICENSE.md` — LICENSE _229w_
+- `LICENSE.md` — LICENSE _229w_
+- `README.md` — How to _193w_
+- `license.md` — license _171w_
+- `license.md` — license _171w_
+- `license.md` — license _171w_
+- `README.md` — clap_builder _77w_
+- `README.md` — clap_derive _78w_
+- `LICENSE.md` — Licenses _500w_
+- `PULL_REQUEST_TEMPLATE.md` — PULL_REQUEST_TEMPLATE _43w_
+- `ORG_CODE_OF_CONDUCT.md` — Bytecode Alliance Organizational Code of Conduct (OCoC) _1069w_
+- `LICENSE.md` — LICENSE _276w_
+- `LICENSE-APACHE.md` — LICENSE-APACHE _1413w_
+- `LICENSE-MIT.md` — LICENSE-MIT _168w_
+- `LICENSE-ZLIB.md` — LICENSE-ZLIB _136w_
+- `LICENSE-MIT.md` — LICENSE-MIT _171w_
+- `ORG_CODE_OF_CONDUCT.md` — Bytecode Alliance Organizational Code of Conduct (OCoC) _1069w_
+- `SECURITY.md` — Security Policy _282w_
+- `LICENSE.md` — LICENSE _169w_
+- `README.md` — README _15w_
+- `LICENSE.md` — LICENSE _225w_
+- `LICENSE.md` — LICENSE _229w_
+- `LICENSE.md` — NCSA Open Source License _509w_
+- `LICENSE.md` — LICENSE _229w_
+- `license.md` — Blender Third-Party Licenses _33462w_
+- `LICENSE.md` — License _609w_
+- `LICENSE.md` — LICENSE _225w_
+- `LICENSE.md` — LICENSE _226w_
+- `LICENSE.md` — LICENSE _229w_
+- `LICENSE.md` — NCSA Open Source License _509w_
+- `LICENSE.md` — LICENSE _226w_
+- `LICENSE.md` — LICENSE _223w_
+- `LICENSE.md` — NCSA Open Source License _509w_
+- `LICENSE.md` — LICENSE _411w_
+- `LICENSE.md` — MT19937 _438w_
+- `LICENSE.md` — PCG64 _179w_
+- `LICENSE.md` — PHILOX _228w_
+- `LICENSE.md` — SFC64 _185w_
+- `LICENSE.md` — SPLITMIX64 _43w_
+- `LICENSE.md` — LICENSE _229w_
+- `LICENSE.md` — LICENSE _229w_
+- `LICENSE.md` — LICENSE _225w_
+- `LICENSE.md` — LICENSE _239w_
+- `LICENSE.md` — LICENSE _245w_
+- `LICENSE.md` — License _609w_
+- `LICENSE.md` — LICENSE _835w_
+- `license.md` — License _65w_
+- `LICENSE.md` — LibTIFF license _182w_
+- `license.md` — License {#detailed-license} _5w_
+- `LICENSE.md` — LICENSE _172w_
+- `LICENCE.md` — LICENCE _549w_
+- `LICENSE.md` — LICENSE _245w_
+- `LICENSE.md` — LICENSE _17w_
+- `LICENSE.md` — LICENSE _540w_
+- `LICENSE-BSD2.md` — LICENSE-BSD2 _195w_
+- `README.md` — systemd Project Licensing _504w_
+- `LICENSE.md` — License _609w_
+- `LICENSE.md` — License _609w_
+- `LICENSE.md` — LICENSE _245w_
+- `LICENSE.md` — License _609w_
+- `LICENSE.md` — LICENSE _833w_
+- `license.md` — License _65w_
+- `LICENSE.md` — LibTIFF license _182w_
+- `LICENSE.md` — LICENSE _172w_
+- `license.md` — License and Credits _103w_
+- `LICENSE.md` — LICENSE _245w_
+- `LICENSE.md` — LICENSE _17w_
+- `LICENSE-BSD2.md` — LICENSE-BSD2 _195w_
+- `LICENSE.md` — LICENSE _193w_
+- `LICENSE.md` — LICENSE _762w_
+- `LICENSE.md` — LICENSE _225w_
+- `LICENSE.md` — The 3-Clause BSD License _225w_
+- `LICENSE.md` — The 3-Clause BSD License _225w_
+- `LICENSE.md` — LICENSE _169w_
+- `LICENSE.md` — LICENSE _172w_
+- `LICENSE.md` — LICENSE _2435w_
+- `LICENSE.md` — LICENSE _171w_
+- `LICENSE.md` — LICENSE _193w_
+- `LICENSE.md` — LICENSE _276w_
+- `LICENSE-APACHE.md` — LICENSE-APACHE _1413w_
+- `LICENSE-MIT.md` — LICENSE-MIT _168w_
+- `LICENSE-ZLIB.md` — LICENSE-ZLIB _136w_
+- `LICENSE-APACHE.md` — LICENSE-APACHE _1413w_
+- `LICENSE-MIT.md` — LICENSE-MIT _168w_
+- `LICENSE-ZLIB.md` — LICENSE-ZLIB _136w_
+- `LICENSE.md` — LICENSE _170w_
+- `LICENSE.md` — LICENSE _166w_
+- `LICENSE.md` — LICENSE _169w_
+- `license.md` — license _182w_
+- `LICENSE.md` — LICENSE _83w_
+- `LICENSE.md` — LICENSE _245w_
+- `LICENSE.md` — License _609w_
+- `LICENSE.md` — LICENSE _835w_
+- `license.md` — License _65w_
+- `LICENSE.md` — LibTIFF license _182w_
+- `license.md` — License {#detailed-license} _5w_
+- `LICENSE.md` — LICENSE _172w_
+- `LICENCE.md` — LICENCE _549w_
+- `license.md` — License and Credits _103w_
+- `LICENSE.md` — LICENSE _245w_
+- `LICENSE.md` — LICENSE _17w_
+- `LICENSE-BSD2.md` — LICENSE-BSD2 _195w_
+- `LICENSE.md` — LICENSE _193w_
+- `LICENSE.md` — LICENSE _833w_
+- `LICENSE.md` — LICENSE _225w_
+- `LICENSE.md` — The 3-Clause BSD License _225w_
+- `license.md` — License and Credits _99w_
+- `LICENSE.md` — The 3-Clause BSD License _225w_
+- `LICENSE.md` — LICENSE _169w_
+- `LICENSE.md` — LICENSE _172w_
+- `LICENSE.md` — LICENSE _2435w_
+- `LICENSE.md` — LICENSE _229w_
+- `LICENSE.md` — LICENSE _171w_
+- `LICENSE.md` — LICENSE _193w_
+- `LICENSE.md` — LICENSE _276w_
+- `LICENSE-MIT.md` — LICENSE-MIT _168w_
+- `LICENSE-ZLIB.md` — LICENSE-ZLIB _136w_
+- `LICENSE-MIT.md` — LICENSE-MIT _168w_
+- `LICENSE-ZLIB.md` — LICENSE-ZLIB _136w_
+- `LICENSE-APACHE.md` — LICENSE-APACHE _1581w_
+- `LICENSE-MIT.md` — LICENSE-MIT _162w_
+- `LICENSE-ZLIB.md` — LICENSE-ZLIB _138w_
+- `LICENSE-APACHE.md` — LICENSE-APACHE _1580w_
+- `LICENSE-MIT.md` — LICENSE-MIT _168w_
+- `LICENSE-ZLIB.md` — LICENSE-ZLIB _139w_
+- `LICENSE.md` — LICENSE _170w_
+- `LICENSE.md` — LICENSE _166w_
+- `LICENSE.md` — LICENSE _169w_
+- `license.md` — license _182w_
+- `LICENSE.md` — LICENSE _83w_
+- `README.md` — systemd Project Licensing _514w_
+- `LICENSE.md` — LICENSE _245w_
+- `LICENSE.md` — License _609w_
+- `LICENSE.md` — LICENSE _835w_
+- `license.md` — License _65w_
+- `LICENSE.md` — LibTIFF license _182w_
+- `license.md` — License {#detailed-license} _5w_
+- `LICENSE.md` — LICENSE _172w_
+- `LICENCE.md` — LICENCE _549w_
+- `license.md` — License and Credits _103w_
+- `LICENSE.md` — LICENSE _245w_
+- `LICENSE.md` — LICENSE _17w_
+- `LICENSE-BSD2.md` — LICENSE-BSD2 _195w_
+- `LICENSE.md` — LICENSE _193w_
+- `LICENSE.md` — LICENSE _833w_
+- `LICENSE.md` — LICENSE _225w_
+- `LICENSE.md` — The 3-Clause BSD License _225w_
+- `license.md` — License and Credits _99w_
+- `LICENSE.md` — The 3-Clause BSD License _225w_
+- `LICENSE.md` — LICENSE _169w_
+- `LICENSE.md` — LICENSE _172w_
+- `LICENSE.md` — LICENSE _2435w_
+- `LICENSE.md` — LICENSE _229w_
+- `LICENSE.md` — LICENSE _171w_
+- `LICENSE.md` — LICENSE _193w_
+- `LICENSE.md` — LICENSE _276w_
+- `LICENSE-MIT.md` — LICENSE-MIT _168w_
+- `LICENSE-ZLIB.md` — LICENSE-ZLIB _136w_
+- `LICENSE-MIT.md` — LICENSE-MIT _168w_
+- `LICENSE-ZLIB.md` — LICENSE-ZLIB _136w_
+- `LICENSE-APACHE.md` — LICENSE-APACHE _1581w_
+- `LICENSE-MIT.md` — LICENSE-MIT _162w_
+- `LICENSE-ZLIB.md` — LICENSE-ZLIB _138w_
+- `LICENSE-APACHE.md` — LICENSE-APACHE _1580w_
+- `LICENSE-MIT.md` — LICENSE-MIT _168w_
+- `LICENSE-ZLIB.md` — LICENSE-ZLIB _139w_
+- `LICENSE.md` — LICENSE _170w_
+- `LICENSE.md` — LICENSE _166w_
+- `LICENSE.md` — LICENSE _169w_
+- `license.md` — license _182w_
+- `LICENSE.md` — LICENSE _83w_
+- `README.md` — systemd Project Licensing _512w_
+- `LICENSE.md` — LICENSE _168w_
+- `README.md` — `@img/sharp-wasm32` _273w_
+- `README.md` — How to _193w_
+- `license.md` — license _171w_
+- `license.md` — license _171w_
+- `license.md` — license _171w_
+- `license.md` — license _171w_
+- `license.md` — license _171w_
+- `license.md` — license _171w_
+- `LICENSE.md` — LICENSE _1413w_
+- `LICENSE.md` — LICENSE _169w_
+- `LICENSE.md` — LICENSE _116w_
+- `LICENSE.md` — LICENSE _171w_
+- `LICENSE.md` — The BSD 2-Clause License _198w_
+- `LICENSE.md` — LICENSE _229w_
+- `LICENSE.md` — LICENSE _229w_
+- `LICENSE.md` — LICENSE _120w_
+- `license.md` — Copyright (c) 2015 Calvin Metcalf _168w_
+- `CONTRIBUTING.md` — Developer's Certificate of Origin 1.1 _223w_
+- `LICENSE.md` — The MIT License (MIT) _177w_
+- `LICENSE.md` — LICENSE _169w_
+- `SECURITY.md` — SECURITY _334w_
+- `LICENSE.md` — LICENSE _176w_
+- `license.md` — license _171w_
+- `LICENSE.md` — LICENSE _229w_
+- `LICENSE.md` — LICENSE _229w_
+- `LICENSE.md` — LICENSE _229w_
+- `LICENSE.md` — Vite core license _16559w_
+- `SourceSerif4-LICENSE-a2cfd9d5.md` — SourceSerif4-LICENSE-a2cfd9d5 _722w_
+- `LICENSE.md` — LICENSE _229w_
+- `LICENSE.md` — LICENSE _229w_
+- `LICENSE.md` — LICENSE _229w_
+- `LICENSE.md` — LICENSE _229w_
+- `LICENSE.md` — LICENSE _171w_
+- `LICENSE.md` — LICENSE _225w_
+- `LICENSE.md` — LICENSE _225w_
+- `LICENSE.md` — LICENSE _229w_
+- `LICENSE.md` — LICENSE _171w_
+- `LICENSE.md` — NCSA Open Source License _509w_
+- `LICENSE.md` — LICENSE _226w_
+- `LICENSE.md` — LICENSE _223w_
+- `LICENSE.md` — NCSA Open Source License _509w_
+- `LICENSE.md` — LICENSE _411w_
+- `LICENSE.md` — MT19937 _438w_
+- `LICENSE.md` — PCG64 _179w_
+- `LICENSE.md` — PHILOX _228w_
+- `LICENSE.md` — SFC64 _185w_
+- `LICENSE.md` — SPLITMIX64 _43w_
+- `LICENSE.md` — LICENSE _229w_
+- `LICENSE.md` — LICENSE _229w_
+- `LICENSE.md` — LICENSE _223w_
+- `CONTRIBUTING.md` — Contributing to bluemonday _693w_
+- `LICENSE.md` — LICENSE _230w_
+- `LICENSE.md` — LICENSE _168w_
+- `ACKNOWLEDGMENTS.md` — Acknowledgments _999w_
