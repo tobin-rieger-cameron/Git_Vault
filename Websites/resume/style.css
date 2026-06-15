@@ -58,7 +58,6 @@ html {
   margin: 0;
   padding: 0;
   }
-
 body {
 	font-family: "CaskaydiaCove Nerd Font Mono", monospace;
   color: var(--fg2);
@@ -66,37 +65,30 @@ body {
 	margin: 0;
 	padding: 0;
 	}
-
 p {
 	margin-top: 0;
   padding: 2em;
 	text-align: justify;
 	}
-
 h1 {
   color: var(--fg0);
   }
-
 h3 {
 	margin-bottom: 0;
 	color: var(--orange);
 	}
-
 a:link {
 	text-decoration: none;
 	color: var(--blu);
 	}
-
 a:visited {
 	text-decoration: none;
 	color: var(--blu);
 	}
-
 a:hover, a:focus, a:active {
 	text-decoration: underline;
 	color: var(--bg0);
 	}
-
 abbr {
 	border-bottom: none;
 	}
@@ -107,13 +99,11 @@ abbr {
 	margin: 0;
 	position: relative;
   }
-
 .intro {
   padding: 0 4em 0 1em;
   margin-left: 1em;
   height: 100%;
   }
-
 .sidebar {
   background-color: var(--bg3);
   flex: 0 0 200px;
@@ -121,17 +111,21 @@ abbr {
   min-height: 100svh;
   border-right: .149em solid var(--bg5);
 }
-
 .page-selection {
 
 }
-
 .intro {
   padding-left: 1em;
   background-color: var(--bg3);
   border-left: .1em solid var(--grey0);
 }
-
 .main {
   padding-left: 2em;
+}
+
+/* experience */
+.job {
+  background-color: var(--bg1);
+  padding: .05em 0 1em .5em;
+  margin: .5em;
 }
