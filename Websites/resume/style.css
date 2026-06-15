@@ -1,45 +1,137 @@
+:root {
+  /* background colors */
+  --bg_dim: #F2E5BC;
+  --bg0: #FBF1C7;
+  --bg1: #F4E8BE;
+  --bg2: #F2E5BC;
+  --bg3: #EEE0B7;
+  --bg4: #E5D5AD;
+  --bg5: #DDCCAB;
+
+  --bg_statusline1: #F2E5BC;
+  --bg_statusline2: #EBDBB2;
+  --bg_statusline3: #E5D5AD;
+  --bg_current_word: #F2E5BC;
+
+  /* foreground colors */
+  --fg0: #654735;
+  --fg1: #4F3829;
+  --fg2: #3c3836;
+
+  /* greys */
+  --grey0: #A89984;
+  --grey1: #928374;
+  --grey2: #7C6F64;
+
+  /* rd */
+  --bg_diff_rd: #F9E0BB;
+  --bg_visual_rd: #F1D9B5;
+  --red: #C14A4A;
+  --bg_rd: #AE5858;
+  --orange: #C35E0A;
+
+  /* grn */
+  --bg_diff_grn: #E6EABC;
+  --bg_visual_grn: #DEE2B6;
+  --grn: #6C782E;
+  --bg_grn: #6F8352;
+
+  /* blu */
+  --bg_diff_blu: #e2e6C7;
+  --bg_visual_blu: #DADEC0;
+  --blu: #45707A;
+  --aqua: #4C7A5D;
+
+  /* yel */
+  --bg_visual_yel: #FAE7B3;
+  --yel: #B47109;
+  --bg_yel: #A96B2C;
+
+  /* prpl */
+  --bg_visual_prpl: #EFDEC3;
+  --prpl: #945E80;
+
+  }
+
+
 html {
-  margin 0;
-  padding 0;
-}
-body { 
-	font: georgia, sans-serif;
-	color: #555753; 
-	margin: 0; 
+  margin: 0;
+  padding: 0;
+  }
+
+body {
+	font-family: "CaskaydiaCove Nerd Font Mono", monospace;
+  color: var(--fg2);
+	background-color: var(--bg0);
+	margin: 0;
 	padding: 0;
 	}
-p { 
-	margin-top: 0; 
+
+p {
+	margin-top: 0;
+  padding: 2em;
 	text-align: justify;
 	}
-h3 { 
-	font: italic normal 1.4em georgia, sans-serif;
-	letter-spacing: 1px; 
-	margin-bottom: 0; 
-	color: #7D775C;
+
+h1 {
+  color: var(--fg0);
+  }
+
+h3 {
+	margin-bottom: 0;
+	color: var(--orange);
 	}
-a:link { 
-	font-weight: bold; 
-	text-decoration: none; 
-	color: #B7A5DF;
+
+a:link {
+	text-decoration: none;
+	color: var(--blu);
 	}
-a:visited { 
-	font-weight: bold; 
-	text-decoration: none; 
-	color: #D4CDDC;
+
+a:visited {
+	text-decoration: none;
+	color: var(--blu);
 	}
-a:hover, a:focus, a:active { 
-	text-decoration: underline; 
-	color: #9685BA;
+
+a:hover, a:focus, a:active {
+	text-decoration: underline;
+	color: var(--bg0);
 	}
+
 abbr {
 	border-bottom: none;
 	}
 
 /* specific divs */
-.page-wrapper { 
-	background: url(http://csszengarden.com/001/zen-bg.jpg) no-repeat top left; 
-	padding: 0 110px 0 110px;  
-	margin: 0; 
+.page-wrapper {
+  display: flex;
+	margin: 0;
 	position: relative;
-	}
+  }
+
+.intro {
+  padding: 0 4em 0 1em;
+  margin-left: 1em;
+  height: 100%;
+  }
+
+.sidebar {
+  background-color: var(--bg3);
+  flex: 0 0 200px;
+  padding-left: 1.5em;
+  min-height: 100svh;
+  border-right: .149em solid var(--bg5);
+}
+
+.page-selection {
+
+}
+
+.intro {
+  padding-left: 1em;
+  background-color: var(--bg3);
+  border-left: .1em solid var(--grey0);
+}
+
+.main {
+  padding-left: 2em;
+}
