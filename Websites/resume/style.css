@@ -95,7 +95,6 @@ abbr {
 
 /* specific divs */
 .page-wrapper {
-  display: flex;
 	margin: 0;
 	position: relative;
   }
@@ -103,24 +102,22 @@ abbr {
   padding: 0 4em 0 1em;
   margin-left: 1em;
   height: 100%;
+  background-color: var(--bg3);
+  border-left: .1em solid var(--grey0);
   }
 .sidebar {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
   background-color: var(--bg3);
-  flex: 0 0 200px;
-  padding-left: 1.5em;
-  min-height: 100svh;
+  min-width: 100svh;
+  height: 2em;
   border-right: .149em solid var(--bg5);
 }
 .page-selection {
 
 }
-.intro {
-  padding-left: 1em;
-  background-color: var(--bg3);
-  border-left: .1em solid var(--grey0);
-}
 .main {
-  padding-left: 2em;
 }
 
 /* experience */
@@ -129,3 +126,16 @@ abbr {
   padding: .05em 0 1em .5em;
   margin: .5em;
 }
+.job-header {
+  background-color: var(--bg4);
+}
+.job-company {
+  padding: 0;
+  margin: 0;
+}
+.job-role {
+  padding: 0;
+  margin: 0;
+  color: var(--blu)
+}
+

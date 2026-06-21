@@ -1,17 +1,172 @@
+<!DOCTYPE html>
 <html lang="en">
+
+
+  
   <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Tobin Rieger Cameron's Resume</title>
-    <title>Tobin Cameron's Resume</title>
-	  <link rel="stylesheet" media="screen" href="style.css">
+    <style>
+    :root {
+      /* background colors */
+      --bg_dim: #F2E5BC;
+      --bg0: #FBF1C7;
+      --bg1: #F4E8BE;
+      --bg2: #F2E5BC;
+      --bg3: #EEE0B7;
+      --bg4: #E5D5AD;
+      --bg5: #DDCCAB;
+
+      --bg_statusline1: #F2E5BC;
+      --bg_statusline2: #EBDBB2;
+      --bg_statusline3: #E5D5AD;
+      --bg_current_word: #F2E5BC;
+
+      /* foreground colors */
+      --fg0: #654735;
+      --fg1: #4F3829;
+      --fg2: #3c3836;
+
+      /* greys */
+      --grey0: #A89984;
+      --grey1: #928374;
+      --grey2: #7C6F64;
+
+      /* rd */
+      --bg_diff_rd: #F9E0BB;
+      --bg_visual_rd: #F1D9B5;
+      --red: #C14A4A;
+      --bg_rd: #AE5858;
+      --orange: #C35E0A;
+
+      /* grn */
+      --bg_diff_grn: #E6EABC;
+      --bg_visual_grn: #DEE2B6;
+      --grn: #6C782E;
+      --bg_grn: #6F8352;
+
+      /* blu */
+      --bg_diff_blu: #e2e6C7;
+      --bg_visual_blu: #DADEC0;
+      --blu: #45707A;
+      --aqua: #4C7A5D;
+
+      /* yel */
+      --bg_visual_yel: #FAE7B3;
+      --yel: #B47109;
+      --bg_yel: #A96B2C;
+
+      /* prpl */
+      --bg_visual_prpl: #EFDEC3;
+      --prpl: #945E80;
+
+    }
+
+
+    html {
+    }
+
+    body {
+      font-family: "CaskaydiaCove Nerd Font Mono", monospace;
+      color: var(--fg2);
+      background-color: var(--bg0);
+    }
+
+    h1 {
+      color: var(--fg0);
+    }
+
+    h3 {
+      color: var(--orange);
+    }
+
+    a:link {
+      text-decoration: none;
+      color: var(--blu);
+    }
+
+    a:visited {
+      text-decoration: none;
+      color: var(--blu);
+    }
+
+    a:hover, a:focus, a:active {
+      text-decoration: underline;
+      color: var(--bg0);
+    }
+
+    abbr {
+      border-bottom: none;
+    }
+
+    /* specific divs */
+    .page-wrapper {
+    }
+
+    .page-selection {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      padding: 0 1em 0 1em;
+    }
+    .navbar {
+      background-color: var(--bg3);
+      position: sticky;
+      top: 0;
+    }
+
+    .nav-list {
+      list-style-type: none;
+      display: flex;
+      gap: 1.25em;
+      margin: 0;
+      padding-left: 1em;
+    }
+    .intro {
+      padding: 0 4em 0 1em;
+      margin-left: 1em;
+      height: 100%;
+      background-color: var(--bg3);
+      border-left: .1em solid var(--grey0);
+    }
+
+
+
+    .main {
+      max-width: 70ch;
+      margin: 0 auto;
+    }
+
+    /* experience */
+    .job {
+      background-color: var(--bg1);
+      padding: .05em 0 1em .5em;
+      margin: .5em;
+    }
+    .job-header {
+      display: flex;
+    }
+    .job-company {
+      padding: 0;
+      margin: 0;
+    }
+    .job-role {
+      padding: 0;
+      margin: 0;
+      color: var(--blu)
+    }
+
+    </style>
   </head>
 
   <body id="tobin-cameron-resume">
     <div class="page-wrapper">
-      <aside class="sidebar" role="complementary">
+      <aside class="navbar" role="navigation">
         <div class="page-selection" id="page-selection">
-          <h3 class ="select"> Select a Page: </h3>
+          <h3 class="select"> Tobin Rieger Cameron </h3>
           <nav role="navigation">
-            <ul>
+            <ul class="nav-list">
               <li>
                 <a href="./index.html" class="page-name">Home</a>
               </li>
@@ -31,15 +186,119 @@
           </nav>
         </div>
       </aside>
-      <section class="intro" id="intro">
-        <h1> Tobin Rieger Cameron </h1>
-        <p>
-          613 290 2791<br>
-          tobincameron@gmail.com<br>
-          239-307 Nancy Elliot, Gatineau QC<br>
-        </p>
-      </section>
-      <div class="main" id="main" role="main"></div>
+      <div class="main" id="main" role="main">
+        <section class="intro" id="intro">
+          <h1> Tobin Rieger Cameron </h1>
+          <p>
+            (613)-290-2791<br>
+            tobincameron@gmail.com<br>
+            239-307 Nancy Elliot, Gatineau QC<br>
+          </p>
+        </section>
+
+        <section class="experience">
+          <h3>Experience</h3>
+
+          <article class="job">
+            <header class="job-header">
+              <h4 class="job-company">Grey's Social Eatery - Ottawa</h4>
+              <p class="job-role">Barback, Supportstaff</p>
+              <p class="job-dates">
+                <time datetime="2025-03">March 2025</time> - <time datetime="2025-08">August 2025</time>
+              </p> 
+            </header>
+            <p class="job-summary">helped all the staff in the house, bartender, dishwasher, chef, servers, manager. worked my first shift the same night as my interview for the job, refined my ability to work well under pressure on canada day</p>
+            <ul class="job-highlights">
+              <li> Served Dishes, sometimes 3 at a time</li>
+              <li> Poured beer, ran drinks to tables </li>
+              <li> Stocked the bar </li>
+              <li> Late night DJ </li>
+            </ul>
+          </article>
+          <article class="job">
+            <header class="job-header">
+              <h4 class="job-company">Les Fourgeres - Chelsea</h4>
+              <p class="job-role">Dishwasher, Prepcook, Linecook</p>
+              <p class="job-dates">
+                <time datetime="2023-11">October 2023</time> - <time datetime="2024-06">June 2024</time>
+              </p> 
+            </header>
+            <p class="job-summary">learned to keep a slower, more refined pace. I started as a dishwasher, then progressed to bussing, prepcook, and eventually linecook</p>
+            <ul class="job-highlights">
+              <li>Adapted to high end kitchen operations</li> 
+              <li>Prepwork for menu items, including house-made ravioli</li>
+              <li>Maintained rigorous cleanliness standards on a nightly basis</li>
+            </ul>
+          </article>
+          <article class="job">
+          <header class="job-header">
+            <h4 class="job-company">Guilt & Ivy - Montreal</h4>
+            <p class="job-role">Bussboy, Server</p>
+            <p class="job-dates">
+              <time datetime="2023-07">August 2023</time> - <time datetime="2023-10">November 2023</time>
+            </p> 
+          </header>
+          <p class="job-summary">Ran the house with my roomate Adam, together we sprinted up and down a staircase to serve food to customers and communicate between the floor and the kitchen</p>
+          <ul class="job-highlights">
+            <li>Supported fast paced service in a small environment</li> 
+            <li>Maintained dining room presentation</li>
+            <li>Swift table turnover</li>
+            <li>Water top ups every 5 minutes</li>
+            <li>Brought food from the pass and drinks from the bar to customers</li>
+          </ul>
+        </article>
+          <article class="job">
+            <header class="job-header">
+              <h4 class="job-company">NDG Luncheonette - Montreal</h4>
+              <p class="job-role">Linecook</p>
+              <p class="job-dates">
+                <time datetime="2023-05">May 2023</time> - <time datetime="2023-07">August 2023</time>
+              </p> 
+            </header>
+            <p class="job-summary">Morning shifts at a breakfast parlor, my first time cooking food for customers</p>
+            <ul class="job-highlights">
+              <li>Made an assortment of breakfast dishes for customers</li>
+              <li>Daily prep lists and mise en place for smooth service</li> 
+              <li>Inventory management across multiple stations</li>
+              <li>Ensure both back and front kitchens are stocked, cleaned, and organized properly</li>
+            </ul>
+          </article>
+          <article class="job">
+            <header class="job-header">
+              <h4 class="job-company">Loic Wine Bar</h4>
+              <p class="job-role">Bussboy</p>
+              <p class="job-dates">
+                <time datetime="2021-05">May 2021</time> - <time datetime="2023-03">March 2023</time>
+              </p> 
+            </header>
+            <p class="job-summary"> Here I learned to buss from scratch in a fast-paced, high-end environment. I worked 12 hour shifts, back to back to back. Every shift started as a dinner service, then transitioned to a club environment</p>
+            <ul class="job-highlights">
+              <li>Extensive setup at the start of the shift</li>
+              <li>Maintained the bars' stock of ice, juices, and other various items</li> 
+              <li>Managed glassware inventory and presentation, ensuring proper temperature and polish</li>
+              <li>did the same for cutlery</li>
+              <li>Supported servers by running food and flipping tables on a regular basis</li>
+              <li>Extensive cleanup at the end of the night</li>
+            </ul>
+          </article>
+          <article class="job">
+            <header class="job-header">
+              <h4 class="job-company">LHH - Online</h4>
+              <p class="job-role">Instructional Producer</p>
+              <p class="job-dates">
+                <time datetime="2018-09">November 2018</time> - <time datetime="2023-08">September 2023</time>
+              </p> 
+            </header>
+            <p class="job-summary">Produced online coaching courses for teams with diverse backgrounds and fields of work</p>
+            <ul class="job-highlights">
+              <li>Worked collaboratively with coaches, subject matter experts, managers, and employees alike</li> 
+              <li>Became quickly proficient in various software and tools needed for online sessions</li>
+              <li>Troubleshooted technical issues, providing technical guidance and training to coaches and participants</li>
+              <li>monitored and analyzed performance metrics and feedback to improve the quality and effectiveness of the coaching courses</li>
+            </ul>
+          </article>
+        </section>
+      </div>
 
      </div>
   </body>
