@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tobin Rieger Cameron — Resume</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg0:     #FBF1C7;
+      --bg1:     #F4E8BE;
+      --bg2:     #EEE0B7;
+      --bg3:     #E5D5AD;
+      --bg4:     #DDCCAB;
+
+      --fg0:     #3c3836;
+      --fg1:     #504945;
+      --fg2:     #665c54;
+
+      --grey0:   #A89984;
+      --grey1:   #928374;
+
+      --orange:  #C35E0A;
+      --red:     #C14A4A;
+      --blu:     #45707A;
+      --grn:     #6C782E;
+      --yel:     #B47109;
+      --prpl:    #945E80;
+
+      --radius:  3px;
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--sans);
+      background-color: var(--bg0);
+      color: var(--fg0);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* ── NAVBAR ─────────────────────────────────────────── */
+    .navbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background-color: var(--bg2);
+      border-bottom: 1px solid var(--bg3);
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+
+    .navbar-inner {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 52px;
+    }
+
+    .navbar-name {
+      font-family: var(--mono);
+      font-size: .85rem;
+      font-weight: 600;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--orange);
+    }
+
+    .nav-list {
+      list-style: none;
+      display: flex;
+      gap: 1.75rem;
+    }
+
+    .nav-list a {
+      font-family: var(--mono);
+      font-size: .78rem;
+      font-weight: 400;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: var(--fg1);
+      text-decoration: none;
+      padding-bottom: 2px;
+      border-bottom: 1px solid transparent;
+      transition: color .15s, border-color .15s;
+    }
+
+    .nav-list a:hover,
+    .nav-list a:focus {
+      color: var(--orange);
+      border-bottom-color: var(--orange);
+      outline: none;
+    }
+
+    /* ── PAGE LAYOUT ─────────────────────────────────────── */
+    .page {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 4rem;
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      grid-template-rows: auto 1fr;
+      column-gap: 2.5rem;
+      row-gap: 0;
+    }
+
+    /* ── INTRO ───────────────────────────────────────────── */
+    .intro {
+      grid-column: 1 / -1;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid var(--bg3);
+      margin-bottom: 2.5rem;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 2rem;
+    }
+
+    .intro-title h1 {
+      font-family: var(--mono);
+      font-size: 2rem;
+      font-weight: 600;
+      letter-spacing: -.01em;
+      color: var(--fg0);
+      line-height: 1.15;
+    }
+
+    .intro-title .tagline {
+      font-family: var(--mono);
+      font-size: .8rem;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--orange);
+      margin-top: .4rem;
+    }
+
+    .intro-contact {
+      text-align: right;
+      font-size: .82rem;
+      color: var(--fg2);
+      line-height: 1.85;
+    }
+
+    .intro-contact a {
+      color: var(--blu);
+      text-decoration: none;
+    }
+
+    .intro-contact a:hover { text-decoration: underline; }
+
+    /* ── SIDEBAR ─────────────────────────────────────────── */
+    .sidebar {
+      position: sticky;
+      top: 70px;
+      align-self: start;
+      grid-column: 1;
+    }
+
+    .sidebar-section {
+      margin-bottom: 2rem;
+    }
+
+    .sidebar-label {
+      font-family: var(--mono);
+      font-size: .7rem;
+      font-weight: 600;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--grey1);
+      padding-bottom: .45rem;
+      border-bottom: 1px solid var(--bg3);
+      margin-bottom: .8rem;
+    }
+
+    .skill-group {
+      margin-bottom: .6rem;
+    }
+
+    .skill-group-label {
+      font-size: .72rem;
+      font-weight: 500;
+      color: var(--fg1);
+      margin-bottom: .2rem;
+    }
+
+    .skill-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .3rem;
+    }
+
+    .tag {
+      font-family: var(--mono);
+      font-size: .68rem;
+      background-color: var(--bg2);
+      border: 1px solid var(--bg3);
+      color: var(--fg1);
+      padding: .15rem .45rem;
+      border-radius: var(--radius);
+    }
+
+    .tag.orange { border-color: var(--orange); color: var(--orange); background: transparent; }
+    .tag.blu    { border-color: var(--blu);    color: var(--blu);    background: transparent; }
+    .tag.grn    { border-color: var(--grn);    color: var(--grn);    background: transparent; }
+
+    .sidebar-text {
+      font-size: .82rem;
+      color: var(--fg1);
+      line-height: 1.7;
+    }
+
+    /* ── MAIN CONTENT ────────────────────────────────────── */
+    .main-content {
+      grid-column: 2;
+    }
+
+    .section-label {
+      font-family: var(--mono);
+      font-size: .7rem;
+      font-weight: 600;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--grey1);
+      padding-top: 1.25rem;
+      padding-bottom: .45rem;
+      border-bottom: 1px solid var(--bg3);
+      margin-bottom: 1.25rem;
+    }
+
+    /* ── JOB CARDS ───────────────────────────────────────── */
+    .box {
+      position: relative;
+      padding: 1rem 1.1rem 1rem 1.1rem;
+      margin-bottom: .75rem;
+      background-color: var(--bg1);
+      border: 1px solid var(--bg3);
+      border-left: 3px solid var(--bg3);
+      border-radius: var(--radius);
+      transition: border-left-color .2s, box-shadow .2s;
+    }
+
+    .box:hover {
+      border-left-color: var(--orange);
+      box-shadow: 2px 2px 8px rgba(0,0,0,.06);
+    }
+
+    .box-header {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      grid-template-rows: auto auto;
+      column-gap: 1rem;
+      align-items: start;
+      margin-bottom: .5rem;
+    }
+
+    .box-title {
+      font-family: var(--mono);
+      font-size: .9rem;
+      font-weight: 600;
+      color: var(--fg0);
+      grid-row: 1;
+      grid-column: 1;
+    }
+
+    .box-subtitle {
+      font-size: .8rem;
+      font-weight: 400;
+      color: var(--blu);
+      grid-row: 2;
+      grid-column: 1;
+      margin-top: .1rem;
+    }
+
+    .box-dates {
+      font-family: var(--mono);
+      font-size: .72rem;
+      color: var(--grey1);
+      grid-row: 1 / 3;
+      grid-column: 2;
+      align-self: center;
+      white-space: nowrap;
+      text-align: right;
+    }
+
+    .box-summary {
+      font-size: .82rem;
+      color: var(--fg1);
+      line-height: 1.65;
+      margin-bottom: .6rem;
+      font-style: italic;
+    }
+
+    .box-highlights {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: .2rem;
+    }
+
+    .box-highlights li {
+      font-size: .82rem;
+      color: var(--fg0);
+      padding-left: 1rem;
+      position: relative;
+    }
+
+    .box-highlights li::before {
+      content: '›';
+      position: absolute;
+      left: 0;
+      color: var(--orange);
+      font-family: var(--mono);
+      font-weight: 600;
+    }
+
+    /* ── FOOTER ──────────────────────────────────────────── */
+    .footer {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--bg3);
+      font-family: var(--mono);
+      font-size: .7rem;
+      color: var(--grey1);
+      letter-spacing: .05em;
+    }
+
+    /* ── RESPONSIVE ──────────────────────────────────────── */
+    @media (max-width: 650px) {
+      .page {
+        grid-template-columns: 1fr;
+      }
+      .intro {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .intro-contact { text-align: left; }
+      .sidebar { grid-column: 1; position: static; }
+      .main-content { grid-column: 1; }
+    }
+  </style>
+</head>
+
+<body id="tobin-cameron-resume">
+
+  <!-- NAVBAR -->
+  <header class="navbar" role="banner">
+    <div class="navbar-inner">
+      <span class="navbar-name">Tobin Rieger Cameron</span>
+      <nav role="navigation" aria-label="Page sections">
+        <ul class="nav-list">
+          <li><a href="#">Home</a></li>
+          <li><a href="#experience">Experience</a></li>
+          <li><a href="#volunteering">Volunteering</a></li>
+          <li><a href="#education">Education</a></li>
+          <li><a href="#">Portfolio</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <div class="page">
+
+    <!-- INTRO -->
+    <div class="intro" id="intro">
+      <div class="intro-title">
+        <h1>Tobin Rieger Cameron</h1>
+        <p class="tagline">Hospitality &amp; Operations</p>
+      </div>
+      <address class="intro-contact">
+        <a href="tel:6132902791">(613) 290-2791</a><br>
+        <a href="mailto:tobincameron@gmail.com">tobincameron@gmail.com</a><br>
+        Gatineau, QC
+      </address>
+    </div>
+
+
+
+
+
+    <!-- 1. REQUIRED: Import Map -->
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+    </script>
+    <script type="module">
+
+      import * as THREE from 'three';
+      import { AsciiEffect } from 'three/addons/effects/AsciiEffect.js';
+
+      let camera, scene, renderer, effect;
+      let cube;
+
+      init();
+
+      function init() {
+
+          const container = document.getElementById('ascii-container');
+
+          const width = container.clientWidth;
+          const height = container.clientHeight;
+
+          // Camera
+
+          camera = new THREE.PerspectiveCamera(
+              70,
+              width / height,
+              1,
+              1000
+          );
+
+          camera.position.z = 30;
+
+          // Scene
+
+          scene = new THREE.Scene();
+
+          // Lights (borrowed from official example)
+
+          const light1 = new THREE.PointLight(0xffffff, 3, 0, 0);
+          light1.position.set(50, 50, 50);
+          scene.add(light1);
+
+          const light2 = new THREE.PointLight(0xffffff, 1, 0, 0);
+          light2.position.set(-50, -50, -50);
+          scene.add(light2);
+
+          scene.add(new THREE.AmbientLight(0xffffff, 0.25));
+
+          // Cube
+
+          cube = new THREE.Mesh(
+              new THREE.BoxGeometry(20, 20, 20),
+              new THREE.MeshPhongMaterial({
+                  flatShading: true
+              })
+          );
+
+          scene.add(cube);
+
+          // Renderer
+
+          renderer = new THREE.WebGLRenderer();
+
+          // ASCII Effect
+
+          effect = new AsciiEffect(
+              renderer,
+              ' .:-+*=%@#',
+              {
+                  invert: true,
+                  resolution: 0.45,
+                  scale: 1.0001,
+              }
+          );
+
+          effect.setSize(width, height);
+          effect.domElement.style.color = 'black';
+          effect.domElement.style.backgroundColor = 'transparent';
+          container.appendChild(effect.domElement);
+          window.addEventListener('resize', onWindowResize);
+          renderer.setAnimationLoop(animate);
+
+      }
+
+      function onWindowResize() {
+
+          const container = document.getElementById('ascii-container');
+
+          const width = container.clientWidth;
+          const height = container.clientHeight;
+
+          camera.aspect = width / height;
+          camera.updateProjectionMatrix();
+
+          effect.setSize(width, height);
+
+      }
+
+      function animate() {
+
+          cube.rotation.x += 0.0005;
+          cube.rotation.y += 0.001;
+
+          // light1.position.x = Math.sin(time * 0.001) * 10;
+          // light2.position.z = Math.cos(time * 0.001) * 10;
+
+          effect.render(scene, camera);
+
+      }
+
+    </script>
+
+
+
+
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" aria-label="Skills and info">
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">Kitchen</div>
+        <div class="skill-tags">
+          <span class="tag orange">Line cooking</span>
+          <span class="tag orange">Prep &amp; mise en place</span>
+          <span class="tag orange">Dishwashing</span>
+          <span class="tag orange">Inventory mgmt</span>
+          <span class="tag orange">Health &amp; safety</span>
+          <span class="tag orange">Rigourous cleanliness</span>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">Front of House</div>
+        <div class="skill-tags">
+          <span class="tag blu">Customer care</span>
+          <span class="tag blu">Table service</span>
+          <span class="tag blu">Fast flipping</span>
+          <span class="tag blu">Bussing</span>
+          <span class="tag blu">Barback</span>
+          <span class="tag blu">Glassware &amp; Cutlery</span>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">General</div>
+        <div class="skill-tags">
+          <span class="tag grn">High-pressure performance</span>
+          <span class="tag grn">Team collaboration</span>
+          <span class="tag grn">Tech troubleshooting</span>
+          <span class="tag grn">Online facilitation</span>
+          <span class="tag grn">Outside the box thinking</span>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-label">Languages</div>
+        <p class="sidebar-text">English — fluent<br>French — conversational</p>
+      </div>
+
+      <div id="ascii-container" style="width: 220; height: 220px; overflow: hidden;/* border: 1px solid var(--red)*/"></div>
+
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content" role="main">
+
+      <section class="experience" id="experience">
+          <h2 class="section-label">Experience</h2>
+
+          <article class="box">
+            <header class="box-header">
+              <h3 class="box-title">Grey's Social Eatery</h3>
+              <p class="box-subtitle">Barback &amp; Support Staff · Ottawa</p>
+              <p class="box-dates">Mar 2025 – Aug 2025</p>
+            </header>
+            <p class="box-summary">Jumped in on my first shift the same night as my interview; worked Canada Day under full house pressure supporting every station in the building.</p>
+            <ul class="box-highlights">
+              <li>Ran dishes and drinks simultaneously across multiple tables</li>
+              <li>Poured and served beer; maintained bar stock throughout service</li>
+              <li>Supported bartenders, servers, kitchen, and management as needed</li>
+              <li>Late-night DJ set during close</li>
+            </ul>
+          </article>
+
+          <article class="box">
+            <header class="box-header">
+              <h3 class="box-title">Les Fougères</h3>
+              <p class="box-subtitle">Dishwasher → Prep Cook → Line Cook · Chelsea</p>
+              <p class="box-dates">Oct 2023 – Jun 2024</p>
+            </header>
+            <p class="box-summary">Worked through three roles in a high-end fine dining kitchen, adapting to a slower, more precise pace after faster-paced environments.</p>
+            <ul class="box-highlights">
+              <li>Progressed from dishwasher through to line cook within the season</li>
+              <li>Prepared house-made ravioli and other à la carte menu items</li>
+              <li>Upheld rigorous cleanliness and plating standards every service</li>
+            </ul>
+          </article>
+
+          <article class="box">
+            <header class="box-header">
+              <h3 class="box-title">Guilt &amp; Ivy</h3>
+              <p class="box-subtitle">Busser &amp; Server · Montréal</p>
+              <p class="box-dates">Aug 2023 – Nov 2023</p>
+            </header>
+            <p class="box-summary">Fast-paced two-floor operation; ran the room alongside a partner, constantly moving between the floor and kitchen via staircase throughout service.</p>
+            <ul class="box-highlights">
+              <li>Maintained dining room presentation and rapid table turnover</li>
+              <li>Ran food from the pass and drinks from the bar in a compact, busy space</li>
+              <li>Coordinated floor-to-kitchen communication under pressure</li>
+            </ul>
+          </article>
+
+          <article class="box">
+            <header class="box-header">
+              <h3 class="box-title">NDG Luncheonette</h3>
+              <p class="box-subtitle">Line Cook · Montréal</p>
+              <p class="box-dates">May 2023 – Aug 2023</p>
+            </header>
+            <p class="box-summary">First professional kitchen cooking role; morning shifts at a breakfast counter requiring consistent pace and clean prep habits from day one.</p>
+            <ul class="box-highlights">
+              <li>Executed breakfast menu across multiple stations each shift</li>
+              <li>Maintained daily prep lists and mise en place for smooth service</li>
+              <li>Managed inventory and organization across front and back kitchen</li>
+            </ul>
+          </article>
+
+          <article class="box">
+            <header class="box-header">
+              <h3 class="box-title">Loïc Wine Bar</h3>
+              <p class="box-subtitle">Busser · Gatineau</p>
+              <p class="box-dates">May 2021 – Mar 2023</p>
+            </header>
+            <p class="box-summary">Long 12-hour shifts in a high-end venue that transitioned from dinner service to club every night — learned the full rhythm of setup, service, and teardown.</p>
+            <ul class="box-highlights">
+              <li>Handled extensive setup and full teardown each shift</li>
+              <li>Managed glassware and cutlery inventory, polish, and temperature</li>
+              <li>Kept bar stocked with ice, juices, and service supplies throughout the night</li>
+              <li>Supported servers with food running and table flips during peak service</li>
+            </ul>
+          </article>
+
+          <article class="box">
+            <header class="box-header">
+              <h3 class="box-title">LHH</h3>
+              <p class="box-subtitle">Instructional Producer · Remote</p>
+              <p class="box-dates">Nov 2018 – Sep 2023</p>
+            </header>
+            <p class="box-summary">Produced and facilitated online coaching sessions for teams across diverse industries, becoming the technical backbone of each engagement.</p>
+            <ul class="box-highlights">
+              <li>Collaborated with coaches, SMEs, managers, and participants simultaneously</li>
+              <li>Ramped up quickly on new platforms and tools for each client engagement</li>
+              <li>Resolved live technical issues and trained coaches on platform use</li>
+              <li>Tracked performance metrics and participant feedback to improve course quality</li>
+            </ul>
+          </article>
+      </section>
+
+
+      <section class="volunteering" id="volunteering">
+        <h2 class="section-label">Volunteering</h2>
+        <article class="box">
+          <header class="box-header">
+            <h4 class="box-title">Learn to Skate - Chelsea</h4>
+            <p class="box-subtitle">Skating Instructor</p>
+            <p class="box-dates">
+              <time datetime="2015-01">January 2015</time>
+            </p>
+          </header>
+          <p class="box-summary"></p>
+          <ul class="box-highlights">
+            <li>Assisted coaches with lessons</li>
+            <li>Taught in group and individual environments</li>
+            <li>Interacted with parents regarding child developments</li>
+          </ul>
+        </article>
+        <article class="box">
+          <header class="box-header">
+            <h4 class="box-title">Ottawa Chamber Orchestra</h4>
+            <p class="box-subtitle">Symphony Orchestra Usher</p>
+            <p class="box-dates">
+              <time datetime="2016-11">September 2016</time>
+            </p>
+          </header>
+          <p class="box-summary"></p>
+          <ul class="box-highlights">
+              <li>Set up and tear down</li>
+              <li>Greeted guests</li>
+              <li>Communicated with public in welcoming manner</li>
+              <li>Guided guests to their seats</li>
+              <li>Sold tickets to customers</li>
+          </ul>
+        </article>
+        <article class="box">
+          <header class="box-header">
+            <h4 class="box-title">Cascades Club</h4>
+            <p class="box-subtitle">Junior Counselor in Training</p>
+            <p class="box-dates">
+              <time datetime="2017-07">July 2017</time>
+            </p>
+          </header>
+          <p class="box-summary"></p>
+          <ul class="box-highlights">
+              <li>Organized and supervised activities</li>
+              <li>Ensured safety requirements being met</li>
+              <li>Assisted senior counsellors</li>
+          </ul>
+        </article>
+      </section>
+
+      <section class="education" id="education">
+        <h2 class="section-label">Education</h2>
+        <article class="box">
+          <header class="box-header">
+            <h4 class="box-title">Computer Science</h4>
+            <p class="box-subtitle">Heritage College, Gatineau</p>
+            <p class="box-dates">
+              <time datetime="2019-09">September 2019</time> - <time datetime="2020-05">June 2020</time>
+            </p>
+          </header>
+          <p class="box-summary"></p>
+          <ul class="box-highlights">
+            <li>Html, Javascript, CSS: Web Development</li>
+            <li>Java: Object Oriented Programming</li>
+            <li>Developed my ability to apply logic and critical thinking to problems</li>
+          </ul>
+        </article>
+        <article class="box">
+          <header class="box-header">
+            <h4 class="box-title">Photography</h4>
+            <p class="box-subtitle">Dawson College, Montreal</p>
+            <p class="box-dates">
+              <time datetime="2022-09">September 2022</time> - <time datetime="2023-01">January 2023</time>
+            </p>
+          </header>
+          <p class="box-summary"></p>
+          <ul class="box-highlights">
+            <li>Refined my eye</li>
+            <li>Developed my ability to edit industry standard photographs</li>
+            <li>Learned how to develop film</li>
+          </ul>
+        </article>
+      </section>
+    </main>
+
+  </div>
+
+  <footer class="footer">
+    <span>tobincameron@gmail.com · (613) 290-2791 · Gatineau, QC</span>
+  </footer>
+
+</body>
+</html>
