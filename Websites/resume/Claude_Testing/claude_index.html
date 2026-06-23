@@ -347,6 +347,147 @@
       .main-content { grid-column: 1; }
     }
   </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module">
+
+  import * as THREE from 'three';
+  import { AsciiEffect } from 'three/addons/effects/AsciiEffect.js';
+  import { TeapotGeometry } from 'three/addons/geometries/TeapotGeometry.js';
+
+  let camera, scene, renderer, effect;
+  let cube, teapot, light1, light2;
+
+  init();
+
+  function init() {
+
+      const container = document.getElementById('ascii-container');
+
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+
+      // Camera
+
+      camera = new THREE.PerspectiveCamera(
+          70,
+          width / height,
+          1,
+          1000
+      );
+
+      camera.position.z = 30;
+
+      // Scene
+
+      scene = new THREE.Scene();
+
+      // Lights (borrowed from official example)
+
+      light1 = new THREE.PointLight(0xffffff, 3, 0, 0);
+      light1.position.set(50, 50, 50);
+      scene.add(light1);
+
+      light2 = new THREE.PointLight(0xffffff, 1, 0, 0);
+      light2.position.set(-50, -50, -50);
+      scene.add(light2);
+
+      scene.add(new THREE.AmbientLight(0xffffff, 0.25));
+
+      // Cube
+
+      cube = new THREE.Mesh(
+          new THREE.BoxGeometry(20, 20, 20),
+          new THREE.MeshPhongMaterial({
+              flatShading: true
+          })
+      );
+      
+      // Teapot
+      
+      const teapotSize = 8;
+      const segments = 5;
+
+      const geometry = new TeapotGeometry(
+        teapotSize,
+        segments,
+        true, // bottom
+        true, // lid
+        true, // body
+        false, // fitLid
+        true // blinn (vertical scaling)
+      );
+
+      const material = new THREE.MeshPhongMaterial({
+        color: 0xffffff,
+        flatShading: true
+      });
+      
+      teapot = new THREE.Mesh(geometry, material);
+
+      // scene.add(teapot);
+      scene.add(cube);
+
+      // Renderer
+
+      renderer = new THREE.WebGLRenderer();
+
+      // ASCII Effect
+
+      effect = new AsciiEffect(
+          renderer,
+          ' .:-+*=%@#',
+          {
+              invert: true,
+              resolution: 1,
+              scale: 1.0001,
+          }
+      );
+
+      effect.setSize(width, height);
+      effect.domElement.style.color = '#928374';
+      effect.domElement.style.backgroundColor = 'transparent';
+      container.appendChild(effect.domElement);
+      window.addEventListener('resize', onWindowResize);
+      renderer.setAnimationLoop(animate);
+
+  }
+
+  function onWindowResize() {
+
+      const container = document.getElementById('ascii-container');
+
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+
+      effect.setSize(width, height);
+
+  }
+
+  function animate() {
+
+      cube.rotation.x += 0.0005;
+      cube.rotation.y += 0.001;
+      
+      teapot.rotation.x += 0.0005;
+      teapot.rotation.y += 0.001;
+
+      // light1.rotation.x += 0.05;
+      // light2.rotation.z += 0.01;
+
+      effect.render(scene, camera);
+
+  }
+  </script>
 </head>
 
 <body id="tobin-cameron-resume">
@@ -381,131 +522,6 @@
         Gatineau, QC
       </address>
     </div>
-
-
-
-
-
-    <!-- 1. REQUIRED: Import Map -->
-    <script type="importmap">
-    {
-      "imports": {
-        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-      }
-    }
-    </script>
-    <script type="module">
-
-      import * as THREE from 'three';
-      import { AsciiEffect } from 'three/addons/effects/AsciiEffect.js';
-
-      let camera, scene, renderer, effect;
-      let cube;
-
-      init();
-
-      function init() {
-
-          const container = document.getElementById('ascii-container');
-
-          const width = container.clientWidth;
-          const height = container.clientHeight;
-
-          // Camera
-
-          camera = new THREE.PerspectiveCamera(
-              70,
-              width / height,
-              1,
-              1000
-          );
-
-          camera.position.z = 30;
-
-          // Scene
-
-          scene = new THREE.Scene();
-
-          // Lights (borrowed from official example)
-
-          const light1 = new THREE.PointLight(0xffffff, 3, 0, 0);
-          light1.position.set(50, 50, 50);
-          scene.add(light1);
-
-          const light2 = new THREE.PointLight(0xffffff, 1, 0, 0);
-          light2.position.set(-50, -50, -50);
-          scene.add(light2);
-
-          scene.add(new THREE.AmbientLight(0xffffff, 0.25));
-
-          // Cube
-
-          cube = new THREE.Mesh(
-              new THREE.BoxGeometry(20, 20, 20),
-              new THREE.MeshPhongMaterial({
-                  flatShading: true
-              })
-          );
-
-          scene.add(cube);
-
-          // Renderer
-
-          renderer = new THREE.WebGLRenderer();
-
-          // ASCII Effect
-
-          effect = new AsciiEffect(
-              renderer,
-              ' .:-+*=%@#',
-              {
-                  invert: true,
-                  resolution: 0.45,
-                  scale: 1.0001,
-              }
-          );
-
-          effect.setSize(width, height);
-          effect.domElement.style.color = 'black';
-          effect.domElement.style.backgroundColor = 'transparent';
-          container.appendChild(effect.domElement);
-          window.addEventListener('resize', onWindowResize);
-          renderer.setAnimationLoop(animate);
-
-      }
-
-      function onWindowResize() {
-
-          const container = document.getElementById('ascii-container');
-
-          const width = container.clientWidth;
-          const height = container.clientHeight;
-
-          camera.aspect = width / height;
-          camera.updateProjectionMatrix();
-
-          effect.setSize(width, height);
-
-      }
-
-      function animate() {
-
-          cube.rotation.x += 0.0005;
-          cube.rotation.y += 0.001;
-
-          // light1.position.x = Math.sin(time * 0.001) * 10;
-          // light2.position.z = Math.cos(time * 0.001) * 10;
-
-          effect.render(scene, camera);
-
-      }
-
-    </script>
-
-
-
-
 
     <!-- SIDEBAR -->
     <aside class="sidebar" aria-label="Skills and info">
@@ -547,10 +563,17 @@
 
       <div class="sidebar-section">
         <div class="sidebar-label">Languages</div>
-        <p class="sidebar-text">English — fluent<br>French — conversational</p>
+        <p class="sidebar-text">
+            English — fluent<br>
+            French — conversational<br>
+            HTML — intermediate<br>
+            CSS - intermediate<br>
+            JavaScript - beginner<br>
+            Python - intermediate
+        </p>
       </div>
 
-      <div id="ascii-container" style="width: 220; height: 220px; overflow: hidden;/* border: 1px solid var(--red)*/"></div>
+      <div id="ascii-container" style="width: 220; height: 220px; overflow: hidden; /*border: 1px solid var(--red)*/"></div>
 
     </aside>
 
@@ -620,7 +643,7 @@
           <article class="box">
             <header class="box-header">
               <h3 class="box-title">Loïc Wine Bar</h3>
-              <p class="box-subtitle">Busser · Gatineau</p>
+              <p class="box-subtitle">Busser · Montréal</p>
               <p class="box-dates">May 2021 – Mar 2023</p>
             </header>
             <p class="box-summary">Long 12-hour shifts in a high-end venue that transitioned from dinner service to club every night — learned the full rhythm of setup, service, and teardown.</p>
