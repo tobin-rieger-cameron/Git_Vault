@@ -1,22 +1,53 @@
-# Obsidian Brain
+# ChatUI
 
-A fully local, privacy-first knowledge assistant built on top of your Obsidian vault. It combines vector-based semantic search, a locally-running LLM via Ollama, and an optional DuckDuckGo web fallback — all inside a Claude Code-styled terminal UI.
+A fully local, privacy-first knowledge assistant built on top of your Obsidian vault. It combines vector-based semantic search, a locally-running LLM via Ollama, and an optional DuckDuckGo web fallback — all inside a terminal UI. Every function is accessible as a `/command` within the chat.
+
+---
+
+## Usage
+
+```bash
+python chatui.py
+```
+
+That's it. No flags needed. If the vector database doesn't exist yet, type `/ingest` once you're inside.
+
+---
+
+## Commands
+
+| Command | Description |
+|---|---|
+| `/help` | List all available commands |
+| `/ingest` | Rebuild the vector database from vault markdown files |
+| `/organize` | Add YAML frontmatter tags and `[[wikilinks]]` to vault notes |
+| `/savefile` | Review and save pending notes to the vault |
+| `/clear` | Reset conversation history |
+| `/web` | Toggle the DuckDuckGo web search fallback on / off |
+
+**Keyboard shortcuts**
+
+| Key | Action |
+|---|---|
+| `Ctrl+S` | Shortcut for `/savefile` |
+| `Ctrl+Q` | Quit |
+| `Esc` | Clear the input field |
 
 ---
 
 ## How It Works
 
-### 1. Ingestion (`--ingest`)
+### 1. Ingestion (`/ingest`)
 
-When you run the program with `--ingest`, it reads every `.md` file in the vault using LangChain's `DirectoryLoader`. Each file is split into 500-character overlapping chunks by `RecursiveCharacterTextSplitter`, then each chunk is passed through `nomic-embed-text` (running locally via Ollama) to produce a dense numerical vector. All vectors are written to a persistent ChromaDB database on disk (`local_db/`).
+Reads every `.md` file in the vault using LangChain's `DirectoryLoader`. Each file is split into 500-character overlapping chunks by `RecursiveCharacterTextSplitter`, then each chunk is embedded by `nomic-embed-text` (running locally via Ollama) into a dense vector and written to a persistent ChromaDB database (`local_db/`).
 
-This only needs to happen once, or again whenever you add notes manually outside the app.
+YAML frontmatter tags are parsed and stored as boolean metadata fields on each chunk (e.g. `tag_ai: true`) so they can be used to filter searches later.
 
-### 2. Retrieval
+Re-run `/ingest` whenever you add notes manually outside the app.
 
-When you ask a question, the question text is embedded into a vector using the same `nomic-embed-text` model. ChromaDB performs an approximate nearest-neighbour search across all stored chunk vectors and returns the top 3 (`TOP_K`) most semantically similar chunks — along with a relevance score between 0 and 1.
+### 2. Tag-Aware Retrieval
 
-If the best chunk scores **≥ 0.5** (`SIMILARITY_THRESHOLD`), the vault is considered sufficient and those chunks are used as context for the answer. The threshold is configurable and the live score is shown in the UI (`🔍 Best vault match: 0.78`) so you can tune it.
+When you ask a question, it is embedded and compared against all stored chunks. The top result's tags (if any) are used to run a second, topic-scoped search. If the scoped search scores within 10% of the baseline, its results replace the unfiltered ones — keeping context focused on the relevant topic as the vault grows. The UI shows which tags were active (`🏷 Scoped to: ai, machinelearning`) and the best match score (`🔍 Best vault match: 0.78`).
 
 ### 3. Generation
 
@@ -24,64 +55,73 @@ Answers are drawn from the best available source, tried in order:
 
 | Source | Condition |
 |---|---|
-| **Vault notes** | Top similarity score ≥ threshold |
-| **Model knowledge** | Vault score too low — always shown, even if the model flags uncertainty |
-| **Web search (supplement)** | Model flags uncertainty — DuckDuckGo result shown alongside the model answer |
+| **Vault notes** | Top similarity score ≥ 0.5 |
+| **Model knowledge** | Vault score too low — always shown, even when the model flags uncertainty |
+| **Web search** | Model flags uncertainty and `/web` is on — DuckDuckGo result shown alongside |
 
-All three generation prompts include the last `HISTORY_WINDOW = 4` exchanges from the conversation so the model can refer to earlier context.
+All prompts include the last 4 conversation exchanges so the model can refer to earlier context.
 
-### 4. Conversation
+### 4. Conversation & Session Saving
 
-The app maintains a full conversation history (`self._history`) across the session. Each question and answer is appended to the history list and included in subsequent prompts. This allows genuine back-and-forth — you can ask follow-up questions, request clarifications, or refer to something said earlier without restating it.
+The app keeps a full in-session history for multi-turn conversations. Every session is also automatically saved to `conversations/YYYY-MM-DD_HH-MM-SS.md` in the vault the moment it starts, with each message appended in real time — so nothing is lost if the app closes unexpectedly.
 
-### 5. Learning
+### 5. Learning (`/savefile`)
 
-When an answer comes from model knowledge or web search, it is not saved immediately. Instead it is queued as a `PendingNote` (question, answer, source, suggested filename). The header subtitle shows the pending count.
+When an answer comes from model knowledge or web search it is queued as a `PendingNote` rather than saved immediately. The header subtitle shows the pending count. Type `/savefile` (or `Ctrl+S`) at any time to open the review screen. For each pending note you can:
 
-Press **Ctrl+S** at any time to open the note review screen. For each pending note you can:
 - Preview the full Q/A content in a scrollable panel
 - Accept the model-suggested filename (Enter)
 - Type your own filename
 - Skip the note entirely
 
-Confirmed notes are written to `.md` files in the vault and added to the live ChromaDB index, so they are immediately searchable without re-ingesting.
+Confirmed notes are written to `.md` files in the vault and added to the live ChromaDB index — immediately searchable without re-ingesting.
 
-### 6. Vault Organisation (`--organize`)
+### 6. Vault Organisation (`/organize`)
 
-A separate TUI mode that runs two passes over all vault notes:
+Runs two passes over all vault notes without leaving the chat:
 
-- **Tags pass** — the LLM analyses all notes together and suggests shared YAML frontmatter tags to group related notes (e.g. both `machinelearning.md` and `language-models.md` get an `ai` tag). You confirm or override each suggestion before anything is written.
-- **Wikilinks pass** — for each note the LLM identifies phrases in the body that refer to another note and proposes `[[wikilinks]]`. You confirm per note.
+- **Tags pass** — the LLM analyses all notes together and suggests shared YAML frontmatter tags to group related notes. You confirm or override each suggestion before anything is written.
+- **Wikilinks pass** — for each note the LLM identifies phrases that refer to another note and proposes `[[wikilinks]]`. You confirm per note.
 
 ---
 
 ## Architecture
 
 ```
-obsidian_brain.py
+chatui.py
 │
-├── Ingestion
-│   ├── ingest_vault()          — load, chunk, embed, persist to ChromaDB
-│   └── load_existing_db()      — load persisted ChromaDB from disk
+├── Database
+│   ├── ingest_vault()           — load, chunk, embed, persist to ChromaDB
+│   └── load_existing_db()       — load persisted ChromaDB from disk
+│
+├── Tag Helpers
+│   ├── _extract_frontmatter_tags()
+│   ├── _tags_to_metadata()      — store tags as ChromaDB boolean fields
+│   ├── _get_chunk_tags()        — read tags back from a retrieved chunk
+│   └── _make_tag_filter()       — build ChromaDB where-clause for tag filtering
 │
 ├── Web Search
-│   └── web_search()            — DuckDuckGo via DDGS, no API key required
+│   └── web_search()             — DuckDuckGo via DDGS, no API key required
 │
 ├── Learning
-│   ├── PendingNote             — dataclass: question, answer, source, suggestion
-│   ├── get_concept_suggestion()— LLM suggests a filename stem
-│   └── save_to_vault()         — writes .md file + adds doc to live ChromaDB
+│   ├── PendingNote              — dataclass: question, answer, source, suggestion
+│   ├── get_concept_suggestion() — LLM suggests a filename stem
+│   └── save_to_vault()          — writes .md file + adds doc to live ChromaDB
 │
-├── Generation
-│   ├── build_vault_prompt()    — vault context + history → answer
-│   ├── build_knowledge_prompt()— history → model answer
-│   ├── build_web_prompt()      — web results + history → answer
-│   └── _format_history()       — trims history to last HISTORY_WINDOW exchanges
+├── Prompts
+│   ├── build_vault_prompt()     — vault context + history → answer
+│   ├── build_knowledge_prompt() — history → model answer
+│   ├── build_web_prompt()       — web results + history → answer
+│   └── _format_history()        — trims history to last HISTORY_WINDOW exchanges
 │
 └── TUI
-    ├── ChatApp                 — main chat interface (Ctrl+S, Ctrl+Q)
-    │   └── NoteReviewScreen    — modal: preview + rename + save pending notes
-    └── OrganizeApp             — standalone vault organiser (--organize)
+    ├── ChatApp                  — unified chat + command interface
+    │   ├── /ingest              — @work coroutine, non-blocking
+    │   ├── /organize            — inline async worker with queue-based prompting
+    │   ├── /savefile            — triggers NoteReviewScreen modal
+    │   ├── /clear, /web, /help
+    │   └── _process()           — RAG pipeline with tag-aware second pass
+    └── NoteReviewScreen         — modal: preview + rename + save pending notes
 ```
 
 ---
@@ -99,32 +139,29 @@ obsidian_brain.py
 
 ---
 
-## Usage
+## Setup
 
 ```bash
-python obsidian_brain.py             # start chat TUI
-python obsidian_brain.py --ingest    # rebuild vector DB from vault, then start
-python obsidian_brain.py --organize  # tag notes + add wikilinks, then exit
+# Install dependencies
+pip install langchain langchain-ollama langchain-community chromadb \
+            duckduckgo-search textual
+
+# Pull Ollama models (once)
+ollama pull nomic-embed-text
+ollama pull llama3.2:3b
+
+# Run
+python chatui.py
+# Then type /ingest to build the database on first launch
 ```
-
-**In-app shortcuts**
-
-| Key | Action |
-|---|---|
-| `Ctrl+S` | Review and save pending notes |
-| `Ctrl+Q` | Quit |
-| `Esc` | Clear the input field |
 
 ---
 
 ## Suggested Improvements
 
-- **Streaming responses** — pipe LLM tokens to the `RichLog` as they arrive rather than waiting for the full response, so the UI feels more interactive
-- **Larger chat model** — swap `llama3.2:3b` for a 7B+ model (e.g. `mistral`, `llama3.1:8b`) for noticeably better reasoning and fewer uncertain fallbacks
-- **Re-ingest on change** — watch the vault directory with `watchdog` and automatically re-embed changed files so the DB stays in sync without a manual `--ingest`
-- **Smarter chunking** — chunk by markdown heading rather than character count so each chunk stays semantically coherent; heading-aware splits tend to improve retrieval precision
-- **Note deduplication** — before saving a new note, check whether a semantically similar entry already exists in the vault (via similarity search) and offer to append rather than create a duplicate
-- **Conversation export** — add a `Ctrl+E` shortcut to export the current session as a dated `.md` file in the vault
-- **Tag-aware retrieval** — filter the ChromaDB search by YAML frontmatter tags so a question tagged `physics` only searches physics notes, reducing noise from unrelated topics
-- **Web search toggle** — let the user enable or disable the DuckDuckGo fallback at runtime without editing the source file
-- **Multi-vault support** — accept `VAULT_PATH` as a CLI argument so the same script can serve multiple vaults without editing the config block
+- **Streaming responses** — pipe LLM tokens to the log as they arrive rather than waiting for the full response
+- **Larger chat model** — swap `llama3.2:3b` for a 7B+ model (`mistral`, `llama3.1:8b`) for better reasoning and fewer uncertain fallbacks
+- **Re-ingest on change** — watch the vault with `watchdog` and automatically re-embed changed files
+- **Smarter chunking** — chunk by markdown heading rather than character count so each chunk stays semantically coherent
+- **Note deduplication** — before saving, check if a semantically similar entry already exists and offer to append instead
+- **Multi-vault support** — accept `VAULT_PATH` as a CLI argument to serve multiple vaults from the same script
