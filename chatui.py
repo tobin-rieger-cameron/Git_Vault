@@ -89,8 +89,13 @@ def _make_tag_filter(tags: list[str]) -> dict:
 # ── Database ──────────────────────────────────────────────────────────────────
 
 def ingest_vault() -> Chroma:
-    loader = DirectoryLoader(VAULT_PATH, glob=FILE_GLOB)
-    docs   = loader.load()
+    # Exclude auto-generated subdirectories from indexing
+    loader = DirectoryLoader(
+        VAULT_PATH,
+        glob=FILE_GLOB,
+        exclude=["conversations/**"],
+    )
+    docs = loader.load()
     if not docs:
         raise RuntimeError("No markdown files found in vault.")
 
@@ -106,10 +111,21 @@ def ingest_vault() -> Chroma:
     splitter = RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
     chunks   = splitter.split_documents(docs)
 
+    # Wipe existing DB after embedding succeeds so failure leaves the old one intact.
+    # If another instance of the app has the DB open, rmtree may partially succeed
+    # and the subsequent write will raise "readonly database" — quit the other instance first.
     if os.path.exists(DB_PATH):
         shutil.rmtree(DB_PATH)
 
-    return Chroma.from_documents(documents=chunks, embedding=embeddings, persist_directory=DB_PATH)
+    try:
+        return Chroma.from_documents(documents=chunks, embedding=embeddings, persist_directory=DB_PATH)
+    except Exception as e:
+        if "readonly" in str(e).lower():
+            raise RuntimeError(
+                "Database is locked by another process. "
+                "Close any other running instance of chatui.py and try /ingest again."
+            ) from e
+        raise
 
 
 def load_existing_db() -> Chroma | None:
@@ -334,6 +350,7 @@ class NoteReviewScreen(ModalScreen[list[tuple[str, PendingNote]]]):
         inp.value       = ""
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
+        event.stop()  # prevent bubbling to ChatApp.on_input_submitted
         raw  = event.value.strip()
         note = self._pending[self._idx]
         if raw.lower() != "skip":
