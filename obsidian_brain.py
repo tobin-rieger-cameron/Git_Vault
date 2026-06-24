@@ -72,6 +72,10 @@ WEB_SEARCH_RESULTS = 3
 CHUNK_SIZE         = 500
 CHUNK_OVERLAP      = 50
 
+# Minimum relevance score (0–1) for a vault chunk to count as a sufficient answer.
+# Raise this to be stricter (fewer vault hits); lower it to be more permissive.
+SIMILARITY_THRESHOLD = 0.5
+
 # How many past exchanges to include in prompts (each exchange = 1 user + 1 assistant turn).
 HISTORY_WINDOW = 4
 
@@ -282,21 +286,6 @@ def build_web_prompt(question: str, web_context: str, history: list[dict]) -> st
     return "\n".join(parts)
 
 
-def context_is_sufficient(question: str, context_chunks: list) -> bool:
-    """Ask the LLM whether the retrieved vault chunks are enough to answer the question."""
-    context_text = "\n\n---\n\n".join(c.page_content for c in context_chunks)
-
-    response = llm.invoke(f"""You are evaluating whether a set of notes contains enough
-information to answer a question. Reply with only YES or NO.
-
---- NOTES ---
-{context_text}
---- END NOTES ---
-
-Question: {question}
-Do these notes contain enough information to answer this question? (YES or NO):""").content.strip().upper()
-
-    return response.startswith("YES")
 
 
 # ── Shared TUI Styles ─────────────────────────────────────────────────────────
@@ -536,14 +525,15 @@ class ChatApp(App[None]):
 
         try:
             # ── Step 1: Vault retrieval ────────────────────────────────────────
-            chunks = await asyncio.to_thread(
-                lambda: self.db.as_retriever(search_kwargs={"k": TOP_K}).invoke(question)
+            results = await asyncio.to_thread(
+                lambda: self.db.similarity_search_with_relevance_scores(question, k=TOP_K)
             )
-            sufficient = await asyncio.to_thread(
-                lambda: context_is_sufficient(question, chunks)
-            )
+            chunks    = [doc for doc, _ in results]
+            top_score = max((score for _, score in results), default=0.0)
 
-            if sufficient:
+            self._log(f"[dim]🔍  Best vault match: {top_score:.2f}[/dim]")
+
+            if top_score >= SIMILARITY_THRESHOLD:
                 self._log("[dim]📓  Source: vault notes[/dim]")
                 answer = await asyncio.to_thread(
                     lambda: llm.invoke(
@@ -555,7 +545,7 @@ class ChatApp(App[None]):
                 return
 
             # ── Step 2: Model knowledge (always shown) ─────────────────────────
-            self._log("[dim]🧠  Vault insufficient — asking model[/dim]")
+            self._log("[dim]🧠  Vault score too low — asking model[/dim]")
             model_answer = await asyncio.to_thread(
                 lambda: llm.invoke(
                     build_knowledge_prompt(question, self._history[:-1])
