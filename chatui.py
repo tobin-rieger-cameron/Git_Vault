@@ -5,6 +5,7 @@ All functions are available as /commands within the chat.
 /help     list commands          /ingest   rebuild vector DB
 /organize tag notes + wikilinks  /savefile review & save notes
 /clear    reset history          /web      toggle web search
+/browse   file browser
 """
 
 from __future__ import annotations
@@ -23,7 +24,7 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical
 from textual.screen import ModalScreen
-from textual.widgets import Footer, Header, Input, Label, RichLog
+from textual.widgets import Footer, Header, Input, Label, ListItem, ListView, RichLog, Static
 from rich.markdown import Markdown
 from rich.text import Text
 
@@ -57,6 +58,9 @@ CHUNK_OVERLAP      = 50
 SIMILARITY_THRESHOLD = 0.5
 HISTORY_WINDOW     = 4
 
+_SKIP_DIRS        = {"__pycache__", "local_db", "conversations", ".git"}
+_UNCERTAIN_PREFIX = "i'm not certain"
+
 embeddings = OllamaEmbeddings(model=EMBED_MODEL)
 llm        = ChatOllama(model=CHAT_MODEL)
 
@@ -89,7 +93,6 @@ def _make_tag_filter(tags: list[str]) -> dict:
 # ── Database ──────────────────────────────────────────────────────────────────
 
 def ingest_vault() -> Chroma:
-    # Exclude auto-generated subdirectories from indexing
     loader = DirectoryLoader(
         VAULT_PATH,
         glob=FILE_GLOB,
@@ -111,9 +114,6 @@ def ingest_vault() -> Chroma:
     splitter = RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
     chunks   = splitter.split_documents(docs)
 
-    # Wipe existing DB after embedding succeeds so failure leaves the old one intact.
-    # If another instance of the app has the DB open, rmtree may partially succeed
-    # and the subsequent write will raise "readonly database" — quit the other instance first.
     if os.path.exists(DB_PATH):
         shutil.rmtree(DB_PATH)
 
@@ -152,6 +152,13 @@ def web_search(query: str) -> str:
 
 
 # ── Learning ──────────────────────────────────────────────────────────────────
+
+@dataclass
+class OpenFile:
+    path:    str
+    rel:     str
+    content: str
+
 
 @dataclass
 class PendingNote:
@@ -206,13 +213,18 @@ def _format_history(history: list[dict]) -> str:
     return "\n\n".join(lines)
 
 
-def build_vault_prompt(question: str, chunks: list, history: list[dict]) -> str:
+def _file_ctx_section(file_ctx: str) -> list[str]:
+    return ["--- OPEN FILE ---", file_ctx, "--- END FILE ---", ""] if file_ctx else []
+
+
+def build_vault_prompt(question: str, chunks: list, history: list[dict], file_ctx: str = "") -> str:
     parts = [
         "You are a helpful assistant with access to the user's personal notes.",
         "Use the context and conversation history to answer the question.",
         "If the answer isn't covered in the context, say so clearly.",
         "",
     ]
+    parts += _file_ctx_section(file_ctx)
     if history:
         parts += ["--- CONVERSATION HISTORY ---", _format_history(history), "--- END HISTORY ---", ""]
     parts += [
@@ -226,12 +238,13 @@ def build_vault_prompt(question: str, chunks: list, history: list[dict]) -> str:
     return "\n".join(parts)
 
 
-def build_knowledge_prompt(question: str, history: list[dict]) -> str:
+def build_knowledge_prompt(question: str, history: list[dict], file_ctx: str = "") -> str:
     parts = [
         "Answer the following question using your own knowledge.",
-        'If you are not confident, start with: "I\'m not certain, but"',
+        f'If you are not confident, start with: "{_UNCERTAIN_PREFIX.capitalize()}, but"',
         "",
     ]
+    parts += _file_ctx_section(file_ctx)
     if history:
         parts += ["--- CONVERSATION HISTORY ---", _format_history(history), "--- END HISTORY ---", ""]
     parts += [f"Question: {question}", "Answer:"]
@@ -281,6 +294,13 @@ Input {
 }
 
 Input:focus { border: tall #5f87af; }
+
+#stream {
+    display: none;
+    margin: 0 2;
+    padding: 0 1;
+    color: #d4d4d4;
+}
 """
 
 
@@ -350,7 +370,7 @@ class NoteReviewScreen(ModalScreen[list[tuple[str, PendingNote]]]):
         inp.value       = ""
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
-        event.stop()  # prevent bubbling to ChatApp.on_input_submitted
+        event.stop()
         raw  = event.value.strip()
         note = self._pending[self._idx]
         if raw.lower() != "skip":
@@ -366,21 +386,119 @@ class NoteReviewScreen(ModalScreen[list[tuple[str, PendingNote]]]):
         self.dismiss(self._confirmed)
 
 
-# ── Chat App ──────────────────────────────────────────────────────────────────
+# ── File Browser Modal ────────────────────────────────────────────────────────
+
+class FileBrowserScreen(ModalScreen[str | None]):
+    """TUI file browser rooted at VAULT_PATH. Returns selected file path or None."""
+
+    CSS = """
+    FileBrowserScreen { align: center middle; }
+
+    #browser-box {
+        width: 80; height: 36;
+        border: thick #5f87af;
+        background: #252526;
+        padding: 1 2;
+    }
+    #browser-path { color: #9cdcfe; margin-bottom: 1; }
+    #browser-list {
+        height: 28;
+        background: #1e1e1e;
+        border: solid #454545;
+        scrollbar-color: #454545;
+        scrollbar-background: #1e1e1e;
+    }
+    #browser-help { color: #6c6c6c; margin-top: 1; }
+    """
+
+    BINDINGS = [Binding("escape", "go_up_or_close", "Up/Close", show=False)]
+
+    def __init__(self, root: str) -> None:
+        super().__init__()
+        self._root    = os.path.realpath(root)
+        self._cwd     = self._root
+        self._entries: list[tuple[bool, str, str]] = []  # (is_dir, name, full_path)
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="browser-box"):
+            yield Label("", id="browser-path")
+            yield ListView(id="browser-list")
+            yield Label("[dim]↑↓ navigate  ·  Enter=open/select  ·  Esc=up/close[/dim]", id="browser-help")
+
+    def on_mount(self) -> None:
+        self._refresh()
+
+    def _refresh(self) -> None:
+        lv  = self.query_one("#browser-list", ListView)
+        lv.clear()
+
+        rel = os.path.relpath(self._cwd, self._root)
+        display = "./" if rel == "." else f"./{rel}/"
+        self.query_one("#browser-path", Label).update(f"[bold]📁  {display}[/bold]")
+
+        self._entries = []
+        try:
+            names = sorted(os.listdir(self._cwd), key=str.lower)
+        except PermissionError:
+            names = []
+
+        dirs, files = [], []
+        for name in names:
+            if name.startswith(".") or name in _SKIP_DIRS:
+                continue
+            full = os.path.join(self._cwd, name)
+            if os.path.isdir(full):
+                dirs.append((True, name, full))
+            else:
+                files.append((False, name, full))
+
+        self._entries = dirs + files
+        for is_dir, name, _ in self._entries:
+            icon = "📁" if is_dir else _file_icon(name)
+            lv.append(ListItem(Label(f"{icon}  {name}")))
+
+    def on_list_view_selected(self, event: ListView.Selected) -> None:
+        idx = event.list_view.index
+        if idx is None or idx >= len(self._entries):
+            return
+        is_dir, _name, full = self._entries[idx]
+        if is_dir:
+            self._cwd = full
+            self._refresh()
+        else:
+            self.dismiss(full)
+
+    def action_go_up_or_close(self) -> None:
+        if os.path.realpath(self._cwd) == self._root:
+            self.dismiss(None)
+        else:
+            self._cwd = os.path.dirname(self._cwd)
+            self._refresh()
+
+
+def _file_icon(name: str) -> str:
+    icons = {".md": "📝", ".py": "🐍", ".txt": "📄", ".json": "📋", ".yaml": "📋", ".yml": "📋"}
+    return icons.get(os.path.splitext(name)[1].lower(), "📄")
+
+
+# ── Help text ─────────────────────────────────────────────────────────────────
 
 _HELP_TEXT = """\
 [bold]Available commands[/bold]
 
   [bold #5f87af]/help[/bold #5f87af]         show this message
+  [bold #5f87af]/browse[/bold #5f87af]       open file browser to load a file as context
   [bold #5f87af]/ingest[/bold #5f87af]       rebuild the vector database from vault files
   [bold #5f87af]/organize[/bold #5f87af]     add YAML tags and wikilinks to vault notes
   [bold #5f87af]/savefile[/bold #5f87af]     review and save pending notes to the vault
-  [bold #5f87af]/clear[/bold #5f87af]        reset conversation history
+  [bold #5f87af]/clear[/bold #5f87af]        reset conversation history and open file
   [bold #5f87af]/web[/bold #5f87af]          toggle web search fallback on / off
 
-[dim]Ctrl+S  shortcut for /savefile  ·  Ctrl+Q  quit[/dim]\
+[dim]Ctrl+S  /savefile  ·  Ctrl+B  /browse  ·  Ctrl+Q  quit[/dim]\
 """
 
+
+# ── Chat App ──────────────────────────────────────────────────────────────────
 
 class ChatApp(App[None]):
     TITLE     = "ChatUI"
@@ -389,9 +507,10 @@ class ChatApp(App[None]):
     CSS = _CSS
 
     BINDINGS = [
-        Binding("ctrl+q", "quit",         "Quit"),
+        Binding("ctrl+q", "quit",        "Quit"),
         Binding("ctrl+s", "savefile",     "Save notes"),
-        Binding("escape", "clear_input",  "Clear input", show=False),
+        Binding("ctrl+b", "browse",      "Browse files"),
+        Binding("escape", "clear_input", "Clear input", show=False),
     ]
 
     def __init__(self, db: Chroma | None) -> None:
@@ -403,12 +522,14 @@ class ChatApp(App[None]):
         self._web_on         = True
         self._organize_queue: asyncio.Queue[str] | None = None
         self._session_file:   str | None = None
+        self._open_file:      OpenFile | None = None
 
     # ── Layout ────────────────────────────────────────────────────────────────
 
     def compose(self) -> ComposeResult:
         yield Header()
         yield RichLog(id="log", markup=True, wrap=True, highlight=False)
+        yield Static("", id="stream")
         yield Input(placeholder="Ask anything, or type /help for commands...", id="input")
         yield Footer()
 
@@ -431,10 +552,21 @@ class ChatApp(App[None]):
     def _log(self, markup: str) -> None:
         self.query_one(RichLog).write(Text.from_markup(markup))
 
+    def _log_md(self, text: str) -> None:
+        self.query_one(RichLog).write(Markdown(text))
+
+    def _update_subtitle(self) -> None:
+        parts = [CHAT_MODEL]
+        if self._pending:
+            n = len(self._pending)
+            parts.append(f"{n} unsaved note{'s' if n != 1 else ''}")
+        if self._open_file:
+            parts.append(f"📄 {self._open_file.rel}")
+        self.sub_title = "  ·  ".join(parts)
+
     def _queue_note(self, question: str, answer: str, source: str, suggestion: str) -> None:
         self._pending.append(PendingNote(question, answer, source, suggestion))
-        n = len(self._pending)
-        self.sub_title = f"{CHAT_MODEL}  ·  {n} unsaved note{'s' if n != 1 else ''}"
+        self._update_subtitle()
 
     def _append_to_session(self, role: str, content: str) -> None:
         if not self._session_file:
@@ -450,7 +582,6 @@ class ChatApp(App[None]):
         text = event.value.strip()
         event.input.value = ""
 
-        # Organize mode: pipe everything to the organize worker's queue
         if self._organize_queue is not None:
             self._organize_queue.put_nowait(text)
             return
@@ -476,6 +607,7 @@ class ChatApp(App[None]):
 
         handlers = {
             "help":     lambda _: self._cmd_help(),
+            "browse":   lambda _: self.action_browse(),
             "ingest":   self._cmd_ingest,
             "organize": self._cmd_organize,
             "savefile": lambda _: self.action_savefile(),
@@ -493,7 +625,9 @@ class ChatApp(App[None]):
 
     def _cmd_clear(self) -> None:
         self._history.clear()
-        self._log("[dim]Conversation history cleared.[/dim]")
+        self._open_file = None
+        self._update_subtitle()
+        self._log("[dim]Conversation history and open file cleared.[/dim]")
 
     def _cmd_web(self, args: str) -> None:
         if args.lower() in ("on", "off"):
@@ -502,6 +636,27 @@ class ChatApp(App[None]):
             self._web_on = not self._web_on
         state = "[green]on[/green]" if self._web_on else "[red]off[/red]"
         self._log(f"[dim]Web search fallback: {state}[/dim]")
+
+    # ── /browse command + Ctrl+B ──────────────────────────────────────────────
+
+    def action_browse(self) -> None:
+        self.push_screen(FileBrowserScreen(VAULT_PATH), callback=self._after_browse)
+
+    @work
+    async def _after_browse(self, path: str | None) -> None:
+        if path is None:
+            return
+        rel = os.path.relpath(path, VAULT_PATH)
+        try:
+            def _read() -> str:
+                with open(path, encoding="utf-8") as f:
+                    return f.read()
+            content = await asyncio.to_thread(_read)
+            self._open_file = OpenFile(path=path, rel=rel, content=content)
+            self._update_subtitle()
+            self._log(f"[dim]📄  Loaded: [bold]{rel}[/bold] — ask anything about it[/dim]")
+        except (OSError, UnicodeDecodeError) as e:
+            self._log(f"[red]Could not read {rel}: {e}[/red]")
 
     # ── /ingest command ───────────────────────────────────────────────────────
 
@@ -520,7 +675,7 @@ class ChatApp(App[None]):
             self._busy = False
             self.query_one(Input).focus()
 
-    # ── /organize command (inline, was OrganizeApp) ───────────────────────────
+    # ── /organize command ─────────────────────────────────────────────────────
 
     @work
     async def _cmd_organize(self, _args: str = "") -> None:
@@ -667,7 +822,7 @@ class ChatApp(App[None]):
 
         self._log("\n[bold green]✓ Vault organisation complete.[/bold green]")
 
-    # ── /savefile command + Ctrl+S ────────────────────────────────────────────
+    # ── /savemd command + Ctrl+S ──────────────────────────────────────────────
 
     def action_savefile(self) -> None:
         if not self._pending:
@@ -677,7 +832,7 @@ class ChatApp(App[None]):
 
     def _after_review(self, confirmed: list[tuple[str, PendingNote]]) -> None:
         self._pending.clear()
-        self.sub_title = CHAT_MODEL
+        self._update_subtitle()
         if confirmed:
             self._save_confirmed(confirmed)
         else:
@@ -685,17 +840,39 @@ class ChatApp(App[None]):
 
     @work
     async def _save_confirmed(self, confirmed: list[tuple[str, PendingNote]]) -> None:
-        for concept, note in confirmed:
-            c, n = concept, note
-            await asyncio.to_thread(lambda: save_to_vault(c, n.question, n.answer, n.source, self.db))
+        await asyncio.gather(*[
+            asyncio.to_thread(save_to_vault, concept, note.question, note.answer, note.source, self.db)
+            for concept, note in confirmed
+        ])
         self._log(f"[dim]📝  {len(confirmed)} note{'s' if len(confirmed) != 1 else ''} saved.[/dim]")
+
+    # ── Streaming LLM helper ──────────────────────────────────────────────────
+
+    async def _stream_llm(self, prompt: str) -> str:
+        stream_widget = self.query_one("#stream", Static)
+        stream_widget.display = True
+        parts: list[str] = []
+        try:
+            async for chunk in llm.astream(prompt):
+                parts.append(chunk.content)
+                stream_widget.update(Text("".join(parts)))
+        finally:
+            stream_widget.display = False
+        accumulated = "".join(parts)
+        if accumulated:
+            self._log_md(accumulated)
+        return accumulated
 
     # ── RAG chat worker ───────────────────────────────────────────────────────
 
     @work
     async def _process(self, question: str) -> None:
-        log = self.query_one(RichLog)
         self._history.append({"role": "user", "content": question})
+
+        file_ctx = ""
+        if self._open_file:
+            file_ctx = f"File: {self._open_file.rel}\n\n{self._open_file.content}"
+            self._log(f"[dim]📄  Context: {self._open_file.rel}[/dim]")
 
         try:
             if self.db is None:
@@ -727,22 +904,16 @@ class ChatApp(App[None]):
 
             if top_score >= SIMILARITY_THRESHOLD:
                 self._log("[dim]📓  Source: vault notes[/dim]")
-                answer = await asyncio.to_thread(
-                    lambda: llm.invoke(build_vault_prompt(question, chunks, self._history[:-1])).content
-                )
+                answer = await self._stream_llm(build_vault_prompt(question, chunks, self._history[:-1], file_ctx))
                 self._history.append({"role": "assistant", "content": answer})
                 self._append_to_session("assistant", answer)
-                log.write(Markdown(answer))
                 return
 
             # ── Model knowledge (always shown) ─────────────────────────────────
             self._log("[dim]🧠  Vault score too low — asking model[/dim]")
-            model_answer = await asyncio.to_thread(
-                lambda: llm.invoke(build_knowledge_prompt(question, self._history[:-1])).content
-            )
-            uncertain = model_answer.strip().lower().startswith("i'm not certain")
+            model_answer = await self._stream_llm(build_knowledge_prompt(question, self._history[:-1], file_ctx))
+            uncertain = model_answer.strip().lower().startswith(_UNCERTAIN_PREFIX)
             self._log(f"[dim]🧠  Model knowledge{'  (uncertain)' if uncertain else ''}[/dim]")
-            log.write(Markdown(model_answer))
             self._history.append({"role": "assistant", "content": model_answer})
             self._append_to_session("assistant", model_answer)
 
@@ -755,11 +926,8 @@ class ChatApp(App[None]):
                 web_ctx = await asyncio.to_thread(lambda: web_search(question))
 
                 if not web_ctx.startswith(("No results", "Web search failed", "duckduckgo")):
-                    web_answer = await asyncio.to_thread(
-                        lambda: llm.invoke(build_web_prompt(question, web_ctx, self._history)).content
-                    )
                     self._log("[dim]🌐  Web result:[/dim]")
-                    log.write(Markdown(web_answer))
+                    web_answer = await self._stream_llm(build_web_prompt(question, web_ctx, self._history))
                     web_suggestion = await asyncio.to_thread(lambda: get_concept_suggestion(question, web_answer))
                     self._queue_note(question, web_answer, "web search", web_suggestion)
                 else:

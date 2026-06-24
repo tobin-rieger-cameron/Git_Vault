@@ -19,10 +19,11 @@ That's it. No flags needed. If the vector database doesn't exist yet, type `/ing
 | Command | Description |
 |---|---|
 | `/help` | List all available commands |
+| `/browse` | Open a TUI file browser to load any file as context |
 | `/ingest` | Rebuild the vector database from vault markdown files |
 | `/organize` | Add YAML frontmatter tags and `[[wikilinks]]` to vault notes |
 | `/savefile` | Review and save pending notes to the vault |
-| `/clear` | Reset conversation history |
+| `/clear` | Reset conversation history and unload any open file |
 | `/web` | Toggle the DuckDuckGo web search fallback on / off |
 
 **Keyboard shortcuts**
@@ -30,6 +31,7 @@ That's it. No flags needed. If the vector database doesn't exist yet, type `/ing
 | Key | Action |
 |---|---|
 | `Ctrl+S` | Shortcut for `/savefile` |
+| `Ctrl+B` | Shortcut for `/browse` |
 | `Ctrl+Q` | Quit |
 | `Esc` | Clear the input field |
 
@@ -65,7 +67,11 @@ All prompts include the last 4 conversation exchanges so the model can refer to 
 
 The app keeps a full in-session history for multi-turn conversations. Every session is also automatically saved to `conversations/YYYY-MM-DD_HH-MM-SS.md` in the vault the moment it starts, with each message appended in real time — so nothing is lost if the app closes unexpectedly.
 
-### 5. Learning (`/savefile`)
+### 5. File Browser (`/browse`)
+
+Opens a TUI file browser rooted at the vault directory. Navigate with arrow keys, Enter to open a folder or select a file, Esc to go up one level (or close at the root). Hidden files, `__pycache__`, `local_db`, and `conversations` are excluded. Selecting any file loads its full content as context — it is injected into every subsequent prompt alongside vault chunks so the model can answer questions about it. The active filename is shown in the header subtitle. `/clear` unloads it.
+
+### 6. Learning (`/savefile`)
 
 When an answer comes from model knowledge or web search it is queued as a `PendingNote` rather than saved immediately. The header subtitle shows the pending count. Type `/savefile` (or `Ctrl+S`) at any time to open the review screen. For each pending note you can:
 
@@ -76,7 +82,7 @@ When an answer comes from model knowledge or web search it is queued as a `Pendi
 
 Confirmed notes are written to `.md` files in the vault and added to the live ChromaDB index — immediately searchable without re-ingesting.
 
-### 6. Vault Organisation (`/organize`)
+### 7. Vault Organisation (`/organize`)
 
 Runs two passes over all vault notes without leaving the chat:
 
@@ -109,18 +115,21 @@ chatui.py
 │   └── save_to_vault()          — writes .md file + adds doc to live ChromaDB
 │
 ├── Prompts
-│   ├── build_vault_prompt()     — vault context + history → answer
-│   ├── build_knowledge_prompt() — history → model answer
+│   ├── build_vault_prompt()     — vault context + open file + history → answer
+│   ├── build_knowledge_prompt() — open file + history → model answer
 │   ├── build_web_prompt()       — web results + history → answer
 │   └── _format_history()        — trims history to last HISTORY_WINDOW exchanges
 │
 └── TUI
     ├── ChatApp                  — unified chat + command interface
+    │   ├── /browse              — pushes FileBrowserScreen, loads file as context
     │   ├── /ingest              — @work coroutine, non-blocking
     │   ├── /organize            — inline async worker with queue-based prompting
     │   ├── /savefile            — triggers NoteReviewScreen modal
     │   ├── /clear, /web, /help
-    │   └── _process()           — RAG pipeline with tag-aware second pass
+    │   ├── _stream_llm()        — streams LLM tokens to a Static widget, writes Markdown when done
+    │   └── _process()           — RAG pipeline with tag-aware second pass + open file injection
+    ├── FileBrowserScreen        — modal: navigate vault files, select to load as context
     └── NoteReviewScreen         — modal: preview + rename + save pending notes
 ```
 
@@ -159,9 +168,9 @@ python chatui.py
 
 ## Suggested Improvements
 
-- **Streaming responses** — pipe LLM tokens to the log as they arrive rather than waiting for the full response
 - **Larger chat model** — swap `llama3.2:3b` for a 7B+ model (`mistral`, `llama3.1:8b`) for better reasoning and fewer uncertain fallbacks
 - **Re-ingest on change** — watch the vault with `watchdog` and automatically re-embed changed files
 - **Smarter chunking** — chunk by markdown heading rather than character count so each chunk stays semantically coherent
 - **Note deduplication** — before saving, check if a semantically similar entry already exists and offer to append instead
 - **Multi-vault support** — accept `VAULT_PATH` as a CLI argument to serve multiple vaults from the same script
+- **Save command distinction** — `/savefile` currently saves LLM-generated notes into the vault database; files opened via `/browse` are read-only context. A future `/browse` edit mode would need a separate save path that writes the file to disk without going through the note-review/embedding pipeline
