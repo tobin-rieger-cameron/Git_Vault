@@ -138,15 +138,137 @@ for _p in sorted(glob.glob(os.path.join(_CONFIG_DIR, "*.md"))):
 
 
 def _snip(src: str, start: str, stop: str) -> str:
-    """Return the section of src from `start` to `stop`.
+    """Return the section of src from `start` to `stop`, prefixed with real line numbers.
     Both markers are anchored to line starts so string literals that happen
-    to contain the same text (mid-line, inside function calls) are skipped."""
+    to contain the same text (mid-line, inside function calls) are skipped.
+    Line numbers let the coding model write accurate hunk headers."""
     m = re.search(r'(?m)^' + re.escape(start), src)
     if not m:
         return ""
     a = m.start()
     m2 = re.search(r'(?m)^' + re.escape(stop), src[a + 1:])
-    return src[a: a + 1 + m2.start()] if m2 else src[a:]
+    section = src[a: a + 1 + m2.start()] if m2 else src[a:]
+    first_line = src[:a].count("\n") + 1
+    return "".join(
+        f"{first_line + i:5d} {line}"
+        for i, line in enumerate(section.splitlines(keepends=True))
+    )
+
+
+def _build_chatui_guide(src: str) -> str:
+    """Parse chatui.py with the AST and return a structural guide for the coding model.
+
+    The guide tells the model exactly WHERE to insert each type of change so it
+    can write accurate diffs without guessing line numbers.
+    """
+    import ast as _ast
+
+    try:
+        tree = _ast.parse(src)
+    except SyntaxError:
+        return "(could not parse chatui.py)"
+
+    lines = src.splitlines()
+
+    # ── collect classes and their methods ──────────────────────────────────────
+    classes: dict[str, dict] = {}
+    for node in _ast.walk(tree):
+        if isinstance(node, _ast.ClassDef):
+            methods = {}
+            for child in _ast.walk(node):
+                if isinstance(child, (_ast.FunctionDef, _ast.AsyncFunctionDef)):
+                    if child.col_offset > node.col_offset:
+                        methods[child.name] = child.lineno
+            classes[node.name] = {"line": node.lineno, "methods": methods}
+
+    # ── find key landmarks via line-anchored regex (avoids matching string literals) ──
+    def _line_of(pattern: str) -> int:
+        m = re.search(r'(?m)^' + re.escape(pattern), src)
+        return src[:m.start()].count("\n") + 1 if m else 0
+
+    def _pos_of(pattern: str) -> int:
+        m = re.search(r'(?m)^' + re.escape(pattern), src)
+        return m.start() if m else -1
+
+    # _HELP_TEXT bounds
+    _ht_open = "_HELP_TEXT = " + '"""'   # split to avoid self-match as a literal
+    ht_pos   = _pos_of(_ht_open)
+    help_start = src[:ht_pos].count("\n") + 1 if ht_pos >= 0 else 0
+    if ht_pos >= 0:
+        _ht_close_m = re.search(r'(?m)^"""', src[ht_pos + len(_ht_open):])
+        help_end = (src[:ht_pos + len(_ht_open) + _ht_close_m.start()].count("\n") + 1
+                    if _ht_close_m else 0)
+    else:
+        help_end = 0
+
+    # handlers dict bounds — 8 spaces indent (inside _dispatch_command)
+    _hd_marker = "        handlers = {"
+    handlers_m = re.search(r'(?m)^' + re.escape(_hd_marker), src)
+    if handlers_m:
+        h_start  = src[:handlers_m.start()].count("\n") + 1
+        h_block  = src[handlers_m.start():]
+        h_close  = h_block.find("\n        }")
+        h_end    = h_start + h_block[:h_close].count("\n") + 1
+        last_handler_line = h_end - 1
+    else:
+        h_start = h_end = last_handler_line = 0
+
+    chatapp      = classes.get("ChatApp", {})
+    chatapp_line = chatapp.get("line", 0)
+    chatapp_methods = chatapp.get("methods", {})
+
+    # Find a good method insertion point: after _cmd_web, before _cmd_update
+    cmd_web_line    = chatapp_methods.get("_cmd_web", 0)
+    cmd_update_line = chatapp_methods.get("_cmd_update", 0)
+    method_insert   = cmd_update_line - 1 if cmd_update_line else (cmd_web_line + 8)
+
+    filebrowser   = classes.get("FileBrowserScreen", {})
+    fb_line       = filebrowser.get("line", 0)
+    fb_methods    = filebrowser.get("methods", {})
+
+    # ── format the guide ───────────────────────────────────────────────────────
+    parts = [
+        "=== chatui.py STRUCTURAL GUIDE ===",
+        "",
+        f"Total lines: {len(lines)}",
+        "",
+        "## Key classes",
+        f"  ChatApp (line {chatapp_line})          — main TUI class; all /commands live here",
+        f"  FileBrowserScreen (line {fb_line})     — modal screen for file/folder selection",
+        "",
+        "## _HELP_TEXT",
+        f"  Defined at line {help_start}, closing \"\"\" at line {help_end}.",
+        f"  To add a help entry, insert a new line BEFORE line {help_end}.",
+        f"  Format:   [bold #5f87af]/<cmd>[/bold #5f87af]       one-line description",
+        "",
+        "## handlers dict (inside ChatApp._dispatch_command)",
+        f"  Dict literal: lines {h_start}–{h_end}.",
+        f"  Last entry is at line {last_handler_line}.",
+        f"  To add a new command, insert BEFORE line {h_end} (the closing brace).",
+        f"  Format:   \"<name>\": lambda _: self._cmd_<name>(),",
+        "",
+        "## ChatApp methods",
+    ]
+    for name, ln in sorted(chatapp_methods.items(), key=lambda x: x[1]):
+        parts.append(f"  line {ln:4d}  def {name}()")
+    parts += [
+        "",
+        f"  ↳ INSERT NEW _cmd_* METHODS at line {method_insert}",
+        f"    (after _cmd_web at line {cmd_web_line}, before _cmd_update at line {cmd_update_line})",
+        "    Pattern to follow: see _cmd_clear / _cmd_web above for style",
+        "",
+        "## FileBrowserScreen methods",
+    ]
+    for name, ln in sorted(fb_methods.items(), key=lambda x: x[1]):
+        parts.append(f"  line {ln:4d}  def {name}()")
+    parts += [
+        "",
+        "## Module-level variables (add new ones near top of file, before _HELP_TEXT)",
+        f"  _HELP_TEXT starts at line {help_start}; insert module vars before this.",
+        "",
+        "=== END GUIDE ===",
+    ]
+    return "\n".join(parts)
 
 
 def _collect_config_diffs() -> dict[str, str]:
@@ -801,42 +923,95 @@ class ChatApp(App[None]):
             self._log(f"[red]Could not read chatui.py: {e}[/red]")
             return
 
-        ctx = "\n\n# ...\n\n".join(filter(None, [
-            _snip(source, "_HELP_TEXT = ",          "# ── Chat App"),
-            _snip(source, "    def _dispatch_command(", "    def _cmd_help("),
-            _snip(source, "    def _cmd_clear(", "    # ── /update command"),
-            _snip(source, "class FileBrowserScreen(", "def _file_icon("),
-            _snip(source, "    def action_browse(self) -> None", "    # ── /ingest command ─"),
-        ]))
-
         all_diffs = "\n\n".join(
             f"=== {rel} ===\n{diff}" for rel, diff in sorted(config_diffs.items())
         )
 
-        prompt = "\n".join([
-            "You are reviewing config file changes for chatui.py (a Python Textual TUI).",
-            "Analyse what changed and propose any corresponding code modifications.",
-            "",
-            "CONFIG FILE CHANGES (unified diff format):",
-            all_diffs,
-            "",
-            "When reviewing, consider:",
-            "  - Lines beginning with 'CHANGE:' are explicit feature requests —",
-            "    read the surrounding section to understand the feature, then implement it",
-            "    using the relevant chatui.py code shown below.",
-            "  - New/removed entries in commands.md → add/remove handler in _dispatch_command,",
-            "    add _cmd_<name> method with self._log placeholder, update _HELP_TEXT",
-            "  - Changed setting descriptions or defaults → update code defaults or logic",
-            "  - New features described in markdown prose → implement or add a stub",
-            "  - Wording, formatting, or documentation-only changes → no code change needed",
-            "",
-            'If no code changes are required, reply with exactly: "No code changes required."',
-            "Otherwise reply with ONLY a unified diff (diff -u format). No explanation. No markdown fences.",
-            "",
-            "RELEVANT chatui.py SECTIONS:",
-            ctx,
-            "\nResponse:",
-        ])
+        # Pre-extract explicit CHANGE: feature requests from diffs (added lines only)
+        change_requests: list[str] = []
+        for _diff in config_diffs.values():
+            for _line in _diff.splitlines():
+                _stripped = _line.lstrip("+")
+                if _stripped.startswith("CHANGE:"):
+                    change_requests.append(_stripped.strip())
+
+        # Build the structural guide (AST-derived, always accurate line numbers)
+        guide = _build_chatui_guide(source)
+
+        # Select code examples based on what the requests mention
+        _cr_text = " ".join(change_requests).lower()
+        _browse_kw = {"browse", "file", "folder", "select", "picker", "path", "open"}
+        _needs_browse = any(kw in _cr_text for kw in _browse_kw)
+
+        _example_parts = [
+            _snip(source, "_HELP_TEXT = ",             "# ── Chat App"),
+            _snip(source, "    def _dispatch_command(", "    def _cmd_help("),
+            _snip(source, "    def _cmd_clear(", "    # ── /update command"),
+        ]
+        if _needs_browse:
+            _example_parts += [
+                _snip(source, "class FileBrowserScreen(", "def _file_icon("),
+                _snip(source, "    def action_browse(self) -> None", "    # ── /ingest command ─"),
+            ]
+        examples = "\n\n# ...\n\n".join(filter(None, _example_parts))
+
+        if change_requests:
+            self._log("[cyan]  Feature requests:[/cyan]")
+            for _r in change_requests:
+                self._log(f"  [dim]  • {_r}[/dim]")
+            cr_block = "\n".join(f"  {i+1}. {r}" for i, r in enumerate(change_requests))
+            prompt = "\n".join([
+                "You are implementing feature requests for chatui.py, a Python Textual TUI.",
+                "You MUST implement ALL of the following feature requests as a unified diff.",
+                "",
+                "FEATURE REQUESTS:",
+                cr_block,
+                "",
+                "== STRUCTURAL GUIDE (use this to find exact insertion points) ==",
+                guide,
+                "",
+                "== CODE EXAMPLES (copy style; left column = real line number) ==",
+                examples,
+                "",
+                "Rules for the diff:",
+                "  - Use the GUIDE above for exact line numbers in @@ hunk headers.",
+                "  - Context lines (starting with space) MUST be copied verbatim from",
+                "    the examples — do NOT paraphrase or invent context lines.",
+                "  - Do NOT re-add anything already shown as existing in the guide.",
+                "  - New _cmd_* methods go INSIDE ChatApp — see guide for the line.",
+                "  - New handler entries go inside the existing handlers dict — do NOT",
+                "    create a second handlers dict.",
+                "",
+                "Reply with ONLY a unified diff.",
+                "Header lines: --- a/chatui.py   +++ b/chatui.py",
+                "No explanation, no markdown fences (``` etc.).",
+                "\nDiff:",
+            ])
+        else:
+            prompt = "\n".join([
+                "You are reviewing config file changes for chatui.py (a Python Textual TUI).",
+                "Propose code modifications implied by the changes below.",
+                "",
+                "CONFIG FILE CHANGES (unified diff format):",
+                all_diffs,
+                "",
+                "Rules:",
+                "  - New/removed command in commands.md → add/remove handler, add _cmd_<name>,",
+                "    update _HELP_TEXT (see guide below for exact line numbers).",
+                "  - Changed setting value or description → update code default or logic.",
+                "  - New feature in prose → implement or stub it.",
+                "  - Documentation-only change → no code change needed.",
+                "",
+                'If no code changes are needed, reply with exactly: "No code changes required."',
+                "Otherwise reply with ONLY a unified diff. No explanation. No markdown fences.",
+                "",
+                "== STRUCTURAL GUIDE ==",
+                guide,
+                "",
+                "== CODE EXAMPLES (left column = real line number) ==",
+                examples,
+                "\nResponse:",
+            ])
 
         self._log(f"\n[dim]🤖  Asking {CODING_MODEL} to analyse changes…[/dim]")
         patch = await self._stream_llm(prompt, model=coding_llm)
