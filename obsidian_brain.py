@@ -105,6 +105,17 @@ def ingest_vault() -> Chroma:
         print("⚠️  No files found. Check your VAULT_PATH and FILE_GLOB.")
         sys.exit(1)
 
+    # Attach frontmatter tags to each document's metadata so ChromaDB can filter by them
+    for doc in docs:
+        src = doc.metadata.get("source", "")
+        if src.endswith(".md"):
+            try:
+                with open(src, encoding="utf-8") as fh:
+                    tags = _extract_frontmatter_tags(fh.read())
+                doc.metadata.update(_tags_to_metadata(tags))
+            except OSError:
+                pass
+
     print(f"   Found {len(docs)} files. Splitting into chunks...")
 
     splitter = RecursiveCharacterTextSplitter(
@@ -114,6 +125,12 @@ def ingest_vault() -> Chroma:
     chunks = splitter.split_documents(docs)
 
     print(f"   Embedding {len(chunks)} chunks and saving to: {DB_PATH}")
+
+    # Wipe the old collection so stale entries (e.g. chunks without tag metadata)
+    # don't persist alongside the freshly ingested ones
+    if os.path.exists(DB_PATH):
+        import shutil
+        shutil.rmtree(DB_PATH)
 
     db = Chroma.from_documents(
         documents=chunks,
@@ -157,6 +174,39 @@ def web_search(query: str) -> str:
 
     except Exception as e:
         return f"Web search failed: {e}"
+
+
+# ── Tag Helpers ───────────────────────────────────────────────────────────────
+
+def _extract_frontmatter_tags(content: str) -> list[str]:
+    """Return the list of tags from a note's YAML frontmatter, or [] if none."""
+    if not content.lstrip().startswith("---"):
+        return []
+    fm_match = re.match(r'^-{3}\s*\n(.*?)\n-{3}', content, re.DOTALL)
+    if not fm_match:
+        return []
+    return re.findall(r'^\s*-\s+(\S+)', fm_match.group(1), re.MULTILINE)
+
+
+def _tags_to_metadata(tags: list[str]) -> dict:
+    """Convert a list of tags to ChromaDB boolean metadata fields."""
+    return {f"tag_{t}": True for t in tags}
+
+
+def _get_chunk_tags(doc: Document) -> list[str]:
+    """Extract tag names from a Document's ChromaDB metadata."""
+    return [
+        key[4:]  # strip "tag_" prefix
+        for key, val in doc.metadata.items()
+        if key.startswith("tag_") and val is True
+    ]
+
+
+def _make_tag_filter(tags: list[str]) -> dict:
+    """Build a ChromaDB where-clause that matches any of the given tags."""
+    if len(tags) == 1:
+        return {f"tag_{tags[0]}": True}
+    return {"$or": [{f"tag_{t}": True} for t in tags]}
 
 
 # ── Learning ──────────────────────────────────────────────────────────────────
@@ -213,9 +263,19 @@ def save_to_vault(concept: str, question: str, answer: str, source: str, db: Chr
             f.write(f"# {concept.replace('-', ' ').title()}\n")
             f.write(entry)
 
+    # Read the file's current frontmatter tags (may have been added via --organize)
+    try:
+        with open(filepath, encoding="utf-8") as fh:
+            tags = _extract_frontmatter_tags(fh.read())
+    except OSError:
+        tags = []
+
+    doc_metadata = {"source": filepath}
+    doc_metadata.update(_tags_to_metadata(tags))
+
     db.add_documents([Document(
         page_content=f"Q: {question}\n\n{answer}",
-        metadata={"source": filepath},
+        metadata=doc_metadata,
     )])
 
 
@@ -530,6 +590,23 @@ class ChatApp(App[None]):
             )
             chunks    = [doc for doc, _ in results]
             top_score = max((score for _, score in results), default=0.0)
+
+            # Tag-aware second pass: if the top chunk has tags, re-search scoped
+            # to that topic — pulls in other related notes from the same category
+            if results:
+                active_tags = _get_chunk_tags(results[0][0])
+                if active_tags:
+                    tag_filter = _make_tag_filter(active_tags)
+                    filtered = await asyncio.to_thread(
+                        lambda: self.db.similarity_search_with_relevance_scores(
+                            question, k=TOP_K, filter=tag_filter
+                        )
+                    )
+                    filtered_top = max((s for _, s in filtered), default=0.0)
+                    if filtered_top >= top_score * 0.9:
+                        chunks    = [doc for doc, _ in filtered]
+                        top_score = filtered_top
+                        self._log(f"[dim]🏷  Scoped to: {', '.join(active_tags)}[/dim]")
 
             self._log(f"[dim]🔍  Best vault match: {top_score:.2f}[/dim]")
 
