@@ -6,19 +6,20 @@ Obsidian vault using a locally-running LLM via Ollama, presented as a
 full-screen terminal UI.
 
 How it works:
-  1. INGEST   — Reads files matching FILE_GLOB, splits them into chunks, and
-                stores vector embeddings in a local ChromaDB database on disk.
-  2. RETRIEVE — When you ask a question, it finds the most relevant chunks
-                using semantic similarity search.
-  3. JUDGE    — The LLM checks whether those chunks actually answer the question.
-  4. GENERATE — Answers from the best available source, in order of preference:
-                  a) Vault notes      (if the judge says context is sufficient)
-                  b) Model knowledge  (if the vault comes up short)
-                  c) DuckDuckGo web search  (if the model is also uncertain)
-  5. LEARN    — If the answer came from model knowledge or web search, the
-                response is saved to a concept note in the vault so future
-                questions can be answered from the vault. The live ChromaDB
-                is updated immediately so re-ingestion isn't needed.
+  1. INGEST    — Reads files matching FILE_GLOB, splits them into chunks, and
+                 stores vector embeddings in a local ChromaDB database on disk.
+  2. RETRIEVE  — When you ask a question, it finds the most relevant chunks
+                 using semantic similarity search.
+  3. JUDGE     — The LLM checks whether those chunks actually answer the question.
+  4. GENERATE  — Answers from the best available source, in order of preference:
+                   a) Vault notes      (if the judge says context is sufficient)
+                   b) Model knowledge  (always shown, even when uncertain)
+                   c) Web search       (supplemented when model flags uncertainty)
+  5. CONVERSE  — Full back-and-forth conversation history is kept and included
+                 in every prompt so the model can refer to earlier exchanges.
+  6. LEARN     — Answers from model knowledge or web search are queued as pending
+                 notes. Press Ctrl+S at any time to review them, preview their
+                 content, confirm or rename each filename, and save to the vault.
 
 Dependencies (install into your venv):
   pip install langchain langchain-ollama langchain-community chromadb duckduckgo-search textual
@@ -35,6 +36,7 @@ import glob
 import os
 import re
 import sys
+from dataclasses import dataclass
 from datetime import datetime
 
 from textual import work
@@ -57,34 +59,24 @@ from duckduckgo_search import DDGS
 # ── Configuration ─────────────────────────────────────────────────────────────
 # Edit these paths to match your setup.
 
-# Where your Obsidian vault (or any folder of .md files) lives.
 VAULT_PATH = "/home/tizz/dev/LLM-sandbox/"
+DB_PATH    = "/home/tizz/dev/LLM-sandbox/local_db"
 
-# Where the vector database will be saved on disk.
-# This persists between runs so you don't have to re-ingest every time.
-DB_PATH = "/home/tizz/dev/LLM-sandbox/local_db"
+EMBED_MODEL = "nomic-embed-text"
+CHAT_MODEL  = "llama3.2:3b"
 
-# Ollama model names. Must match what you have pulled locally.
-EMBED_MODEL = "nomic-embed-text"  # used to turn text into vectors
-CHAT_MODEL  = "llama3.2:3b"       # used to generate answers
-
-# Which files to ingest from the vault. Supports glob patterns.
-# "**/*.md" = markdown only (default). Use "**/*.*" to ingest everything.
 FILE_GLOB = "**/*.md"
 
-# Retrieval settings
-TOP_K = 3  # how many note chunks to pull in as context per query
+TOP_K              = 3
+WEB_SEARCH_RESULTS = 3
+CHUNK_SIZE         = 500
+CHUNK_OVERLAP      = 50
 
-# Web search settings
-WEB_SEARCH_RESULTS = 3  # how many DuckDuckGo results to pull in as context
-
-# Chunking settings (affects retrieval quality — tweak if answers feel off)
-CHUNK_SIZE    = 500   # max characters per chunk
-CHUNK_OVERLAP = 50    # overlap between chunks to preserve context at boundaries
+# How many past exchanges to include in prompts (each exchange = 1 user + 1 assistant turn).
+HISTORY_WINDOW = 4
 
 
 # ── Model Setup ───────────────────────────────────────────────────────────────
-# These are lazy — Ollama doesn't actually connect until you call them.
 
 embeddings = OllamaEmbeddings(model=EMBED_MODEL)
 llm        = ChatOllama(model=CHAT_MODEL)
@@ -97,10 +89,8 @@ def ingest_vault() -> Chroma:
     Load files matching FILE_GLOB from VAULT_PATH, split them into chunks, embed them,
     and store the result in a ChromaDB database at DB_PATH.
 
-    This overwrites any existing database, so re-running it is safe — it just
-    rebuilds from scratch. Call this whenever your notes change significantly.
-
-    Returns the loaded Chroma vector store, ready for querying.
+    Overwrites any existing database — safe to re-run whenever notes change.
+    Returns the loaded Chroma vector store ready for querying.
     """
     print(f"📚 Loading notes from: {VAULT_PATH}")
 
@@ -133,9 +123,7 @@ def ingest_vault() -> Chroma:
 
 def load_existing_db() -> Chroma:
     """
-    Load an already-ingested ChromaDB database from disk without re-reading
-    your vault. Much faster than ingest_vault() for day-to-day use.
-
+    Load an already-ingested ChromaDB database from disk.
     Raises FileNotFoundError if the database doesn't exist yet.
     """
     if not os.path.exists(DB_PATH):
@@ -143,21 +131,14 @@ def load_existing_db() -> Chroma:
             f"No database found at '{DB_PATH}'.\n"
             "Run the script with --ingest first to build it."
         )
-
     print(f"📂 Loading existing database from: {DB_PATH}\n")
     return Chroma(persist_directory=DB_PATH, embedding_function=embeddings)
 
 
-# ── Fallback: Web Search ───────────────────────────────────────────────────────
+# ── Web Search ─────────────────────────────────────────────────────────────────
 
 def web_search(query: str) -> str:
-    """
-    Search DuckDuckGo for the query and return a plain-text summary of the
-    top results. No API key required.
-
-    Returns a formatted string of results, or an error message if the search
-    fails (e.g. no network connection).
-    """
+    """Search DuckDuckGo and return a plain-text summary of top results."""
     try:
         with DDGS() as ddgs:
             results = list(ddgs.text(query, max_results=WEB_SEARCH_RESULTS))
@@ -165,23 +146,28 @@ def web_search(query: str) -> str:
         if not results:
             return "No results found."
 
-        formatted = []
-        for r in results:
-            formatted.append(f"Source: {r['href']}\nTitle: {r['title']}\n{r['body']}")
-
-        return "\n\n---\n\n".join(formatted)
+        return "\n\n---\n\n".join(
+            f"Source: {r['href']}\nTitle: {r['title']}\n{r['body']}"
+            for r in results
+        )
 
     except Exception as e:
         return f"Web search failed: {e}"
 
 
-# ── Learning: Save responses to vault ─────────────────────────────────────────
+# ── Learning ──────────────────────────────────────────────────────────────────
+
+@dataclass
+class PendingNote:
+    """A learnable answer queued for review before being written to the vault."""
+    question:   str
+    answer:     str
+    source:     str
+    suggestion: str  # LLM-suggested filename stem, e.g. "photosynthesis"
+
 
 def get_concept_suggestion(question: str, answer: str) -> str:
-    """
-    Ask the LLM to identify the single core concept from a question/answer pair
-    and return a sanitised filename stem (e.g. "cupcakes").
-    """
+    """Ask the LLM for a short concept name; return a sanitised filename stem."""
     prompt = f"""Identify the single core concept or subject that this question and answer are about.
 Reply with only 1-3 words, lowercase, no punctuation. This will be used as a filename.
 
@@ -201,27 +187,19 @@ Core concept:"""
 
 def save_to_vault(concept: str, question: str, answer: str, source: str, db: Chroma) -> None:
     """
-    Save a question/answer pair to the appropriate concept note in the vault,
-    then add it to the live ChromaDB so it's immediately searchable without
-    needing a full re-ingest.
+    Write a Q/A entry to the vault and add it to the live ChromaDB index.
 
     Args:
-        concept:  The sanitised filename stem chosen by the user (e.g. "cupcakes").
+        concept:  Sanitised filename stem chosen by the user (e.g. "cupcakes").
         question: The original user question.
         answer:   The generated answer.
-        source:   Where the answer came from ("model knowledge" or "web search").
-        db:       The live Chroma instance to update in place.
+        source:   Where the answer came from.
+        db:       Live Chroma instance to update in place.
     """
-    filename  = f"{concept}.md"
-    filepath  = os.path.join(VAULT_PATH, filename)
+    filepath  = os.path.join(VAULT_PATH, f"{concept}.md")
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
 
-    entry = f"""
-## Q: {question}
-*Source: {source} — {timestamp}*
-
-{answer}
-"""
+    entry = f"\n## Q: {question}\n*Source: {source} — {timestamp}*\n\n{answer}\n"
 
     if os.path.exists(filepath):
         with open(filepath, "a", encoding="utf-8") as f:
@@ -231,62 +209,84 @@ def save_to_vault(concept: str, question: str, answer: str, source: str, db: Chr
             f.write(f"# {concept.replace('-', ' ').title()}\n")
             f.write(entry)
 
-    new_doc = Document(
+    db.add_documents([Document(
         page_content=f"Q: {question}\n\n{answer}",
         metadata={"source": filepath},
-    )
-    db.add_documents([new_doc])
+    )])
 
 
 # ── Retrieval + Generation ─────────────────────────────────────────────────────
 
-def build_vault_prompt(question: str, context_chunks: list) -> str:
-    """Prompt for answering from vault context."""
-    context_text = "\n\n---\n\n".join(chunk.page_content for chunk in context_chunks)
-
-    return f"""You are a helpful assistant with access to the user's personal notes.
-Use only the context provided below to answer the question.
-If the answer isn't covered in the context, say so clearly — don't guess.
-
---- CONTEXT FROM NOTES ---
-{context_text}
---- END CONTEXT ---
-
-Question: {question}
-Answer:"""
+def _format_history(history: list[dict]) -> str:
+    """Return the last HISTORY_WINDOW exchanges as a plain-text block."""
+    recent = history[-(HISTORY_WINDOW * 2):]
+    lines  = []
+    for msg in recent:
+        role    = "User" if msg["role"] == "user" else "Assistant"
+        content = msg["content"]
+        if len(content) > 600:
+            content = content[:600] + "…"
+        lines.append(f"{role}: {content}")
+    return "\n\n".join(lines)
 
 
-def build_knowledge_prompt(question: str) -> str:
-    """Prompt for answering from the model's own training knowledge."""
-    return f"""Answer the following question using your own knowledge.
-If you are not confident in your answer or the information may be outdated,
-start your response with the exact phrase: "I'm not certain, but"
+def build_vault_prompt(question: str, context_chunks: list, history: list[dict]) -> str:
+    parts = [
+        "You are a helpful assistant with access to the user's personal notes.",
+        "Use the context and conversation history below to answer the question.",
+        "If the answer isn't covered in the context, say so clearly — don't guess.",
+        "",
+    ]
+    if history:
+        parts += ["--- CONVERSATION HISTORY ---", _format_history(history), "--- END HISTORY ---", ""]
+    parts += [
+        "--- CONTEXT FROM NOTES ---",
+        "\n\n---\n\n".join(c.page_content for c in context_chunks),
+        "--- END CONTEXT ---",
+        "",
+        f"Question: {question}",
+        "Answer:",
+    ]
+    return "\n".join(parts)
 
-Question: {question}
-Answer:"""
+
+def build_knowledge_prompt(question: str, history: list[dict]) -> str:
+    parts = [
+        "Answer the following question using your own knowledge.",
+        "If you are not confident in your answer, start your response with the",
+        'exact phrase: "I\'m not certain, but"',
+        "",
+    ]
+    if history:
+        parts += ["--- CONVERSATION HISTORY ---", _format_history(history), "--- END HISTORY ---", ""]
+    parts += [f"Question: {question}", "Answer:"]
+    return "\n".join(parts)
 
 
-def build_web_prompt(question: str, web_context: str) -> str:
-    """Prompt for answering from web search results."""
-    return f"""Answer the following question using the web search results below.
-Summarise the relevant information clearly and cite the sources where helpful.
-
---- WEB SEARCH RESULTS ---
-{web_context}
---- END RESULTS ---
-
-Question: {question}
-Answer:"""
+def build_web_prompt(question: str, web_context: str, history: list[dict]) -> str:
+    parts = [
+        "Answer the following question using the web search results below.",
+        "Summarise the relevant information clearly and cite the sources where helpful.",
+        "",
+    ]
+    if history:
+        parts += ["--- CONVERSATION HISTORY ---", _format_history(history), "--- END HISTORY ---", ""]
+    parts += [
+        "--- WEB SEARCH RESULTS ---",
+        web_context,
+        "--- END RESULTS ---",
+        "",
+        f"Question: {question}",
+        "Answer:",
+    ]
+    return "\n".join(parts)
 
 
 def context_is_sufficient(question: str, context_chunks: list) -> bool:
-    """
-    Ask the LLM whether the retrieved vault chunks contain enough information
-    to answer the question. Returns True if yes, False if not.
-    """
-    context_text = "\n\n---\n\n".join(chunk.page_content for chunk in context_chunks)
+    """Ask the LLM whether the retrieved vault chunks are enough to answer the question."""
+    context_text = "\n\n---\n\n".join(c.page_content for c in context_chunks)
 
-    judge_prompt = f"""You are evaluating whether a set of notes contains enough
+    response = llm.invoke(f"""You are evaluating whether a set of notes contains enough
 information to answer a question. Reply with only YES or NO.
 
 --- NOTES ---
@@ -294,9 +294,8 @@ information to answer a question. Reply with only YES or NO.
 --- END NOTES ---
 
 Question: {question}
-Do these notes contain enough information to answer this question? (YES or NO):"""
+Do these notes contain enough information to answer this question? (YES or NO):""").content.strip().upper()
 
-    response = llm.invoke(judge_prompt).content.strip().upper()
     return response.startswith("YES")
 
 
@@ -339,76 +338,141 @@ Input:focus {
 """
 
 
-# ── Filename Modal ─────────────────────────────────────────────────────────────
+# ── Note Review Screen ────────────────────────────────────────────────────────
 
-class FilenameModal(ModalScreen[str]):
+class NoteReviewScreen(ModalScreen[list[tuple[str, PendingNote]]]):
     """
-    Overlay that shows the model's suggested note filename and lets the user
-    confirm it or type their own before the note is written to disk.
+    Modal that walks through all pending notes one at a time.
+
+    For each note the user sees:
+      - A scrollable preview of the Q/A content
+      - The model's suggested filename
+      - An input to confirm, rename, or skip
+
+    Dismissed with the list of (concept, note) pairs the user confirmed.
+    The caller is responsible for saving them to the vault.
     """
 
     CSS = """
-    FilenameModal {
+    NoteReviewScreen {
         align: center middle;
     }
 
-    #modal-box {
-        width: 64;
-        height: auto;
+    #review-box {
+        width: 86;
+        height: 36;
         border: thick #5f87af;
         background: #252526;
         padding: 1 2;
     }
 
-    #modal-box Label {
+    #review-header {
+        color: #cccccc;
+        margin-bottom: 1;
+    }
+
+    #preview-log {
+        height: 18;
+        background: #1e1e1e;
+        border: solid #454545;
+        padding: 0 1;
+        margin-bottom: 1;
+        scrollbar-color: #454545;
+        scrollbar-background: #1e1e1e;
+    }
+
+    #review-suggestion {
         color: #d4d4d4;
         margin-bottom: 1;
     }
 
-    #modal-box Input {
-        margin: 1 0 0 0;
+    #review-input {
+        margin: 0 0 1 0;
         background: #1e1e1e;
         color: #d4d4d4;
         border: tall #454545;
     }
 
-    #modal-box Input:focus {
+    #review-input:focus {
         border: tall #5f87af;
+    }
+
+    #review-help {
+        color: #6c6c6c;
     }
     """
 
-    BINDINGS = [Binding("escape", "use_suggestion", "Use suggestion", show=True)]
+    BINDINGS = [Binding("escape", "finish", "Done")]
 
-    def __init__(self, suggestion: str) -> None:
+    def __init__(self, pending: list[PendingNote]) -> None:
         super().__init__()
-        self.suggestion = suggestion
+        self._pending   = pending
+        self._confirmed: list[tuple[str, PendingNote]] = []
+        self._idx       = 0
 
     def compose(self) -> ComposeResult:
-        with Vertical(id="modal-box"):
-            yield Label("[bold]Save note as[/bold]")
+        with Vertical(id="review-box"):
+            yield Label("", id="review-header")
+            yield RichLog(id="preview-log", markup=False, wrap=True, highlight=False)
+            yield Label("", id="review-suggestion")
+            yield Input(id="review-input")
             yield Label(
-                f"Suggestion: [bold #5f87af]{self.suggestion}.md[/bold #5f87af]"
+                "[dim]Enter to save  ·  type 'skip' to skip  ·  Esc to finish[/dim]",
+                id="review-help",
             )
-            yield Input(placeholder=self.suggestion, id="filename-input")
-            yield Label("[dim]Enter to confirm  ·  Esc to use suggestion[/dim]")
 
     def on_mount(self) -> None:
-        self.query_one(Input).focus()
+        self._refresh()
+        self.query_one("#review-input", Input).focus()
+
+    def _refresh(self) -> None:
+        note  = self._pending[self._idx]
+        total = len(self._pending)
+
+        self.query_one("#review-header", Label).update(
+            f"[bold]Review notes  {self._idx + 1} / {total}[/bold]"
+        )
+
+        log = self.query_one("#preview-log", RichLog)
+        log.clear()
+        log.write(Markdown(
+            f"**Q:** {note.question}\n\n*Source: {note.source}*\n\n{note.answer}"
+        ))
+
+        self.query_one("#review-suggestion", Label).update(
+            f"Filename: [bold #5f87af]{note.suggestion}.md[/bold #5f87af]"
+        )
+
+        inp             = self.query_one("#review-input", Input)
+        inp.placeholder = note.suggestion
+        inp.value       = ""
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
-        raw = event.value.strip().lower()
-        sanitised = re.sub(r"[^a-z0-9\s-]", "", raw) if raw else ""
-        sanitised = re.sub(r"\s+", "-", sanitised.strip()) or self.suggestion
-        self.dismiss(sanitised)
+        raw  = event.value.strip()
+        note = self._pending[self._idx]
 
-    def action_use_suggestion(self) -> None:
-        self.dismiss(self.suggestion)
+        if raw.lower() != "skip":
+            if raw:
+                sanitised = re.sub(r"[^a-z0-9\s-]", "", raw.lower())
+                concept   = re.sub(r"\s+", "-", sanitised.strip()) or note.suggestion
+            else:
+                concept = note.suggestion
+            self._confirmed.append((concept, note))
+
+        self._idx += 1
+        if self._idx >= len(self._pending):
+            self.dismiss(self._confirmed)
+        else:
+            self._refresh()
+
+    def action_finish(self) -> None:
+        self.dismiss(self._confirmed)
 
 
 # ── Chat App ──────────────────────────────────────────────────────────────────
 
 class ChatApp(App[None]):
-    """Main interactive chat TUI."""
+    """Main interactive chat TUI with conversation history and deferred note saving."""
 
     TITLE     = "Obsidian Brain"
     SUB_TITLE = CHAT_MODEL
@@ -417,13 +481,16 @@ class ChatApp(App[None]):
 
     BINDINGS = [
         Binding("ctrl+q", "quit", "Quit"),
+        Binding("ctrl+s", "review_notes", "Save notes"),
         Binding("escape", "clear_input", "Clear input", show=False),
     ]
 
     def __init__(self, db: Chroma) -> None:
         super().__init__()
-        self.db    = db
-        self._busy = False
+        self.db       = db
+        self._busy    = False
+        self._history: list[dict] = []
+        self._pending: list[PendingNote] = []
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -437,7 +504,7 @@ class ChatApp(App[None]):
             "[dim]Obsidian Brain ready. Ask anything about your notes.[/dim]"
         ))
         log.write(Text.from_markup(
-            "[dim]Ctrl+Q to quit  ·  run with --organize to tag & link notes[/dim]\n"
+            "[dim]Ctrl+S to review & save pending notes  ·  Ctrl+Q to quit[/dim]\n"
         ))
         self.query_one(Input).focus()
 
@@ -446,7 +513,12 @@ class ChatApp(App[None]):
     def _log(self, markup: str) -> None:
         self.query_one(RichLog).write(Text.from_markup(markup))
 
-    # ── Input ─────────────────────────────────────────────────────────────────
+    def _queue_note(self, question: str, answer: str, source: str, suggestion: str) -> None:
+        self._pending.append(PendingNote(question, answer, source, suggestion))
+        count = len(self._pending)
+        self.sub_title = f"{CHAT_MODEL}  ·  {count} unsaved note{'s' if count != 1 else ''}"
+
+    # ── Input handling ────────────────────────────────────────────────────────
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         question = event.value.strip()
@@ -460,8 +532,10 @@ class ChatApp(App[None]):
     @work
     async def _process(self, question: str) -> None:
         log = self.query_one(RichLog)
+        self._history.append({"role": "user", "content": question})
 
         try:
+            # ── Step 1: Vault retrieval ────────────────────────────────────────
             chunks = await asyncio.to_thread(
                 lambda: self.db.as_retriever(search_kwargs={"k": TOP_K}).invoke(question)
             )
@@ -472,48 +546,94 @@ class ChatApp(App[None]):
             if sufficient:
                 self._log("[dim]📓  Source: vault notes[/dim]")
                 answer = await asyncio.to_thread(
-                    lambda: llm.invoke(build_vault_prompt(question, chunks)).content
+                    lambda: llm.invoke(
+                        build_vault_prompt(question, chunks, self._history[:-1])
+                    ).content
                 )
+                self._history.append({"role": "assistant", "content": answer})
                 log.write(Markdown(answer))
                 return
 
-            self._log("[dim]🧠  Vault insufficient — trying model knowledge[/dim]")
+            # ── Step 2: Model knowledge (always shown) ─────────────────────────
+            self._log("[dim]🧠  Vault insufficient — asking model[/dim]")
             model_answer = await asyncio.to_thread(
-                lambda: llm.invoke(build_knowledge_prompt(question)).content
+                lambda: llm.invoke(
+                    build_knowledge_prompt(question, self._history[:-1])
+                ).content
             )
+            uncertain = model_answer.strip().lower().startswith("i'm not certain")
 
-            if not model_answer.strip().lower().startswith("i'm not certain"):
+            if uncertain:
+                self._log("[dim]🧠  Model knowledge (uncertain)[/dim]")
+            else:
                 self._log("[dim]🧠  Source: model knowledge[/dim]")
-                suggestion = await asyncio.to_thread(
-                    lambda: get_concept_suggestion(question, model_answer)
-                )
-                concept = await self.push_screen_wait(FilenameModal(suggestion))
-                await asyncio.to_thread(
-                    lambda: save_to_vault(concept, question, model_answer, "model knowledge", self.db)
-                )
-                self._log(f"[dim]📝  Saved to {concept}.md[/dim]")
-                log.write(Markdown(model_answer))
-                return
 
-            self._log("[dim]🌐  Model uncertain — searching the web[/dim]")
-            web_ctx = await asyncio.to_thread(lambda: web_search(question))
-            web_answer = await asyncio.to_thread(
-                lambda: llm.invoke(build_web_prompt(question, web_ctx)).content
-            )
-            self._log("[dim]🌐  Source: web search[/dim]")
+            log.write(Markdown(model_answer))
+            self._history.append({"role": "assistant", "content": model_answer})
+
             suggestion = await asyncio.to_thread(
-                lambda: get_concept_suggestion(question, web_answer)
+                lambda: get_concept_suggestion(question, model_answer)
             )
-            concept = await self.push_screen_wait(FilenameModal(suggestion))
-            await asyncio.to_thread(
-                lambda: save_to_vault(concept, question, web_answer, "web search", self.db)
-            )
-            self._log(f"[dim]📝  Saved to {concept}.md[/dim]")
-            log.write(Markdown(web_answer))
+            source = "model knowledge (uncertain)" if uncertain else "model knowledge"
+            self._queue_note(question, model_answer, source, suggestion)
+
+            # ── Step 3: Supplement with web search when uncertain ──────────────
+            if uncertain:
+                self._log("[dim]🌐  Supplementing with web search…[/dim]")
+                web_ctx = await asyncio.to_thread(lambda: web_search(question))
+
+                if not web_ctx.startswith("No results") and not web_ctx.startswith("Web search failed"):
+                    web_answer = await asyncio.to_thread(
+                        lambda: llm.invoke(
+                            build_web_prompt(question, web_ctx, self._history)
+                        ).content
+                    )
+                    self._log("[dim]🌐  Web search result:[/dim]")
+                    log.write(Markdown(web_answer))
+
+                    web_suggestion = await asyncio.to_thread(
+                        lambda: get_concept_suggestion(question, web_answer)
+                    )
+                    self._queue_note(question, web_answer, "web search", web_suggestion)
+                else:
+                    self._log("[dim]🌐  Web search returned no results.[/dim]")
 
         finally:
             self._busy = False
             self.query_one(Input).focus()
+
+    # ── Note review ───────────────────────────────────────────────────────────
+
+    def action_review_notes(self) -> None:
+        if not self._pending:
+            self._log("[dim]No pending notes to review.[/dim]")
+            return
+        self.push_screen(
+            NoteReviewScreen(list(self._pending)),
+            callback=self._after_review,
+        )
+
+    def _after_review(self, confirmed: list[tuple[str, PendingNote]]) -> None:
+        self._pending.clear()
+        self.sub_title = CHAT_MODEL
+        if confirmed:
+            self._save_confirmed(confirmed)
+        else:
+            self._log("[dim]No notes saved.[/dim]")
+
+    @work
+    async def _save_confirmed(self, confirmed: list[tuple[str, PendingNote]]) -> None:
+        for concept, note in confirmed:
+            c, n = concept, note
+            await asyncio.to_thread(
+                lambda: save_to_vault(c, n.question, n.answer, n.source, self.db)
+            )
+        count = len(confirmed)
+        self._log(
+            f"[dim]📝  {count} note{'s' if count != 1 else ''} saved to vault.[/dim]"
+        )
+
+    # ── Other actions ─────────────────────────────────────────────────────────
 
     def action_clear_input(self) -> None:
         self.query_one(Input).value = ""
@@ -532,7 +652,7 @@ class OrganizeApp(App[None]):
     Each suggestion is shown in the log; the input at the bottom accepts:
       Enter          — accept the suggestion as-is
       'skip'         — skip this note
-      custom text    — override (comma-separated tags, or a free-text answer)
+      custom text    — override (comma-separated tags, or a renamed filename)
     """
 
     TITLE     = "Obsidian Brain  ·  Organise Vault"
@@ -560,18 +680,13 @@ class OrganizeApp(App[None]):
         event.input.value = ""
         self._queue.put_nowait(event.value.strip())
 
-    # ── Helpers ───────────────────────────────────────────────────────────────
-
     def _log(self, markup: str) -> None:
         self.query_one(RichLog).write(Text.from_markup(markup))
 
     async def _prompt(self, hint: str = "") -> str:
-        """Display a hint line then wait for the user to submit input."""
         if hint:
             self._log(f"[dim]{hint}[/dim]")
         return await self._queue.get()
-
-    # ── Organise worker ───────────────────────────────────────────────────────
 
     @work
     async def _run_organize(self) -> None:
@@ -643,11 +758,10 @@ Tags:"""
             raw = await self._prompt(
                 "  Enter to accept · 'skip' to skip · comma-separated to override:"
             )
-
             if raw.lower() == "skip":
                 continue
 
-            final = [t.strip() for t in raw.split(",")] if raw else suggested
+            final       = [t.strip() for t in raw.split(",")] if raw else suggested
             frontmatter = "---\ntags:\n" + "".join(f"  - {t}\n" for t in final) + "---\n"
             new_content = frontmatter + content
 
@@ -661,8 +775,8 @@ Tags:"""
         self._log("\n[bold]Scanning for wikilink opportunities…[/bold]")
 
         for stem, data in notes.items():
-            content      = data["content"]
-            other_notes  = {s: d["title"] for s, d in notes.items() if s != stem}
+            content     = data["content"]
+            other_notes = {s: d["title"] for s, d in notes.items() if s != stem}
             if not other_notes:
                 continue
 
@@ -684,7 +798,6 @@ Note:
 Suggestions:"""
 
             raw = await asyncio.to_thread(lambda: llm.invoke(link_prompt).content.strip())
-
             if not raw or raw.lower() == "none":
                 continue
 
@@ -710,9 +823,9 @@ Suggestions:"""
                 continue
 
             if content.lstrip().startswith("---"):
-                fm_end      = content.find("---", content.index("---") + 3) + 3
-                fm_block    = content[:fm_end]
-                body        = content[fm_end:]
+                fm_end   = content.find("---", content.index("---") + 3) + 3
+                fm_block = content[:fm_end]
+                body     = content[fm_end:]
             else:
                 fm_block = ""
                 body     = content
