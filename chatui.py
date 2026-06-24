@@ -138,10 +138,15 @@ for _p in sorted(glob.glob(os.path.join(_CONFIG_DIR, "*.md"))):
 
 
 def _snip(src: str, start: str, stop: str) -> str:
-    """Return src[start:stop] by substring search; empty string if not found."""
-    a = src.find(start)
-    b = src.find(stop, a + 1) if a >= 0 else -1
-    return src[a:b] if (a >= 0 and b > a) else (src[a:] if a >= 0 else "")
+    """Return the section of src from `start` to `stop`.
+    Both markers are anchored to line starts so string literals that happen
+    to contain the same text (mid-line, inside function calls) are skipped."""
+    m = re.search(r'(?m)^' + re.escape(start), src)
+    if not m:
+        return ""
+    a = m.start()
+    m2 = re.search(r'(?m)^' + re.escape(stop), src[a + 1:])
+    return src[a: a + 1 + m2.start()] if m2 else src[a:]
 
 
 def _collect_config_diffs() -> dict[str, str]:
@@ -797,9 +802,11 @@ class ChatApp(App[None]):
             return
 
         ctx = "\n\n# ...\n\n".join(filter(None, [
-            _snip(source, "_HELP_TEXT = ", "# ── Chat App"),
+            _snip(source, "_HELP_TEXT = ",          "# ── Chat App"),
             _snip(source, "    def _dispatch_command(", "    def _cmd_help("),
             _snip(source, "    def _cmd_clear(", "    # ── /update command"),
+            _snip(source, "class FileBrowserScreen(", "def _file_icon("),
+            _snip(source, "    def action_browse(self) -> None", "    # ── /ingest command ─"),
         ]))
 
         all_diffs = "\n\n".join(
@@ -814,6 +821,9 @@ class ChatApp(App[None]):
             all_diffs,
             "",
             "When reviewing, consider:",
+            "  - Lines beginning with 'CHANGE:' are explicit feature requests —",
+            "    read the surrounding section to understand the feature, then implement it",
+            "    using the relevant chatui.py code shown below.",
             "  - New/removed entries in commands.md → add/remove handler in _dispatch_command,",
             "    add _cmd_<name> method with self._log placeholder, update _HELP_TEXT",
             "  - Changed setting descriptions or defaults → update code defaults or logic",
