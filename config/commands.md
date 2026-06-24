@@ -22,7 +22,7 @@ commands:
 
 # Commands
 
-This file is the source of truth for what commands chatui exposes.
+This file holds commands that [[ChatUI]] exposes.
 
 **Adding a command:** add an entry under `commands:` with at least a `description`.
 Run `/update` inside the app — the coding model will propose the implementation.

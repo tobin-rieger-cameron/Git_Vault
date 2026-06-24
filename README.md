@@ -40,31 +40,13 @@ That's it. No flags needed. If the vector database doesn't exist yet, type `/ing
 
 ## Configuration
 
-All tuneable settings live in the `config/` folder as markdown files with YAML frontmatter. Edit them in any text editor; changes take effect on next launch.
+All settings live in `config/` as markdown files with YAML frontmatter. Each file is self-documenting — open it to see every key, its default, and what it does.
 
-### `config/models.md`
-
-| Key | Default | Role |
-|---|---|---|
-| `chat_model` | `llama3.2:3b` | Live streaming responses — optimised for speed |
-| `coding_model` | `qwen2.5-coder:7b` | `/organize`, `/update` patch proposals, concept suggestions |
-| `embed_model` | `nomic-embed-text` | Vault ingestion and similarity search |
-
-### `config/settings.md`
-
-| Key | Default | Description |
-|---|---|---|
-| `vault_path` | _(script dir)_ | Absolute path to the vault root |
-| `similarity_threshold` | `0.5` | Minimum score to answer from vault; below this falls back to model knowledge |
-| `top_k` | `3` | Vault chunks retrieved per query |
-| `chunk_size` | `500` | Characters per chunk during ingestion |
-| `chunk_overlap` | `50` | Overlap between adjacent chunks |
-| `history_window` | `4` | Conversation exchanges kept in prompt context |
-| `web_search_results` | `3` | DuckDuckGo results fetched per web query |
-
-### `config/commands.md`
-
-The source of truth for what commands the app exposes. Adding or removing an entry here and running `/update` triggers the coding model to propose the corresponding Python implementation as a unified diff.
+| File | Controls |
+|---|---|
+| `config/models.md` | Model assignments per role; `models:` list is auto-pulled on launch |
+| `config/settings.md` | Thresholds, chunk sizes, history window, vault path |
+| `config/commands.md` | Command spec — edit here, run `/update` to get a code patch |
 
 ---
 

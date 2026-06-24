@@ -15,6 +15,7 @@ import glob
 import os
 import re
 import shutil
+import subprocess
 import sys
 from dataclasses import dataclass
 from datetime import datetime
@@ -87,6 +88,37 @@ HISTORY_WINDOW       = int(_cfg.get("history_window",       4))
 
 _SKIP_DIRS        = {"__pycache__", "local_db", "conversations", ".git", "config"}
 _UNCERTAIN_PREFIX = "i'm not certain"
+
+
+def _ensure_models() -> None:
+    required = _cfg.get("models", [])
+    if not required:
+        return
+
+    result = subprocess.run(["ollama", "list"], capture_output=True, text=True)
+    if result.returncode != 0:
+        print("Warning: could not query ollama — skipping model check.", file=sys.stderr)
+        return
+
+    installed: set[str] = set()
+    for line in result.stdout.splitlines()[1:]:
+        cols = line.split()
+        if cols:
+            name = cols[0]
+            installed.add(name)
+            if name.endswith(":latest"):
+                installed.add(name[: -len(":latest")])
+
+    def _tagged(name: str) -> str:
+        return name if ":" in name else f"{name}:latest"
+
+    for model in required:
+        if model not in installed and _tagged(model) not in installed:
+            print(f"Pulling {model}…")
+            subprocess.run(["ollama", "pull", model])
+
+
+_ensure_models()
 
 embeddings  = OllamaEmbeddings(model=EMBED_MODEL)
 llm         = ChatOllama(model=CHAT_MODEL)
