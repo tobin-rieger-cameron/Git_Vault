@@ -736,8 +736,17 @@ class ChatApp(App[None]):
         cmd_spec  = _load_config_file(
             os.path.join(_CONFIG_DIR, "commands.md")
         ).get("commands", {})
-        known_cmds = {"help", "browse", "ingest", "organize", "savefile",
-                      "clear", "web", "update", "apply"}
+        # Derive known commands from the actual handlers dict in source
+        # so previously-applied patches are reflected without needing manual updates.
+        try:
+            with open(os.path.abspath(__file__), encoding="utf-8") as _f:
+                _src = _f.read()
+            _h_start = _src.find("handlers = {")
+            _h_end   = _src.find("}", _h_start) + 1
+            known_cmds = set(re.findall(r'"(\w+)"', _src[_h_start:_h_end]))
+        except (OSError, ValueError):
+            known_cmds = {"help", "browse", "ingest", "organize", "savefile",
+                          "clear", "web", "update", "apply"}
         spec_cmds  = set(cmd_spec.keys())
         new_cmds     = spec_cmds - known_cmds
         removed_cmds = known_cmds - spec_cmds
@@ -779,6 +788,17 @@ class ChatApp(App[None]):
         for cmd in sorted(removed_cmds):
             changes.append(f"REMOVE /{cmd}")
 
+        def _snip(src: str, start: str, stop: str) -> str:
+            a = src.find(start)
+            b = src.find(stop, a + 1) if a >= 0 else -1
+            return src[a:b] if (a >= 0 and b > a) else (src[a:] if a >= 0 else "")
+
+        ctx = "\n\n# ...\n\n".join(filter(None, [
+            _snip(source, "_HELP_TEXT = ", "# ── Chat App"),
+            _snip(source, "    def _dispatch_command(", "    def _cmd_help("),
+            _snip(source, "    def _cmd_clear(", "    # ── /update command"),
+        ]))
+
         prompt = "\n".join([
             "You are patching a Python Textual TUI app (chatui.py).",
             "Apply exactly these command changes:",
@@ -790,7 +810,7 @@ class ChatApp(App[None]):
             "  - REMOVE: delete from handlers dict, delete the method, remove from _HELP_TEXT.",
             "  - Reply with ONLY a unified diff (diff -u format). No explanation, no markdown fences.",
             "",
-            f"Source (first 8000 chars):\n{source[:8000]}",
+            "Relevant source sections:\n" + ctx,
             "\nDiff:",
         ])
 

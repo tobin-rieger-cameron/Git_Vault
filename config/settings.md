@@ -1,9 +1,5 @@
 ---
-summary: >
-  Tuneable runtime parameters for chatui.py. All keys are read at startup via
-  _load_all_config() and override the hardcoded defaults in the source. Also
-  contains full technical documentation (How It Works, Architecture, Stack) so
-  that an LLM reading this file has complete context before proposing changes.
+summary: Tuneable runtime parameters for chatui.py. All keys are read at startup via _load_all_config() and override the hardcoded defaults in the source. Also contains full technical documentation (How It Works, Architecture, Stack) so that an LLM reading this file has complete context before proposing changes.
 vault_path: /home/tizz/dev/LLM-sandbox/
 similarity_threshold: 0.5
 top_k: 3
@@ -75,12 +71,18 @@ Two-pass worker using `coding_llm`:
 - **Tags pass** — suggests shared YAML frontmatter tags across all notes; user confirms per note.
 - **Wikilinks pass** — suggests `[[wikilinks]]` for phrases that refer to other notes; user confirms per note.
 
-### 8. Config-Driven Self-Update (`/update`)
+### 8. Config-Driven Self-Update (`/update` + `/apply`)
 
-Diffs live config files against the `_startup_cfg` snapshot:
+`/update` diffs live config files against the `_startup_cfg` snapshot:
 
-- **Setting / model drift** — reports changed values; restart to apply.
-- **Command spec drift** — new or removed entries in `commands.md` trigger `_propose_code_patch()`, which streams a unified diff from `coding_llm` for manual review.
+- **Setting / model drift** — reports changed keys/values; restart to apply (no code change needed).
+- **Command spec drift** — compares `commands.md` against the `handlers` dict parsed from the live `chatui.py` source. New or removed entries trigger `_propose_code_patch()`.
+
+`_propose_code_patch()` sends `qwen2.5-coder:7b` three targeted source sections — `_HELP_TEXT`, the `handlers` dict, and a simple `_cmd_*` example — and streams back a unified diff. The diff is stored in `self._pending_patch`.
+
+`/apply` prompts for confirmation, dry-runs `patch` at `-p1` then `-p0` to handle both git-style and bare-filename headers, and writes the patch on success. After a successful apply, restart to load the changes.
+
+See `config/commands.md` for the full step-by-step workflow.
 
 ---
 
@@ -131,7 +133,8 @@ chatui.py
     │   ├── /ingest              — @work coroutine, non-blocking
     │   ├── /organize            — async worker, uses coding_llm
     │   ├── /savefile            — triggers NoteReviewScreen modal
-    │   ├── /update              — config drift check + coding model patch proposal
+    │   ├── /update              — config drift check; coding model streams a unified diff
+    │   ├── /apply               — dry-run + apply pending patch; prompt to restart
     │   ├── /clear, /web, /help
     │   ├── _stream_llm()        — streams tokens (llm or coding_llm), writes Markdown when done
     │   └── _process()           — RAG pipeline with tag-aware second pass + open file injection

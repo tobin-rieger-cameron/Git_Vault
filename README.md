@@ -28,6 +28,7 @@ That's it. No flags needed. If the vector database doesn't exist yet, type `/ing
 | `/clear` | Reset conversation history and unload any open file |
 | `/web` | Toggle the DuckDuckGo web search fallback on / off |
 | `/update` | Detect config drift and propose code patches via coding model |
+| `/apply` | Apply the diff proposed by `/update` (yes/no confirmation, then restart) |
 
 **Keyboard shortcuts**
 
@@ -40,6 +41,14 @@ That's it. No flags needed. If the vector database doesn't exist yet, type `/ing
 
 ---
 
+## Self-updating via config
+
+Add a command to `config/commands.md` → run `/update` → review the diff → `/apply` → restart. The coding model (`qwen2.5-coder:7b`) generates the patch; `/apply` dry-runs it before writing.
+
+See `config/commands.md` for the full step-by-step workflow and limitations.
+
+---
+
 ## Configuration
 
 All settings live in `config/` as markdown files with YAML frontmatter. Each file is self-documenting — open it to see every key, its default, and what it does.
@@ -48,7 +57,7 @@ All settings live in `config/` as markdown files with YAML frontmatter. Each fil
 |---|---|
 | `config/models.md` | Model assignments per role; `models:` list is auto-pulled on launch |
 | `config/settings.md` | Thresholds, chunk sizes, history window, vault path; full technical reference |
-| `config/commands.md` | Command spec — edit here, run `/update` to get a code patch |
+| `config/commands.md` | Command spec + self-update workflow — edit here, run `/update` to get a code patch |
 
 ---
 
@@ -74,7 +83,6 @@ python chatui.py
 
 ## Suggested Improvements
 
-- **`/apply`** — parse the unified diff produced by `/update` and write it to `chatui.py` with a line-by-line confirmation step, then prompt to restart
 - **Re-ingest on change** — watch the vault with `watchdog` and automatically re-embed changed files
 - **Smarter chunking** — chunk by markdown heading rather than character count so each chunk stays semantically coherent
 - **Note deduplication** — before saving, check if a semantically similar entry already exists and offer to append instead
