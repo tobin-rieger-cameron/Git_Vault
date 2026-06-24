@@ -1,5 +1,11 @@
 ---
-summary: Tuneable runtime parameters for chatui.py. All keys are read at startup via _load_all_config() and override the hardcoded defaults in the source. Also contains full technical documentation (How It Works, Architecture, Stack) so that an LLM reading this file has complete context before proposing changes.
+summary: >
+  Tuneable runtime parameters for chatui.py. All keys are read at startup via
+  _load_all_config() and override the hardcoded defaults in the source. Changing
+  a value here and running /update will produce "no code changes required" — just
+  restart to apply. Also contains full technical documentation (How It Works,
+  Architecture, Stack) so an LLM reading this file has complete context before
+  proposing changes.
 vault_path: /home/tizz/dev/LLM-sandbox/
 similarity_threshold: 0.5
 top_k: 3
@@ -73,16 +79,15 @@ Two-pass worker using `coding_llm`:
 
 ### 8. Config-Driven Self-Update (`/update` + `/apply`)
 
-`/update` diffs live config files against the `_startup_cfg` snapshot:
+At startup, `chatui.py` snapshots the full text of every `config/*.md` file into `_startup_config_texts`. `/update` re-reads all those files, computes a unified diff of anything that changed (frontmatter values OR body text), and passes the complete set of diffs to `qwen2.5-coder:7b`.
 
-- **Setting / model drift** — reports changed keys/values; restart to apply (no code change needed).
-- **Command spec drift** — compares `commands.md` against the `handlers` dict parsed from the live `chatui.py` source. New or removed entries trigger `_propose_code_patch()`.
+The model receives the config diffs alongside three targeted `chatui.py` sections — `_HELP_TEXT`, the `handlers` dict, and a `_cmd_*` example — and reasons about what code changes (if any) are implied. It returns either a unified diff for `chatui.py` or "No code changes required."
 
-`_propose_code_patch()` sends `qwen2.5-coder:7b` three targeted source sections — `_HELP_TEXT`, the `handlers` dict, and a simple `_cmd_*` example — and streams back a unified diff. The diff is stored in `self._pending_patch`.
+`/update` also shows a structured frontmatter-drift summary (changed setting/model values) so you can see numeric or string changes at a glance even when no code patch is needed.
 
-`/apply` prompts for confirmation, dry-runs `patch` at `-p1` then `-p0` to handle both git-style and bare-filename headers, and writes the patch on success. After a successful apply, restart to load the changes.
+`/apply` prompts yes/no, dry-runs `patch` at `-p1` then `-p0`, and writes the patch on a clean dry-run. Restart to load the changes.
 
-See `config/commands.md` for the full step-by-step workflow.
+See `config/commands.md` for the full step-by-step workflow and a table of what triggers a code change proposal.
 
 ---
 

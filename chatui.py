@@ -12,6 +12,7 @@ All functions are available as /commands within the chat.
 from __future__ import annotations
 
 import asyncio
+import difflib
 import glob
 import os
 import re
@@ -124,6 +125,48 @@ _ensure_models()
 embeddings  = OllamaEmbeddings(model=EMBED_MODEL)
 llm         = ChatOllama(model=CHAT_MODEL)
 coding_llm  = ChatOllama(model=CODING_MODEL)
+
+# Full-text snapshot of every config/*.md for /update change detection.
+# Captured once at startup so diffs show exactly what the user changed this session.
+_startup_config_texts: dict[str, str] = {}
+for _p in sorted(glob.glob(os.path.join(_CONFIG_DIR, "*.md"))):
+    try:
+        with open(_p, encoding="utf-8") as _f:
+            _startup_config_texts[_p] = _f.read()
+    except OSError:
+        pass
+
+
+def _snip(src: str, start: str, stop: str) -> str:
+    """Return src[start:stop] by substring search; empty string if not found."""
+    a = src.find(start)
+    b = src.find(stop, a + 1) if a >= 0 else -1
+    return src[a:b] if (a >= 0 and b > a) else (src[a:] if a >= 0 else "")
+
+
+def _collect_config_diffs() -> dict[str, str]:
+    """Return unified diffs for every config/*.md that changed since startup."""
+    diffs: dict[str, str] = {}
+    current_paths = set(glob.glob(os.path.join(_CONFIG_DIR, "*.md")))
+    for path in sorted(current_paths | set(_startup_config_texts.keys())):
+        try:
+            with open(path, encoding="utf-8") as f:
+                current = f.read()
+        except OSError:
+            current = ""
+        baseline = _startup_config_texts.get(path, "")
+        if current == baseline:
+            continue
+        rel  = os.path.relpath(path, _SCRIPT_DIR)
+        diff = "".join(difflib.unified_diff(
+            baseline.splitlines(keepends=True),
+            current.splitlines(keepends=True),
+            fromfile=f"a/{rel}",
+            tofile=f"b/{rel}",
+        ))
+        if diff:
+            diffs[rel] = diff
+    return diffs
 
 
 # ── Tag Helpers ───────────────────────────────────────────────────────────────
@@ -712,16 +755,15 @@ class ChatApp(App[None]):
 
     @work
     async def _cmd_update(self, _args: str = "") -> None:
-        self._log("[bold]🔄  Checking config for drift…[/bold]")
+        self._log("[bold]🔄  Scanning config/ for changes…[/bold]")
 
-        # ── Setting / model drift ──────────────────────────────────────────────
-        live_cfg  = _load_all_config()
-        all_keys  = set(_startup_cfg) | set(live_cfg)
-        drift     = {k: (_startup_cfg.get(k), live_cfg.get(k))
-                     for k in all_keys if _startup_cfg.get(k) != live_cfg.get(k)}
-
+        # ── Frontmatter drift: quick human-readable summary ───────────────────
+        live_cfg = _load_all_config()
+        all_keys = set(_startup_cfg) | set(live_cfg)
+        drift    = {k: (_startup_cfg.get(k), live_cfg.get(k))
+                    for k in all_keys if _startup_cfg.get(k) != live_cfg.get(k)}
         if drift:
-            self._log("[yellow]Settings / model changes (restart to apply):[/yellow]")
+            self._log("[yellow]Setting / model changes (restart to apply):[/yellow]")
             for key, (old, new) in sorted(drift.items()):
                 if old is None:
                     self._log(f"  [green]+[/green] {key}: {new}")
@@ -729,46 +771,23 @@ class ChatApp(App[None]):
                     self._log(f"  [red]-[/red] {key}: {old}")
                 else:
                     self._log(f"  [yellow]~[/yellow] {key}: {old!r} → {new!r}")
-        else:
-            self._log("[dim]  Settings / models unchanged.[/dim]")
 
-        # ── Command spec drift ─────────────────────────────────────────────────
-        cmd_spec  = _load_config_file(
-            os.path.join(_CONFIG_DIR, "commands.md")
-        ).get("commands", {})
-        # Derive known commands from the actual handlers dict in source
-        # so previously-applied patches are reflected without needing manual updates.
-        try:
-            with open(os.path.abspath(__file__), encoding="utf-8") as _f:
-                _src = _f.read()
-            _h_start = _src.find("handlers = {")
-            _h_end   = _src.find("}", _h_start) + 1
-            known_cmds = set(re.findall(r'"(\w+)"', _src[_h_start:_h_end]))
-        except (OSError, ValueError):
-            known_cmds = {"help", "browse", "ingest", "organize", "savefile",
-                          "clear", "web", "update", "apply"}
-        spec_cmds  = set(cmd_spec.keys())
-        new_cmds     = spec_cmds - known_cmds
-        removed_cmds = known_cmds - spec_cmds
+        # ── Full-text diff of all config/*.md files ───────────────────────────
+        config_diffs = await asyncio.to_thread(_collect_config_diffs)
 
-        if not new_cmds and not removed_cmds:
-            self._log("[dim]  Command spec unchanged.[/dim]")
+        if not config_diffs:
+            self._log("[dim]  No config changes detected.[/dim]")
             return
 
-        if new_cmds:
-            self._log(f"\n[green]New commands in spec:[/green] "
-                      f"{', '.join(f'/{c}' for c in sorted(new_cmds))}")
-        if removed_cmds:
-            self._log(f"[red]Removed from spec:[/red] "
-                      f"{', '.join(f'/{c}' for c in sorted(removed_cmds))}")
+        for rel in sorted(config_diffs):
+            n = sum(1 for ln in config_diffs[rel].splitlines()
+                    if ln.startswith(("+", "-")) and not ln.startswith(("+++", "---")))
+            self._log(f"[dim]  📝 {rel}  ({n} changed lines)[/dim]")
 
-        await self._propose_code_patch(new_cmds, removed_cmds, cmd_spec)
+        await self._propose_changes_from_config_diffs(config_diffs)
 
-    async def _propose_code_patch(
-        self,
-        new_cmds: set[str],
-        removed_cmds: set[str],
-        cmd_spec: dict,
+    async def _propose_changes_from_config_diffs(
+        self, config_diffs: dict[str, str]
     ) -> None:
         try:
             with open(os.path.abspath(__file__), encoding="utf-8") as f:
@@ -777,45 +796,44 @@ class ChatApp(App[None]):
             self._log(f"[red]Could not read chatui.py: {e}[/red]")
             return
 
-        changes: list[str] = []
-        for cmd in sorted(new_cmds):
-            desc = cmd_spec.get(cmd, {}).get("description", "")
-            shortcut = cmd_spec.get(cmd, {}).get("shortcut", "")
-            line = f"ADD /{cmd}: {desc}"
-            if shortcut:
-                line += f"  (shortcut: {shortcut})"
-            changes.append(line)
-        for cmd in sorted(removed_cmds):
-            changes.append(f"REMOVE /{cmd}")
-
-        def _snip(src: str, start: str, stop: str) -> str:
-            a = src.find(start)
-            b = src.find(stop, a + 1) if a >= 0 else -1
-            return src[a:b] if (a >= 0 and b > a) else (src[a:] if a >= 0 else "")
-
         ctx = "\n\n# ...\n\n".join(filter(None, [
             _snip(source, "_HELP_TEXT = ", "# ── Chat App"),
             _snip(source, "    def _dispatch_command(", "    def _cmd_help("),
             _snip(source, "    def _cmd_clear(", "    # ── /update command"),
         ]))
 
+        all_diffs = "\n\n".join(
+            f"=== {rel} ===\n{diff}" for rel, diff in sorted(config_diffs.items())
+        )
+
         prompt = "\n".join([
-            "You are patching a Python Textual TUI app (chatui.py).",
-            "Apply exactly these command changes:",
-            *[f"  - {c}" for c in changes],
+            "You are reviewing config file changes for chatui.py (a Python Textual TUI).",
+            "Analyse what changed and propose any corresponding code modifications.",
             "",
-            "Rules:",
-            "  - ADD: register in _dispatch_command handlers dict, add a _cmd_<name>",
-            "    method with a self._log placeholder, add to _HELP_TEXT.",
-            "  - REMOVE: delete from handlers dict, delete the method, remove from _HELP_TEXT.",
-            "  - Reply with ONLY a unified diff (diff -u format). No explanation, no markdown fences.",
+            "CONFIG FILE CHANGES (unified diff format):",
+            all_diffs,
             "",
-            "Relevant source sections:\n" + ctx,
-            "\nDiff:",
+            "When reviewing, consider:",
+            "  - New/removed entries in commands.md → add/remove handler in _dispatch_command,",
+            "    add _cmd_<name> method with self._log placeholder, update _HELP_TEXT",
+            "  - Changed setting descriptions or defaults → update code defaults or logic",
+            "  - New features described in markdown prose → implement or add a stub",
+            "  - Wording, formatting, or documentation-only changes → no code change needed",
+            "",
+            'If no code changes are required, reply with exactly: "No code changes required."',
+            "Otherwise reply with ONLY a unified diff (diff -u format). No explanation. No markdown fences.",
+            "",
+            "RELEVANT chatui.py SECTIONS:",
+            ctx,
+            "\nResponse:",
         ])
 
-        self._log(f"\n[dim]🤖  Asking {CODING_MODEL} for a patch…[/dim]")
+        self._log(f"\n[dim]🤖  Asking {CODING_MODEL} to analyse changes…[/dim]")
         patch = await self._stream_llm(prompt, model=coding_llm)
+
+        if patch.strip().lower().startswith(("no code changes", "no changes")):
+            self._log("[dim]  No code changes suggested.[/dim]")
+            return
 
         if patch.strip():
             self._pending_patch = patch

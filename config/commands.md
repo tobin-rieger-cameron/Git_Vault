@@ -1,10 +1,12 @@
 ---
 summary: >
-  Defines every command that chatui.py exposes. The YAML spec under commands:
-  is the source of truth — /update reads it to detect additions or removals and
-  calls the coding model to propose the corresponding Python implementation.
-  Edit descriptions freely; add or remove entries to trigger a code patch.
-  The /apply command then writes the patch to chatui.py after confirmation.
+  Defines every command that chatui.py exposes. Edit any file in config/ —
+  frontmatter or body text — then run /update inside ChatUI: it diffs all
+  config/*.md files against their startup state, sends every change to
+  qwen2.5-coder:7b, and proposes a unified diff for chatui.py. Run /apply to
+  write the patch after reviewing it. This file is also the best place to
+  describe new features in prose — the model will read those descriptions and
+  propose an implementation.
 commands:
   help:
     description: list all available commands
@@ -23,7 +25,7 @@ commands:
   web:
     description: toggle DuckDuckGo web search fallback on/off
   update:
-    description: detect config drift and propose code patches via coding model
+    description: diff all config files against startup state and ask the coding model to propose code changes
   apply:
     description: apply the unified diff proposed by /update to chatui.py with yes/no confirmation, then prompt to restart
 ---
@@ -39,65 +41,50 @@ commands:
 | `/savefile` | Review and save pending LLM-generated notes to the vault | `Ctrl+S` |
 | `/clear` | Reset conversation history and unload any open file | — |
 | `/web` | Toggle DuckDuckGo web search fallback on/off | — |
-| `/update` | Detect config drift and propose code patches via coding model | — |
+| `/update` | Diff all config files against startup state; coding model proposes code changes | — |
 | `/apply` | Apply the diff proposed by `/update` to `chatui.py` (yes/no first), then prompt to restart | — |
 
 ## Self-update workflow
 
-This is the full loop for adding or changing commands:
+Make any change to any file in `config/` — frontmatter values, body text, new sections, new commands — then run `/update`.
 
-### 1. Edit this file
+### What triggers a code change proposal
 
-Add an entry under `commands:` in the frontmatter and a matching row in the table above. At minimum, provide a `description`; optionally add a `shortcut`.
+`/update` reads every `config/*.md` file and diffs it against the snapshot captured at startup. If anything changed — in frontmatter or in the body — the full diff is sent to `qwen2.5-coder:7b` alongside the relevant sections of `chatui.py`. The model decides what code changes (if any) are implied:
 
-```yaml
-  mycommand:
-    description: a short description of what it does
-    shortcut: Ctrl+M   # optional
-```
+| What you changed | What the model does |
+|---|---|
+| New entry in `commands:` frontmatter | Adds handler, `_cmd_*` method, `_HELP_TEXT` entry |
+| Removed entry from `commands:` frontmatter | Removes handler, method, help text |
+| Changed a command description | Updates `_HELP_TEXT` |
+| New feature described in markdown prose | Implements or stubs it |
+| Numeric setting value (e.g. `top_k`) | Says "no code change needed" — restart applies it |
+| Documentation / wording only | Says "no code change needed" |
 
-To remove a command: delete the frontmatter entry and the table row.
+### Step-by-step
 
-### 2. Run `/update` inside ChatUI
+**1. Edit any config file** while ChatUI is running (in another terminal or editor). Changes to any of `models.md`, `settings.md`, `commands.md` — or any new `.md` file added to `config/` — are all detected.
 
-ChatUI will:
-- Compare this file against the command handlers registered in `chatui.py`
-- Show a diff between spec and implementation
-- Ask `qwen2.5-coder:7b` to generate a unified diff with the necessary Python changes
-- Stream the diff into the chat log and store it as a pending patch
+**2. Run `/update`** in ChatUI. It will:
+- Show a structured summary of frontmatter value changes
+- List which files changed and how many lines
+- Call `qwen2.5-coder:7b` with the full unified diffs + relevant `chatui.py` sections
+- Stream the model's response (a unified diff, or "No code changes required")
 
-### 3. Review the proposed diff
+**3. Review the response.** If the model proposes a diff, scroll up and read it. Check:
+- Does it patch the right sections (`handlers`, `_HELP_TEXT`, `_cmd_*` methods)?
+- Does the implementation make sense?
 
-Scroll up to read what the coding model produced. The model is given the three most relevant source sections — `_HELP_TEXT`, the `handlers` dict, and a `_cmd_*` example — so its output should be targeted. Check:
-- Is the new command registered in `handlers`?
-- Is it in `_HELP_TEXT`?
-- Does the placeholder method make sense?
+If it looks wrong, edit `chatui.py` manually instead.
 
-If the diff looks wrong, edit `chatui.py` manually instead.
+**4. Run `/apply`** to write the patch. Type `yes` to confirm. ChatUI dry-runs `patch` first; if the dry-run passes it applies for real. Reports the exact `patch` output on failure.
 
-### 4. Run `/apply`
-
-Type `/apply`, then `yes` to confirm. ChatUI will:
-- Dry-run `patch` (trying `-p1` then `-p0` header styles)
-- Apply if the dry-run succeeds
-- Report the patch output if it fails (apply manually in that case)
-
-### 5. Restart
-
-`Ctrl+Q`, then `python chatui.py`. The new command is live.
-
-## What /update does and doesn't do
-
-| Change type | /update detects? | How to apply |
-|---|---|---|
-| New command in spec | Yes | `/update` → `/apply` → restart |
-| Removed command from spec | Yes | `/update` → `/apply` → restart |
-| Settings / model values changed | Yes (reports drift) | Restart (no patch needed) |
-| Behavior change to an existing command | No | Edit `chatui.py` manually |
+**5. Restart** (`Ctrl+Q`, then `python chatui.py`). Changes are live.
 
 ## Limitations
 
-- The coding model's diff is a first draft — always review it before `/apply`.
-- `/apply` runs `patch` against `chatui.py`. If the diff has markdown fences or bad headers, the dry-run will catch it and fail gracefully.
-- A second `/update` overwrites the stored patch. Apply before running `/update` again.
-- `patch` must be installed (`/usr/bin/patch` on most Linux systems).
+- The coding model's output is a first draft — always read it before applying.
+- `/apply` calls the system `patch` binary. If the model wraps the diff in markdown fences or produces bad headers, the dry-run fails gracefully with the error shown.
+- Running `/update` again overwrites the stored pending patch. Apply first if you want to keep it.
+- `patch` must be installed (`/usr/bin/patch` on most Linux systems — it is on Arch).
+- Settings and model changes (frontmatter values) apply on restart without any patch; the model will correctly say "no code changes required" for those.
