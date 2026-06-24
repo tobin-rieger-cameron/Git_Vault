@@ -6,6 +6,7 @@ All functions are available as /commands within the chat.
 /organize tag notes + wikilinks  /savefile review & save notes
 /clear    reset history          /web      toggle web search
 /browse   file browser           /update   detect config drift
+/apply    apply /update patch    (yes/no confirmation before write)
 """
 
 from __future__ import annotations
@@ -554,6 +555,7 @@ _HELP_TEXT = """\
   [bold #5f87af]/clear[/bold #5f87af]        reset conversation history and open file
   [bold #5f87af]/web[/bold #5f87af]          toggle web search fallback on / off
   [bold #5f87af]/update[/bold #5f87af]       detect config drift and propose code patches
+  [bold #5f87af]/apply[/bold #5f87af]        apply the diff proposed by /update (asks yes/no first)
 
 [dim]Ctrl+S  /savefile  ·  Ctrl+B  /browse  ·  Ctrl+Q  quit[/dim]\
 """
@@ -582,6 +584,8 @@ class ChatApp(App[None]):
         self._pending:  list[PendingNote] = []
         self._web_on         = True
         self._organize_queue: asyncio.Queue[str] | None = None
+        self._apply_queue:    asyncio.Queue[str] | None = None
+        self._pending_patch:  str | None = None
         self._session_file:   str | None = None
         self._open_file:      OpenFile | None = None
 
@@ -647,6 +651,10 @@ class ChatApp(App[None]):
             self._organize_queue.put_nowait(text)
             return
 
+        if self._apply_queue is not None:
+            self._apply_queue.put_nowait(text)
+            return
+
         if not text or self._busy:
             return
 
@@ -675,6 +683,7 @@ class ChatApp(App[None]):
             "clear":    lambda _: self._cmd_clear(),
             "web":      self._cmd_web,
             "update":   self._cmd_update,
+            "apply":    self._cmd_apply,
         }
 
         if cmd in handlers:
@@ -728,7 +737,7 @@ class ChatApp(App[None]):
             os.path.join(_CONFIG_DIR, "commands.md")
         ).get("commands", {})
         known_cmds = {"help", "browse", "ingest", "organize", "savefile",
-                      "clear", "web", "update"}
+                      "clear", "web", "update", "apply"}
         spec_cmds  = set(cmd_spec.keys())
         new_cmds     = spec_cmds - known_cmds
         removed_cmds = known_cmds - spec_cmds
@@ -789,12 +798,70 @@ class ChatApp(App[None]):
         patch = await self._stream_llm(prompt, model=coding_llm)
 
         if patch.strip():
+            self._pending_patch = patch
             self._log(
                 "\n[dim]Review the diff above, then run "
                 "[bold]/apply[/bold] to write it — or edit chatui.py manually.[/dim]"
             )
-        # TODO (step 5-6): parse the diff, show line-by-line confirmation,
-        #   write patch via `patch` subprocess, prompt user to restart.
+
+    # ── /apply command ────────────────────────────────────────────────────────
+
+    @work
+    async def _cmd_apply(self, _args: str = "") -> None:
+        if not self._pending_patch:
+            self._log("[dim]No pending patch — run /update first.[/dim]")
+            return
+
+        self._log("[bold yellow]⚠  Apply pending patch to chatui.py?[/bold yellow]")
+        self._log("[dim]Type [bold]yes[/bold] to apply, anything else to cancel.[/dim]")
+
+        inp = self.query_one(Input)
+        inp.placeholder = "yes / no…"
+        self._apply_queue = asyncio.Queue()
+        try:
+            resp = (await self._apply_queue.get()).strip().lower()
+        finally:
+            self._apply_queue = None
+            inp.placeholder = "Ask anything, or type /help for commands..."
+
+        if resp != "yes":
+            self._log("[dim]Cancelled.[/dim]")
+            return
+
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        patch_data = self._pending_patch
+
+        def _run_patch(p_level: int, dry_run: bool) -> subprocess.CompletedProcess:
+            args = ["patch", f"-p{p_level}"]
+            if dry_run:
+                args.append("--dry-run")
+            return subprocess.run(
+                args, input=patch_data, capture_output=True, text=True, cwd=script_dir
+            )
+
+        # Try dry-run at -p1 (git-style headers) then -p0 (bare filename headers)
+        chosen = None
+        result = None
+        for level in (1, 0):
+            result = await asyncio.to_thread(_run_patch, level, True)
+            if result.returncode == 0:
+                chosen = level
+                break
+
+        if chosen is None:
+            self._log("[red]✗  Patch cannot be applied cleanly:[/red]")
+            if result:
+                self._log(f"[dim]{(result.stdout + result.stderr).strip()}[/dim]")
+            self._log("[dim]Edit chatui.py manually using the diff shown above.[/dim]")
+            return
+
+        result = await asyncio.to_thread(_run_patch, chosen, False)
+        if result.returncode == 0:
+            self._log("[green]✓  Patch applied successfully.[/green]")
+            self._log("[dim]Quit and restart chatui.py to load the changes.[/dim]")
+            self._pending_patch = None
+        else:
+            self._log(f"[red]✗  patch failed:[/red] {(result.stdout + result.stderr).strip()}")
 
     # ── /browse command + Ctrl+B ──────────────────────────────────────────────
 

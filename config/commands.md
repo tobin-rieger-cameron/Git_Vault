@@ -23,6 +23,8 @@ commands:
     description: toggle DuckDuckGo web search fallback on/off
   update:
     description: detect config drift and propose code patches via coding model
+  apply:
+    description: apply the unified diff proposed by /update to chatui.py with line-by-line confirmation, then prompt to restart
 ---
 
 # Commands
@@ -37,6 +39,7 @@ commands:
 | `/clear` | Reset conversation history and unload any open file | — |
 | `/web` | Toggle DuckDuckGo web search fallback on/off | — |
 | `/update` | Detect config drift and propose code patches via coding model | — |
+| `/apply` | Apply the diff proposed by `/update` to `chatui.py`, hunk-by-hunk, then prompt to restart | — |
 
 ## Adding or removing commands
 
