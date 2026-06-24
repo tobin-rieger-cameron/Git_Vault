@@ -5,7 +5,7 @@ All functions are available as /commands within the chat.
 /help     list commands          /ingest   rebuild vector DB
 /organize tag notes + wikilinks  /savefile review & save notes
 /clear    reset history          /web      toggle web search
-/browse   file browser
+/browse   file browser           /update   detect config drift
 """
 
 from __future__ import annotations
@@ -18,6 +18,8 @@ import shutil
 import sys
 from dataclasses import dataclass
 from datetime import datetime
+
+import yaml
 
 from textual import work
 from textual.app import App, ComposeResult
@@ -43,26 +45,52 @@ except ImportError:
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-VAULT_PATH        = "/home/tizz/dev/LLM-sandbox/"
-DB_PATH           = "/home/tizz/dev/LLM-sandbox/local_db"
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_CONFIG_DIR = os.path.join(_SCRIPT_DIR, "config")
+
+
+def _load_config_file(path: str) -> dict:
+    try:
+        with open(path, encoding="utf-8") as f:
+            content = f.read()
+    except OSError:
+        return {}
+    m = re.match(r'^---\s*\n(.*?)\n---', content, re.DOTALL)
+    return yaml.safe_load(m.group(1)) or {} if m else {}
+
+
+def _load_all_config() -> dict:
+    cfg: dict = {}
+    for name in ("settings", "models"):
+        cfg.update(_load_config_file(os.path.join(_CONFIG_DIR, f"{name}.md")))
+    return cfg
+
+
+_cfg         = _load_all_config()
+_startup_cfg = dict(_cfg)
+
+VAULT_PATH        = _cfg.get("vault_path", _SCRIPT_DIR + "/")
+DB_PATH           = os.path.join(VAULT_PATH, "local_db")
 CONVERSATIONS_DIR = os.path.join(VAULT_PATH, "conversations")
 
-EMBED_MODEL = "nomic-embed-text"
-CHAT_MODEL  = "llama3.2:3b"
-FILE_GLOB   = "**/*.md"
+EMBED_MODEL  = _cfg.get("embed_model",  "nomic-embed-text")
+CHAT_MODEL   = _cfg.get("chat_model",   "llama3.2:3b")
+CODING_MODEL = _cfg.get("coding_model", "llama3.1:8b")
+FILE_GLOB    = "**/*.md"
 
-TOP_K              = 3
-WEB_SEARCH_RESULTS = 3
-CHUNK_SIZE         = 500
-CHUNK_OVERLAP      = 50
-SIMILARITY_THRESHOLD = 0.5
-HISTORY_WINDOW     = 4
+TOP_K                = int(_cfg.get("top_k",                3))
+WEB_SEARCH_RESULTS   = int(_cfg.get("web_search_results",   3))
+CHUNK_SIZE           = int(_cfg.get("chunk_size",           500))
+CHUNK_OVERLAP        = int(_cfg.get("chunk_overlap",        50))
+SIMILARITY_THRESHOLD = float(_cfg.get("similarity_threshold", 0.5))
+HISTORY_WINDOW       = int(_cfg.get("history_window",       4))
 
-_SKIP_DIRS        = {"__pycache__", "local_db", "conversations", ".git"}
+_SKIP_DIRS        = {"__pycache__", "local_db", "conversations", ".git", "config"}
 _UNCERTAIN_PREFIX = "i'm not certain"
 
-embeddings = OllamaEmbeddings(model=EMBED_MODEL)
-llm        = ChatOllama(model=CHAT_MODEL)
+embeddings  = OllamaEmbeddings(model=EMBED_MODEL)
+llm         = ChatOllama(model=CHAT_MODEL)
+coding_llm  = ChatOllama(model=CODING_MODEL)
 
 
 # ── Tag Helpers ───────────────────────────────────────────────────────────────
@@ -96,7 +124,7 @@ def ingest_vault() -> Chroma:
     loader = DirectoryLoader(
         VAULT_PATH,
         glob=FILE_GLOB,
-        exclude=["conversations/**"],
+        exclude=["conversations/**", "config/**"],
     )
     docs = loader.load()
     if not docs:
@@ -174,7 +202,7 @@ def get_concept_suggestion(question: str, answer: str) -> str:
         "Reply with only 1-3 words, lowercase, no punctuation. Used as a filename.\n"
         f"Question: {question}\nAnswer: {answer}\nCore concept:"
     )
-    raw = llm.invoke(prompt).content.strip().lower()
+    raw = coding_llm.invoke(prompt).content.strip().lower()
     return re.sub(r"\s+", "-", re.sub(r"[^a-z0-9\s-]", "", raw).strip()) or "general"
 
 
@@ -493,6 +521,7 @@ _HELP_TEXT = """\
   [bold #5f87af]/savefile[/bold #5f87af]     review and save pending notes to the vault
   [bold #5f87af]/clear[/bold #5f87af]        reset conversation history and open file
   [bold #5f87af]/web[/bold #5f87af]          toggle web search fallback on / off
+  [bold #5f87af]/update[/bold #5f87af]       detect config drift and propose code patches
 
 [dim]Ctrl+S  /savefile  ·  Ctrl+B  /browse  ·  Ctrl+Q  quit[/dim]\
 """
@@ -613,6 +642,7 @@ class ChatApp(App[None]):
             "savefile": lambda _: self.action_savefile(),
             "clear":    lambda _: self._cmd_clear(),
             "web":      self._cmd_web,
+            "update":   self._cmd_update,
         }
 
         if cmd in handlers:
@@ -636,6 +666,103 @@ class ChatApp(App[None]):
             self._web_on = not self._web_on
         state = "[green]on[/green]" if self._web_on else "[red]off[/red]"
         self._log(f"[dim]Web search fallback: {state}[/dim]")
+
+    # ── /update command ───────────────────────────────────────────────────────
+
+    @work
+    async def _cmd_update(self, _args: str = "") -> None:
+        self._log("[bold]🔄  Checking config for drift…[/bold]")
+
+        # ── Setting / model drift ──────────────────────────────────────────────
+        live_cfg  = _load_all_config()
+        all_keys  = set(_startup_cfg) | set(live_cfg)
+        drift     = {k: (_startup_cfg.get(k), live_cfg.get(k))
+                     for k in all_keys if _startup_cfg.get(k) != live_cfg.get(k)}
+
+        if drift:
+            self._log("[yellow]Settings / model changes (restart to apply):[/yellow]")
+            for key, (old, new) in sorted(drift.items()):
+                if old is None:
+                    self._log(f"  [green]+[/green] {key}: {new}")
+                elif new is None:
+                    self._log(f"  [red]-[/red] {key}: {old}")
+                else:
+                    self._log(f"  [yellow]~[/yellow] {key}: {old!r} → {new!r}")
+        else:
+            self._log("[dim]  Settings / models unchanged.[/dim]")
+
+        # ── Command spec drift ─────────────────────────────────────────────────
+        cmd_spec  = _load_config_file(
+            os.path.join(_CONFIG_DIR, "commands.md")
+        ).get("commands", {})
+        known_cmds = {"help", "browse", "ingest", "organize", "savefile",
+                      "clear", "web", "update"}
+        spec_cmds  = set(cmd_spec.keys())
+        new_cmds     = spec_cmds - known_cmds
+        removed_cmds = known_cmds - spec_cmds
+
+        if not new_cmds and not removed_cmds:
+            self._log("[dim]  Command spec unchanged.[/dim]")
+            return
+
+        if new_cmds:
+            self._log(f"\n[green]New commands in spec:[/green] "
+                      f"{', '.join(f'/{c}' for c in sorted(new_cmds))}")
+        if removed_cmds:
+            self._log(f"[red]Removed from spec:[/red] "
+                      f"{', '.join(f'/{c}' for c in sorted(removed_cmds))}")
+
+        await self._propose_code_patch(new_cmds, removed_cmds, cmd_spec)
+
+    async def _propose_code_patch(
+        self,
+        new_cmds: set[str],
+        removed_cmds: set[str],
+        cmd_spec: dict,
+    ) -> None:
+        try:
+            with open(os.path.abspath(__file__), encoding="utf-8") as f:
+                source = f.read()
+        except OSError as e:
+            self._log(f"[red]Could not read chatui.py: {e}[/red]")
+            return
+
+        changes: list[str] = []
+        for cmd in sorted(new_cmds):
+            desc = cmd_spec.get(cmd, {}).get("description", "")
+            shortcut = cmd_spec.get(cmd, {}).get("shortcut", "")
+            line = f"ADD /{cmd}: {desc}"
+            if shortcut:
+                line += f"  (shortcut: {shortcut})"
+            changes.append(line)
+        for cmd in sorted(removed_cmds):
+            changes.append(f"REMOVE /{cmd}")
+
+        prompt = "\n".join([
+            "You are patching a Python Textual TUI app (chatui.py).",
+            "Apply exactly these command changes:",
+            *[f"  - {c}" for c in changes],
+            "",
+            "Rules:",
+            "  - ADD: register in _dispatch_command handlers dict, add a _cmd_<name>",
+            "    method with a self._log placeholder, add to _HELP_TEXT.",
+            "  - REMOVE: delete from handlers dict, delete the method, remove from _HELP_TEXT.",
+            "  - Reply with ONLY a unified diff (diff -u format). No explanation, no markdown fences.",
+            "",
+            f"Source (first 8000 chars):\n{source[:8000]}",
+            "\nDiff:",
+        ])
+
+        self._log(f"\n[dim]🤖  Asking {CODING_MODEL} for a patch…[/dim]")
+        patch = await self._stream_llm(prompt, model=coding_llm)
+
+        if patch.strip():
+            self._log(
+                "\n[dim]Review the diff above, then run "
+                "[bold]/apply[/bold] to write it — or edit chatui.py manually.[/dim]"
+            )
+        # TODO (step 5-6): parse the diff, show line-by-line confirmation,
+        #   write patch via `patch` subprocess, prompt user to restart.
 
     # ── /browse command + Ctrl+B ──────────────────────────────────────────────
 
@@ -723,7 +850,7 @@ class ChatApp(App[None]):
             f"{note_list_str}\n\nTags:"
         )
         self._log("[dim]Generating tag suggestions…[/dim]")
-        raw_tags = await asyncio.to_thread(lambda: llm.invoke(tag_prompt).content.strip())
+        raw_tags = await asyncio.to_thread(lambda: coding_llm.invoke(tag_prompt).content.strip())
 
         tag_map: dict[str, list[str]] = {}
         for line in raw_tags.splitlines():
@@ -779,7 +906,7 @@ class ChatApp(App[None]):
                 'Reply one per line as: "exact phrase" -> target_stem  — or reply "none".\n\n'
                 f"Note:\n{content}\n\nSuggestions:"
             )
-            raw = await asyncio.to_thread(lambda: llm.invoke(link_prompt).content.strip())
+            raw = await asyncio.to_thread(lambda: coding_llm.invoke(link_prompt).content.strip())
             if not raw or raw.lower() == "none":
                 continue
 
@@ -848,12 +975,13 @@ class ChatApp(App[None]):
 
     # ── Streaming LLM helper ──────────────────────────────────────────────────
 
-    async def _stream_llm(self, prompt: str) -> str:
+    async def _stream_llm(self, prompt: str, *, model: ChatOllama | None = None) -> str:
+        m = model if model is not None else llm
         stream_widget = self.query_one("#stream", Static)
         stream_widget.display = True
         parts: list[str] = []
         try:
-            async for chunk in llm.astream(prompt):
+            async for chunk in m.astream(prompt):
                 parts.append(chunk.content)
                 stream_widget.update(Text("".join(parts)))
         finally:
