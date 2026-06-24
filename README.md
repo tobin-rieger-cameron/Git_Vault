@@ -1,6 +1,6 @@
 # ChatUI
 
-A fully local, privacy-first knowledge assistant built on top of your Obsidian vault. It combines vector-based semantic search, a locally-running LLM via Ollama, and an optional DuckDuckGo web fallback — all inside a terminal UI. Every function is accessible as a `/command` within the chat.
+A fully local, privacy-first knowledge assistant built on top of your Obsidian vault. It combines vector-based semantic search, locally-running LLMs via Ollama, and an optional DuckDuckGo web fallback — all inside a terminal UI. Every function is accessible as a `/command` within the chat.
 
 ---
 
@@ -25,6 +25,7 @@ That's it. No flags needed. If the vector database doesn't exist yet, type `/ing
 | `/savefile` | Review and save pending notes to the vault |
 | `/clear` | Reset conversation history and unload any open file |
 | `/web` | Toggle the DuckDuckGo web search fallback on / off |
+| `/update` | Detect config drift and propose code patches via coding model |
 
 **Keyboard shortcuts**
 
@@ -37,11 +38,41 @@ That's it. No flags needed. If the vector database doesn't exist yet, type `/ing
 
 ---
 
+## Configuration
+
+All tuneable settings live in the `config/` folder as markdown files with YAML frontmatter. Edit them in any text editor; changes take effect on next launch.
+
+### `config/models.md`
+
+| Key | Default | Role |
+|---|---|---|
+| `chat_model` | `llama3.2:3b` | Live streaming responses — optimised for speed |
+| `coding_model` | `qwen2.5-coder:7b` | `/organize`, `/update` patch proposals, concept suggestions |
+| `embed_model` | `nomic-embed-text` | Vault ingestion and similarity search |
+
+### `config/settings.md`
+
+| Key | Default | Description |
+|---|---|---|
+| `vault_path` | _(script dir)_ | Absolute path to the vault root |
+| `similarity_threshold` | `0.5` | Minimum score to answer from vault; below this falls back to model knowledge |
+| `top_k` | `3` | Vault chunks retrieved per query |
+| `chunk_size` | `500` | Characters per chunk during ingestion |
+| `chunk_overlap` | `50` | Overlap between adjacent chunks |
+| `history_window` | `4` | Conversation exchanges kept in prompt context |
+| `web_search_results` | `3` | DuckDuckGo results fetched per web query |
+
+### `config/commands.md`
+
+The source of truth for what commands the app exposes. Adding or removing an entry here and running `/update` triggers the coding model to propose the corresponding Python implementation as a unified diff.
+
+---
+
 ## How It Works
 
 ### 1. Ingestion (`/ingest`)
 
-Reads every `.md` file in the vault using LangChain's `DirectoryLoader`. Each file is split into 500-character overlapping chunks by `RecursiveCharacterTextSplitter`, then each chunk is embedded by `nomic-embed-text` (running locally via Ollama) into a dense vector and written to a persistent ChromaDB database (`local_db/`).
+Reads every `.md` file in the vault using LangChain's `DirectoryLoader` (skipping `conversations/`, `config/`, and `local_db/`). Each file is split into overlapping chunks by `RecursiveCharacterTextSplitter`, then each chunk is embedded by `nomic-embed-text` into a dense vector and written to a persistent ChromaDB database (`local_db/`).
 
 YAML frontmatter tags are parsed and stored as boolean metadata fields on each chunk (e.g. `tag_ai: true`) so they can be used to filter searches later.
 
@@ -57,11 +88,11 @@ Answers are drawn from the best available source, tried in order:
 
 | Source | Condition |
 |---|---|
-| **Vault notes** | Top similarity score ≥ 0.5 |
+| **Vault notes** | Top similarity score ≥ threshold |
 | **Model knowledge** | Vault score too low — always shown, even when the model flags uncertainty |
 | **Web search** | Model flags uncertainty and `/web` is on — DuckDuckGo result shown alongside |
 
-All prompts include the last 4 conversation exchanges so the model can refer to earlier context.
+All prompts include the last `history_window` conversation exchanges so the model can refer to earlier context. Responses stream token-by-token as they are generated.
 
 ### 4. Conversation & Session Saving
 
@@ -69,7 +100,7 @@ The app keeps a full in-session history for multi-turn conversations. Every sess
 
 ### 5. File Browser (`/browse`)
 
-Opens a TUI file browser rooted at the vault directory. Navigate with arrow keys, Enter to open a folder or select a file, Esc to go up one level (or close at the root). Hidden files, `__pycache__`, `local_db`, and `conversations` are excluded. Selecting any file loads its full content as context — it is injected into every subsequent prompt alongside vault chunks so the model can answer questions about it. The active filename is shown in the header subtitle. `/clear` unloads it.
+Opens a TUI file browser rooted at the vault directory. Navigate with arrow keys, Enter to open a folder or select a file, Esc to go up one level (or close at the root). Selecting any file loads its full content as context — it is injected into every subsequent prompt alongside vault chunks so the model can answer questions about it. The active filename is shown in the header subtitle. `/clear` unloads it.
 
 ### 6. Learning (`/savefile`)
 
@@ -84,37 +115,55 @@ Confirmed notes are written to `.md` files in the vault and added to the live Ch
 
 ### 7. Vault Organisation (`/organize`)
 
-Runs two passes over all vault notes without leaving the chat:
+Runs two passes over all vault notes using the coding model (for better instruction-following):
 
-- **Tags pass** — the LLM analyses all notes together and suggests shared YAML frontmatter tags to group related notes. You confirm or override each suggestion before anything is written.
-- **Wikilinks pass** — for each note the LLM identifies phrases that refer to another note and proposes `[[wikilinks]]`. You confirm per note.
+- **Tags pass** — analyses all notes together and suggests shared YAML frontmatter tags to group related notes. You confirm or override each suggestion before anything is written.
+- **Wikilinks pass** — for each note identifies phrases that refer to another note and proposes `[[wikilinks]]`. You confirm per note.
+
+### 8. Config-Driven Self-Update (`/update`)
+
+Compares the live config files against the snapshot taken at startup:
+
+- **Setting / model drift** — reports any changed values; restart to apply.
+- **Command spec drift** — if `config/commands.md` has new or removed commands, calls the coding model to stream a unified diff that implements the change. Review the proposed patch, then apply manually or via a future `/apply` command.
 
 ---
 
 ## Architecture
 
 ```
+config/
+├── models.md    — chat_model, coding_model, embed_model
+├── settings.md  — vault_path, thresholds, chunk params, history window
+└── commands.md  — command spec; /update watches this for additions/removals
+
 chatui.py
 │
+├── Config
+│   ├── _load_config_file()  — parse YAML frontmatter from a config/*.md file
+│   ├── _load_all_config()   — merge settings.md + models.md into one dict
+│   └── _startup_cfg         — snapshot for drift detection
+│
 ├── Database
-│   ├── ingest_vault()           — load, chunk, embed, persist to ChromaDB
-│   └── load_existing_db()       — load persisted ChromaDB from disk
+│   ├── ingest_vault()       — load, chunk, embed, persist to ChromaDB
+│   └── load_existing_db()   — load persisted ChromaDB from disk
 │
 ├── Tag Helpers
 │   ├── _extract_frontmatter_tags()
-│   ├── _tags_to_metadata()      — store tags as ChromaDB boolean fields
-│   ├── _get_chunk_tags()        — read tags back from a retrieved chunk
-│   └── _make_tag_filter()       — build ChromaDB where-clause for tag filtering
+│   ├── _tags_to_metadata()  — store tags as ChromaDB boolean fields
+│   ├── _get_chunk_tags()    — read tags back from a retrieved chunk
+│   └── _make_tag_filter()   — build ChromaDB where-clause for tag filtering
 │
 ├── Web Search
-│   └── web_search()             — DuckDuckGo via DDGS, no API key required
+│   └── web_search()         — DuckDuckGo via DDGS, no API key required
 │
 ├── Learning
 │   ├── PendingNote              — dataclass: question, answer, source, suggestion
-│   ├── get_concept_suggestion() — LLM suggests a filename stem
+│   ├── get_concept_suggestion() — coding model suggests a filename stem
 │   └── save_to_vault()          — writes .md file + adds doc to live ChromaDB
 │
 ├── Prompts
+│   ├── _file_ctx_section()      — shared open-file block injected into prompts
 │   ├── build_vault_prompt()     — vault context + open file + history → answer
 │   ├── build_knowledge_prompt() — open file + history → model answer
 │   ├── build_web_prompt()       — web results + history → answer
@@ -124,10 +173,11 @@ chatui.py
     ├── ChatApp                  — unified chat + command interface
     │   ├── /browse              — pushes FileBrowserScreen, loads file as context
     │   ├── /ingest              — @work coroutine, non-blocking
-    │   ├── /organize            — inline async worker with queue-based prompting
+    │   ├── /organize            — async worker, uses coding_llm
     │   ├── /savefile            — triggers NoteReviewScreen modal
+    │   ├── /update              — config drift check + coding model patch proposal
     │   ├── /clear, /web, /help
-    │   ├── _stream_llm()        — streams LLM tokens to a Static widget, writes Markdown when done
+    │   ├── _stream_llm()        — streams tokens (chat or coding model), writes Markdown when done
     │   └── _process()           — RAG pipeline with tag-aware second pass + open file injection
     ├── FileBrowserScreen        — modal: navigate vault files, select to load as context
     └── NoteReviewScreen         — modal: preview + rename + save pending notes
@@ -139,8 +189,9 @@ chatui.py
 
 | Layer | Tool |
 |---|---|
+| Chat model | `llama3.2:3b` via Ollama — fast streaming responses |
+| Coding model | `qwen2.5-coder:7b` via Ollama — `/organize`, `/update`, concept suggestions |
 | Embedding model | `nomic-embed-text` via Ollama |
-| Chat model | `llama3.2:3b` via Ollama |
 | Vector database | ChromaDB (persistent, local) |
 | LLM framework | LangChain (`langchain-ollama`, `langchain-community`) |
 | Web search | DuckDuckGo Search (`duckduckgo-search`) |
@@ -153,11 +204,12 @@ chatui.py
 ```bash
 # Install dependencies
 pip install langchain langchain-ollama langchain-community chromadb \
-            duckduckgo-search textual
+            duckduckgo-search textual pyyaml
 
 # Pull Ollama models (once)
 ollama pull nomic-embed-text
 ollama pull llama3.2:3b
+ollama pull qwen2.5-coder:7b
 
 # Run
 python chatui.py
@@ -168,9 +220,8 @@ python chatui.py
 
 ## Suggested Improvements
 
-- **Larger chat model** — swap `llama3.2:3b` for a 7B+ model (`mistral`, `llama3.1:8b`) for better reasoning and fewer uncertain fallbacks
+- **`/apply`** — parse the unified diff produced by `/update` and write it to `chatui.py` with a line-by-line confirmation step, then prompt to restart
 - **Re-ingest on change** — watch the vault with `watchdog` and automatically re-embed changed files
 - **Smarter chunking** — chunk by markdown heading rather than character count so each chunk stays semantically coherent
 - **Note deduplication** — before saving, check if a semantically similar entry already exists and offer to append instead
-- **Multi-vault support** — accept `VAULT_PATH` as a CLI argument to serve multiple vaults from the same script
-- **Save command distinction** — `/savefile` currently saves LLM-generated notes into the vault database; files opened via `/browse` are read-only context. A future `/browse` edit mode would need a separate save path that writes the file to disk without going through the note-review/embedding pipeline
+- **Multi-vault support** — accept `vault_path` as a CLI argument, overriding `config/settings.md`
