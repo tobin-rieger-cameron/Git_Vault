@@ -1,4 +1,10 @@
 ---
+summary: >
+  Defines which Ollama models are assigned to each role (chat, coding, embed)
+  and maintains the registry of models that should exist locally. chatui.py
+  reads this at startup — any model in the models: list that is not installed
+  will be pulled automatically before the app launches. Edit role keys to swap
+  models; add to models: before assigning a new model to a role.
 chat_model: llama3.2:3b
 coding_model: qwen2.5-coder:7b
 embed_model: nomic-embed-text
@@ -20,7 +26,7 @@ models:
 
 ## Installed models
 
-Any model listed under `models:` in the frontmatter will be pulled automatically on next launch if it is not already available locally. Add a model here before assigning it to a role.
+Models listed under `models:` in the frontmatter are pulled automatically on launch if not already available. Add a model to this list before assigning it to a role.
 
 | Model | Size | Notes |
 |---|---|---|
@@ -30,6 +36,6 @@ Any model listed under `models:` in the frontmatter will be pulled automatically
 
 ## Notes
 
-- Role assignment and model list changes take effect on next launch.
-- Run `/ingest` after changing `embed_model` — the new model must re-embed the entire vault.
+- Role and model list changes take effect on next launch.
+- After changing `embed_model`, run `/ingest` — the vault must be fully re-embedded.
 - Alternatives for `coding_model`: `deepseek-coder-v2`, `llama3.1:8b`.

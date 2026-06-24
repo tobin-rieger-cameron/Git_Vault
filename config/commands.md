@@ -1,4 +1,9 @@
 ---
+summary: >
+  Defines every command that chatui.py exposes. The YAML spec under commands:
+  is the source of truth — /update reads it to detect additions or removals and
+  calls the coding model to propose the corresponding Python implementation.
+  Edit descriptions freely; add or remove entries to trigger a code patch.
 commands:
   help:
     description: list all available commands
@@ -22,11 +27,21 @@ commands:
 
 # Commands
 
-This file holds commands that [[ChatUI]] exposes.
+| Command | Description | Shortcut |
+|---|---|---|
+| `/help` | List all available commands | — |
+| `/browse` | Open TUI file browser; load a file as chat context | `Ctrl+B` |
+| `/ingest` | Rebuild the vector database from all vault markdown files | — |
+| `/organize` | Add YAML frontmatter tags and `[[wikilinks]]` to vault notes | — |
+| `/savefile` | Review and save pending LLM-generated notes to the vault | `Ctrl+S` |
+| `/clear` | Reset conversation history and unload any open file | — |
+| `/web` | Toggle DuckDuckGo web search fallback on/off | — |
+| `/update` | Detect config drift and propose code patches via coding model | — |
 
-**Adding a command:** add an entry under `commands:` with at least a `description`.
-Run `/update` inside the app — the coding model will propose the implementation.
+## Adding or removing commands
 
-**Removing a command:** delete the entry and run `/update`.
+**Add:** create an entry under `commands:` in the frontmatter with at least a `description` (and optionally a `shortcut`), add a matching row to the table above, then run `/update` — the coding model will propose the Python implementation.
 
-**Changing a description:** edit freely; `/update` will patch `_HELP_TEXT` in chatui.py.
+**Remove:** delete the frontmatter entry and the table row, then run `/update`.
+
+**Change a description:** edit both the frontmatter and the table row; `/update` will patch `_HELP_TEXT` in `chatui.py`.
