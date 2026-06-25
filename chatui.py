@@ -866,10 +866,10 @@ _HELP_TEXT = """\
   [bold #5f87af]/savefile[/bold #5f87af]     review and save pending notes to the vault
   [bold #5f87af]/clear[/bold #5f87af]        reset conversation history and open file
   [bold #5f87af]/web[/bold #5f87af]          toggle web search fallback on / off
-  [bold #5f87af]/update[/bold #5f87af]       detect config drift and propose code patches
+  [bold #5f87af]/update[/bold #5f87af]       detect config directives and propose code changes
   [bold #5f87af]/apply[/bold #5f87af]        apply the diff proposed by /update (asks yes/no first)
-
-  [bold #5f87af]/version[/bold #5f87af]       add a /version command that prints the chatui.py versio
+  [bold #5f87af]/status[/bold #5f87af]       show current session state (web, file, history, vault)
+  [bold #5f87af]/version[/bold #5f87af]      print the chatui.py version string
 [dim]Ctrl+S  /savefile  ·  Ctrl+B  /browse  ·  Ctrl+Q  quit[/dim]\
 """
 
@@ -918,6 +918,8 @@ class ChatApp(App[None]):
         with open(self._session_file, "w", encoding="utf-8") as f:
             f.write(f"# Chat Session — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
 
+        self._update_subtitle()
+
         if self.db is None:
             self._log("[yellow]No vault database found. Run [bold]/ingest[/bold] to build it.[/yellow]\n")
         else:
@@ -935,6 +937,7 @@ class ChatApp(App[None]):
 
     def _update_subtitle(self) -> None:
         parts = [CHAT_MODEL]
+        parts.append("web: on" if self._web_on else "web: off")
         if self._pending:
             n = len(self._pending)
             parts.append(f"{n} unsaved note{'s' if n != 1 else ''}")
@@ -998,12 +1001,15 @@ class ChatApp(App[None]):
             "update":   self._cmd_update,
             "apply":    self._cmd_apply,
             "version":   lambda _: self._cmd_version(),
+            "status":    lambda _: self._cmd_status(),
         }
 
         if cmd in handlers:
             handlers[cmd](args)
         else:
-            self._log(f"[red]Unknown command: /{cmd}[/red]  — type /help for the list.")
+            close = difflib.get_close_matches(cmd, handlers.keys(), n=1, cutoff=0.6)
+            hint = f"  Did you mean [bold]/{ close[0]}[/bold]?" if close else "  Type [bold]/help[/bold] for the list."
+            self._log(f"[red]Unknown command: /{cmd}[/red]{hint}")
 
     def _cmd_help(self) -> None:
         self._log(_HELP_TEXT)
@@ -1019,6 +1025,7 @@ class ChatApp(App[None]):
             self._web_on = args.lower() == "on"
         else:
             self._web_on = not self._web_on
+        self._update_subtitle()
         state = "[green]on[/green]" if self._web_on else "[red]off[/red]"
         self._log(f"[dim]Web search fallback: {state}[/dim]")
 
@@ -1031,6 +1038,19 @@ class ChatApp(App[None]):
         except FileNotFoundError:
             pass
         self._log(f"[dim]ChatUI.py version: {version}[/dim]")
+
+    def _cmd_status(self) -> None:
+        web = "[green]on[/green]" if self._web_on else "[red]off[/red]"
+        lines = [
+            "[bold]Session status[/bold]",
+            f"  web search:    {web}",
+            f"  open file:     {self._open_file.rel if self._open_file else '[dim]none[/dim]'}",
+            f"  history:       {len(self._history) // 2} exchange{'s' if len(self._history) // 2 != 1 else ''}",
+            f"  pending notes: {len(self._pending)}",
+            f"  vault:         {'loaded' if self.db else '[yellow]not loaded — run /ingest[/yellow]'}",
+            f"  patch pending: {'yes' if self._pending_source else 'no'}",
+        ]
+        self._log("\n".join(lines))
 
     # ── /update command ─────────────────────────────────────────────────────────────
 
