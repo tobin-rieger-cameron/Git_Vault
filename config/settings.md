@@ -15,6 +15,31 @@ history_window: 4
 web_search_results: 3
 ---
 
+# Changes
+
+## Directive format
+
+Add directives anywhere in the body of any `config/*.md` file (not in frontmatter).
+`/update` picks them up via `git diff` against `.chatui_sync` and applies each one as a
+targeted surgical edit — handler entry, help line, and method body are handled separately,
+then the result is validated with `ast.parse` + `py_compile` before being shown to you.
+
+| Prefix | Effect |
+|---|---|
+| `CHANGE: add /X …` | Add new command X (handler entry + _cmd_X method + help line) |
+| `REMOVE: /X command` | Remove command X and its method |
+| `RENAME: /X → /Y` | Rename command X to Y everywhere |
+| `FIX: description` | Model-guided targeted fix (extracts relevant method, splices result) |
+
+After `/apply` writes the file, `.chatui_sync` advances to the current `HEAD` so each
+directive is only processed once.
+
+---
+
+CHANGE: add a /version command that prints the chatui.py version string (read from a VERSION variable at the top of the file, default "0.1.0")
+
+---
+
 # Settings
 
 | Key | Default | Description |
@@ -65,6 +90,8 @@ Every session is saved to `conversations/YYYY-MM-DD_HH-MM-SS.md` in the vault th
 ### 5. File Browser (`/browse`)
 
 TUI file browser rooted at the vault directory. Selecting a file loads its full content as context, injected into every subsequent prompt alongside vault chunks. `/clear` unloads it.
+
+
 
 ### 6. Learning (`/savefile`)
 

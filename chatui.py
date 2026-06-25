@@ -5,8 +5,8 @@ All functions are available as /commands within the chat.
 /help     list commands          /ingest   rebuild vector DB
 /organize tag notes + wikilinks  /savefile review & save notes
 /clear    reset history          /web      toggle web search
-/browse   file browser           /update   detect config drift
-/apply    apply /update patch    (yes/no confirmation before write)
+/browse   file browser           /update   apply directives from config/
+/apply    write proposed source   (yes/no, atomic write + git sync hash)
 """
 
 from __future__ import annotations
@@ -69,8 +69,7 @@ def _load_all_config() -> dict:
     return cfg
 
 
-_cfg         = _load_all_config()
-_startup_cfg = dict(_cfg)
+_cfg = _load_all_config()
 
 VAULT_PATH        = _cfg.get("vault_path", _SCRIPT_DIR + "/")
 DB_PATH           = os.path.join(VAULT_PATH, "local_db")
@@ -78,7 +77,7 @@ CONVERSATIONS_DIR = os.path.join(VAULT_PATH, "conversations")
 
 EMBED_MODEL  = _cfg.get("embed_model",  "nomic-embed-text")
 CHAT_MODEL   = _cfg.get("chat_model",   "llama3.2:3b")
-CODING_MODEL = _cfg.get("coding_model", "llama3.1:8b")
+CODING_MODEL = _cfg.get("coding_model", "qwen2.5-coder:7b")
 FILE_GLOB    = "**/*.md"
 
 TOP_K                = int(_cfg.get("top_k",                3))
@@ -126,15 +125,6 @@ embeddings  = OllamaEmbeddings(model=EMBED_MODEL)
 llm         = ChatOllama(model=CHAT_MODEL)
 coding_llm  = ChatOllama(model=CODING_MODEL)
 
-# Full-text snapshot of every config/*.md for /update change detection.
-# Captured once at startup so diffs show exactly what the user changed this session.
-_startup_config_texts: dict[str, str] = {}
-for _p in sorted(glob.glob(os.path.join(_CONFIG_DIR, "*.md"))):
-    try:
-        with open(_p, encoding="utf-8") as _f:
-            _startup_config_texts[_p] = _f.read()
-    except OSError:
-        pass
 
 
 def _snip(src: str, start: str, stop: str) -> str:
@@ -271,29 +261,181 @@ def _build_chatui_guide(src: str) -> str:
     return "\n".join(parts)
 
 
-def _collect_config_diffs() -> dict[str, str]:
-    """Return unified diffs for every config/*.md that changed since startup."""
+# ── Sync-hash management ──────────────────────────────────────────────────────
+
+_SYNC_FILE = os.path.join(_SCRIPT_DIR, ".chatui_sync")
+
+
+def _get_sync_hash() -> str | None:
+    try:
+        with open(_SYNC_FILE) as f:
+            h = f.read().strip()
+            return h or None
+    except OSError:
+        return None
+
+
+def _set_sync_hash(h: str) -> None:
+    with open(_SYNC_FILE, "w") as f:
+        f.write(h + "\n")
+
+
+def _git_head_hash() -> str | None:
+    r = subprocess.run(
+        ["git", "rev-parse", "HEAD"], capture_output=True, text=True, cwd=_SCRIPT_DIR
+    )
+    return r.stdout.strip() if r.returncode == 0 else None
+
+
+# ── Config diff via git ───────────────────────────────────────────────────────
+
+_DIRECTIVE_PREFIXES = ("CHANGE:", "REMOVE:", "RENAME:", "FIX:")
+
+
+def _collect_config_diffs_git() -> dict[str, str]:
+    """Return per-file unified diffs for config/*.md using git.
+
+    Priority: sync-hash → HEAD (committed changes not yet applied)
+    Fallback 1: HEAD → working tree (uncommitted edits)
+    Fallback 2: HEAD~1 → HEAD (last commit, first run with no sync hash)
+    """
+    sync_hash = _get_sync_hash()
     diffs: dict[str, str] = {}
-    current_paths = set(glob.glob(os.path.join(_CONFIG_DIR, "*.md")))
-    for path in sorted(current_paths | set(_startup_config_texts.keys())):
-        try:
-            with open(path, encoding="utf-8") as f:
-                current = f.read()
-        except OSError:
-            current = ""
-        baseline = _startup_config_texts.get(path, "")
-        if current == baseline:
+
+    for path in sorted(glob.glob(os.path.join(_CONFIG_DIR, "*.md"))):
+        rel = os.path.relpath(path, _SCRIPT_DIR)
+
+        if sync_hash:
+            r = subprocess.run(
+                ["git", "diff", sync_hash, "HEAD", "--", rel],
+                capture_output=True, text=True, cwd=_SCRIPT_DIR,
+            )
+            if r.returncode == 0 and r.stdout.strip():
+                diffs[rel] = r.stdout
+                continue
+
+        # Uncommitted changes
+        r = subprocess.run(
+            ["git", "diff", "HEAD", "--", rel],
+            capture_output=True, text=True, cwd=_SCRIPT_DIR,
+        )
+        if r.returncode == 0 and r.stdout.strip():
+            diffs[rel] = r.stdout
             continue
-        rel  = os.path.relpath(path, _SCRIPT_DIR)
-        diff = "".join(difflib.unified_diff(
-            baseline.splitlines(keepends=True),
-            current.splitlines(keepends=True),
-            fromfile=f"a/{rel}",
-            tofile=f"b/{rel}",
-        ))
-        if diff:
-            diffs[rel] = diff
+
+        # First run, no sync hash — check last commit
+        if not sync_hash:
+            r = subprocess.run(
+                ["git", "diff", "HEAD~1", "HEAD", "--", rel],
+                capture_output=True, text=True, cwd=_SCRIPT_DIR,
+            )
+            if r.returncode == 0 and r.stdout.strip():
+                diffs[rel] = r.stdout
+
     return diffs
+
+
+def _extract_directives(diffs: dict[str, str]) -> list[dict]:
+    """Parse CHANGE:/REMOVE:/RENAME:/FIX: lines from added lines in config diffs."""
+    directives: list[dict] = []
+    for path, diff in diffs.items():
+        for line in diff.splitlines():
+            if not line.startswith("+") or line.startswith("+++"):
+                continue
+            stripped = line[1:].strip()
+            for prefix in _DIRECTIVE_PREFIXES:
+                if stripped.upper().startswith(prefix):
+                    directives.append({
+                        "type":   prefix.rstrip(":").lower(),
+                        "text":   stripped[len(prefix):].strip(),
+                        "source": path,
+                    })
+                    break
+    return directives
+
+
+# ── Code-block extraction helpers ─────────────────────────────────────────────
+
+def _extract_handlers_block(source: str) -> str:
+    """Extract the handlers = {...} literal from _dispatch_command."""
+    m = re.search(r'(?m)^        handlers = \{', source)
+    if not m:
+        return ""
+    rest  = source[m.end():]
+    close = re.search(r'(?m)^        \}', rest)
+    if not close:
+        return ""
+    return source[m.start(): m.end() + close.end()]
+
+
+def _extract_help_block(source: str) -> str:
+    """Extract _HELP_TEXT = \"\"\"...\"\"\" including its delimiters."""
+    m = re.search(r'(?m)^_HELP_TEXT = """', source)
+    if not m:
+        return ""
+    rest  = source[m.end():]
+    close = re.search(r'(?m)^"""', rest)
+    if not close:
+        return ""
+    return source[m.start(): m.end() + close.end()]
+
+
+def _extract_method_block(source: str, name: str) -> str:
+    """Extract a named function/method from source using the AST."""
+    import ast as _ast
+    try:
+        tree = _ast.parse(source)
+    except SyntaxError:
+        return ""
+    lines = source.splitlines(keepends=True)
+    for node in _ast.walk(tree):
+        if isinstance(node, (_ast.FunctionDef, _ast.AsyncFunctionDef)) and node.name == name:
+            return "".join(lines[node.lineno - 1: node.end_lineno])
+    return ""
+
+
+def _insert_method_after(source: str, after_method: str, new_method_code: str) -> str:
+    """Splice new_method_code into source immediately after after_method."""
+    import ast as _ast
+    try:
+        tree = _ast.parse(source)
+    except SyntaxError:
+        return source
+    lines = source.splitlines(keepends=True)
+    for node in _ast.walk(tree):
+        if isinstance(node, (_ast.FunctionDef, _ast.AsyncFunctionDef)) and node.name == after_method:
+            insert_at = node.end_lineno
+            block = "\n" + new_method_code
+            if not block.endswith("\n"):
+                block += "\n"
+            return "".join(lines[:insert_at]) + block + "".join(lines[insert_at:])
+    return source
+
+
+# ── Source validation ─────────────────────────────────────────────────────────
+
+def _validate_source(source: str) -> str | None:
+    """Return an error string if source has a syntax/compile error, else None."""
+    import ast as _ast, py_compile, tempfile
+    try:
+        _ast.parse(source)
+    except SyntaxError as e:
+        return f"SyntaxError at line {e.lineno}: {e.msg}"
+    with tempfile.NamedTemporaryFile(
+        suffix=".py", mode="w", encoding="utf-8", delete=False
+    ) as tf:
+        tf.write(source)
+        tmp = tf.name
+    try:
+        py_compile.compile(tmp, doraise=True)
+        return None
+    except py_compile.PyCompileError as e:
+        return str(e)
+    finally:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
 
 
 # ── Tag Helpers ───────────────────────────────────────────────────────────────
@@ -755,7 +897,7 @@ class ChatApp(App[None]):
         self._web_on         = True
         self._organize_queue: asyncio.Queue[str] | None = None
         self._apply_queue:    asyncio.Queue[str] | None = None
-        self._pending_patch:  str | None = None
+        self._pending_source: str | None = None
         self._session_file:   str | None = None
         self._open_file:      OpenFile | None = None
 
@@ -878,44 +1020,34 @@ class ChatApp(App[None]):
         state = "[green]on[/green]" if self._web_on else "[red]off[/red]"
         self._log(f"[dim]Web search fallback: {state}[/dim]")
 
-    # ── /update command ───────────────────────────────────────────────────────
+    # ── /update command ─────────────────────────────────────────────────────────────
 
     @work
     async def _cmd_update(self, _args: str = "") -> None:
-        self._log("[bold]🔄  Scanning config/ for changes…[/bold]")
+        self._log("[bold]🔄  Scanning config changes via git…[/bold]")
 
-        # ── Frontmatter drift: quick human-readable summary ───────────────────
-        live_cfg = _load_all_config()
-        all_keys = set(_startup_cfg) | set(live_cfg)
-        drift    = {k: (_startup_cfg.get(k), live_cfg.get(k))
-                    for k in all_keys if _startup_cfg.get(k) != live_cfg.get(k)}
-        if drift:
-            self._log("[yellow]Setting / model changes (restart to apply):[/yellow]")
-            for key, (old, new) in sorted(drift.items()):
-                if old is None:
-                    self._log(f"  [green]+[/green] {key}: {new}")
-                elif new is None:
-                    self._log(f"  [red]-[/red] {key}: {old}")
-                else:
-                    self._log(f"  [yellow]~[/yellow] {key}: {old!r} → {new!r}")
-
-        # ── Full-text diff of all config/*.md files ───────────────────────────
-        config_diffs = await asyncio.to_thread(_collect_config_diffs)
-
+        config_diffs = await asyncio.to_thread(_collect_config_diffs_git)
         if not config_diffs:
-            self._log("[dim]  No config changes detected.[/dim]")
+            self._log("[dim]No config changes found since last sync.[/dim]")
             return
 
-        for rel in sorted(config_diffs):
-            n = sum(1 for ln in config_diffs[rel].splitlines()
+        for rel, diff in sorted(config_diffs.items()):
+            n = sum(1 for ln in diff.splitlines()
                     if ln.startswith(("+", "-")) and not ln.startswith(("+++", "---")))
             self._log(f"[dim]  📝 {rel}  ({n} changed lines)[/dim]")
 
-        await self._propose_changes_from_config_diffs(config_diffs)
+        directives = _extract_directives(config_diffs)
+        if not directives:
+            self._log(
+                "[dim]No actionable directives found. "
+                "Add CHANGE:/REMOVE:/RENAME:/FIX: lines to config files.[/dim]"
+            )
+            return
 
-    async def _propose_changes_from_config_diffs(
-        self, config_diffs: dict[str, str]
-    ) -> None:
+        self._log("[cyan]  Directives:[/cyan]")
+        for d in directives:
+            self._log(f"  [dim]  • [{d['type'].upper()}] {d['text']}[/dim]")
+
         try:
             with open(os.path.abspath(__file__), encoding="utf-8") as f:
                 source = f.read()
@@ -923,119 +1055,208 @@ class ChatApp(App[None]):
             self._log(f"[red]Could not read chatui.py: {e}[/red]")
             return
 
-        all_diffs = "\n\n".join(
-            f"=== {rel} ===\n{diff}" for rel, diff in sorted(config_diffs.items())
-        )
+        guide  = _build_chatui_guide(source)
+        result = source
 
-        # Pre-extract explicit CHANGE: feature requests from diffs (added lines only)
-        change_requests: list[str] = []
-        for _diff in config_diffs.values():
-            for _line in _diff.splitlines():
-                _stripped = _line.lstrip("+")
-                if _stripped.startswith("CHANGE:"):
-                    change_requests.append(_stripped.strip())
+        for d in directives:
+            updated = await self._apply_directive(result, d, guide)
+            if updated is not None:
+                result = updated
 
-        # Build the structural guide (AST-derived, always accurate line numbers)
-        guide = _build_chatui_guide(source)
-
-        # Select code examples based on what the requests mention
-        _cr_text = " ".join(change_requests).lower()
-        _browse_kw = {"browse", "file", "folder", "select", "picker", "path", "open"}
-        _needs_browse = any(kw in _cr_text for kw in _browse_kw)
-
-        _example_parts = [
-            _snip(source, "_HELP_TEXT = ",             "# ── Chat App"),
-            _snip(source, "    def _dispatch_command(", "    def _cmd_help("),
-            _snip(source, "    def _cmd_clear(", "    # ── /update command"),
-        ]
-        if _needs_browse:
-            _example_parts += [
-                _snip(source, "class FileBrowserScreen(", "def _file_icon("),
-                _snip(source, "    def action_browse(self) -> None", "    # ── /ingest command ─"),
-            ]
-        examples = "\n\n# ...\n\n".join(filter(None, _example_parts))
-
-        if change_requests:
-            self._log("[cyan]  Feature requests:[/cyan]")
-            for _r in change_requests:
-                self._log(f"  [dim]  • {_r}[/dim]")
-            cr_block = "\n".join(f"  {i+1}. {r}" for i, r in enumerate(change_requests))
-            prompt = "\n".join([
-                "You are implementing feature requests for chatui.py, a Python Textual TUI.",
-                "You MUST implement ALL of the following feature requests as a unified diff.",
-                "",
-                "FEATURE REQUESTS:",
-                cr_block,
-                "",
-                "== STRUCTURAL GUIDE (use this to find exact insertion points) ==",
-                guide,
-                "",
-                "== CODE EXAMPLES (copy style; left column = real line number) ==",
-                examples,
-                "",
-                "Rules for the diff:",
-                "  - Use the GUIDE above for exact line numbers in @@ hunk headers.",
-                "  - Context lines (starting with space) MUST be copied verbatim from",
-                "    the examples — do NOT paraphrase or invent context lines.",
-                "  - Do NOT re-add anything already shown as existing in the guide.",
-                "  - New _cmd_* methods go INSIDE ChatApp — see guide for the line.",
-                "  - New handler entries go inside the existing handlers dict — do NOT",
-                "    create a second handlers dict.",
-                "",
-                "Reply with ONLY a unified diff.",
-                "Header lines: --- a/chatui.py   +++ b/chatui.py",
-                "No explanation, no markdown fences (``` etc.).",
-                "\nDiff:",
-            ])
-        else:
-            prompt = "\n".join([
-                "You are reviewing config file changes for chatui.py (a Python Textual TUI).",
-                "Propose code modifications implied by the changes below.",
-                "",
-                "CONFIG FILE CHANGES (unified diff format):",
-                all_diffs,
-                "",
-                "Rules:",
-                "  - New/removed command in commands.md → add/remove handler, add _cmd_<name>,",
-                "    update _HELP_TEXT (see guide below for exact line numbers).",
-                "  - Changed setting value or description → update code default or logic.",
-                "  - New feature in prose → implement or stub it.",
-                "  - Documentation-only change → no code change needed.",
-                "",
-                'If no code changes are needed, reply with exactly: "No code changes required."',
-                "Otherwise reply with ONLY a unified diff. No explanation. No markdown fences.",
-                "",
-                "== STRUCTURAL GUIDE ==",
-                guide,
-                "",
-                "== CODE EXAMPLES (left column = real line number) ==",
-                examples,
-                "\nResponse:",
-            ])
-
-        self._log(f"\n[dim]🤖  Asking {CODING_MODEL} to analyse changes…[/dim]")
-        patch = await self._stream_llm(prompt, model=coding_llm)
-
-        if patch.strip().lower().startswith(("no code changes", "no changes")):
-            self._log("[dim]  No code changes suggested.[/dim]")
+        ok, result = await self._validate_and_heal(result)
+        if not ok:
             return
 
-        if patch.strip():
-            self._pending_patch = patch
-            self._log(
-                "\n[dim]Review the diff above, then run "
-                "[bold]/apply[/bold] to write it — or edit chatui.py manually.[/dim]"
+        diff_lines = list(difflib.unified_diff(
+            source.splitlines(keepends=True),
+            result.splitlines(keepends=True),
+            fromfile="chatui.py (current)",
+            tofile="chatui.py (proposed)",
+            n=3,
+        ))
+
+        if not diff_lines:
+            self._log("[dim]No changes generated.[/dim]")
+            return
+
+        self._log_md("```diff\n" + "".join(diff_lines) + "\n```")
+        self._pending_source = result
+        self._log(
+            "\n[dim]Review the diff above, then run "
+            "[bold]/apply[/bold] to write it — or edit chatui.py manually.[/dim]"
+        )
+
+    async def _apply_directive(self, source: str, d: dict, guide: str) -> str | None:
+        """Route a single directive to the appropriate handler; return updated source."""
+        dtype = d["type"]
+        text  = d["text"]
+
+        cmd_m = re.search(r'/(\w+)', text)
+        name  = cmd_m.group(1).lower() if cmd_m else None
+
+        if dtype == "change" and name:
+            return await self._directive_add_command(source, name, text, guide)
+
+        if dtype == "remove" and name:
+            return self._directive_remove_command(source, name)
+
+        if dtype == "rename":
+            old_m = re.search(r'/(\w+)', text)
+            new_m = re.search(r'[→>]\s*/(\w+)', text) or re.search(r'\bto\s+/(\w+)', text, re.I)
+            if old_m and new_m:
+                return self._directive_rename_command(source, old_m.group(1), new_m.group(1))
+
+        return await self._directive_model_guided(source, text, guide)
+
+    async def _directive_add_command(
+        self, source: str, name: str, description: str, guide: str
+    ) -> str:
+        self._log(f"[dim]  ➕  Adding /{name}…[/dim]")
+
+        # Handler entry (deterministic)
+        handlers_block = _extract_handlers_block(source)
+        if handlers_block and f'"{name}"' not in handlers_block:
+            new_entry    = '            "' + name + '":   lambda _: self._cmd_' + name + '(),\n'
+            new_handlers = handlers_block.replace('\n        }', '\n' + new_entry + '        }', 1)
+            source       = source.replace(handlers_block, new_handlers, 1)
+
+        # Help line (deterministic)
+        help_block = _extract_help_block(source)
+        if help_block and f"/{name}" not in help_block:
+            pad         = max(1, 14 - len(name))
+            new_help_ln = f"  [bold #5f87af]/{name}[/bold #5f87af]{' ' * pad}{description[:55]}\n"
+            new_help    = help_block.replace("[dim]Ctrl", new_help_ln + "[dim]Ctrl", 1)
+            source      = source.replace(help_block, new_help, 1)
+
+        # Method body (model-generated, ~60-line context)
+        if f"_cmd_{name}" not in source:
+            examples    = "\n\n".join(filter(None, [
+                _extract_method_block(source, "_cmd_clear"),
+                _extract_method_block(source, "_cmd_web"),
+            ]))
+            method_code = await self._generate_new_method(name, description, examples)
+            if method_code:
+                source = _insert_method_after(source, "_cmd_web", method_code)
+
+        return source
+
+    def _directive_remove_command(self, source: str, name: str) -> str:
+        self._log(f"[dim]  ➖  Removing /{name}…[/dim]")
+
+        source = re.sub(rf'(?m)^ +"{{re.escape(name)}}":[^\n]+\n', "", source)
+        source = re.sub(
+            rf'(?m)^ +\[bold #5f87af\]/{{re.escape(name)}}\[/bold #5f87af\][^\n]*\n', "", source
+        )
+
+        import ast as _ast
+        try:
+            tree = _ast.parse(source)
+            for node in _ast.walk(tree):
+                if (isinstance(node, (_ast.FunctionDef, _ast.AsyncFunctionDef))
+                        and node.name == f"_cmd_{name}"):
+                    lines  = source.splitlines(keepends=True)
+                    source = "".join(lines[:node.lineno - 1]) + "".join(lines[node.end_lineno:])
+                    break
+        except SyntaxError:
+            pass
+
+        return source
+
+    def _directive_rename_command(self, source: str, old: str, new: str) -> str:
+        self._log(f"[dim]  ✏️   Renaming /{old} → /{new}…[/dim]")
+        source = source.replace(f'"{old}":', f'"{new}":')
+        source = source.replace(f"_cmd_{old}", f"_cmd_{new}")
+        source = source.replace(f"/{old}", f"/{new}")
+        return source
+
+    async def _directive_model_guided(self, source: str, instruction: str, guide: str) -> str:
+        """Ask coding_llm to make a targeted change described by instruction."""
+        self._log(f"[dim]  🤖  {CODING_MODEL}: {instruction[:70]}…[/dim]")
+
+        relevant_block = ""
+        for m in re.finditer(r'_cmd_\w+', instruction):
+            block = _extract_method_block(source, m.group(0))
+            if block:
+                relevant_block = block
+                break
+
+        prompt = "\n".join([
+            "Make the following targeted change to chatui.py:",
+            instruction,
+            "",
+            "STRUCTURAL GUIDE:",
+            guide[:600],
+            "",
+            *(["RELEVANT CODE:", relevant_block, ""] if relevant_block else []),
+            "Return the updated code for the changed section only. No explanation, no fences.",
+        ])
+        updated = await asyncio.to_thread(lambda: coding_llm.invoke(prompt).content.strip())
+
+        if relevant_block and updated and updated.strip() != relevant_block.strip():
+            return source.replace(relevant_block, updated, 1)
+        return source
+
+    async def _generate_new_method(self, cmd_name: str, description: str, examples: str) -> str:
+        prompt = "\n".join([
+            f"Write a `_cmd_{cmd_name}(self, _args: str = \"\")` method for the ChatApp Textual TUI class.",
+            f"Purpose: {description}",
+            "",
+            "Style examples — copy indentation and patterns exactly:",
+            examples,
+            "",
+            "Rules:",
+            "  - 4-space indent (method is inside a class)",
+            "  - Use self._log() to write output to the UI",
+            "  - Add @work decorator and make it async if the operation could take time",
+            "",
+            "Return ONLY the method definition. No class wrapper, no explanation, no fences.",
+        ])
+        return await asyncio.to_thread(lambda: coding_llm.invoke(prompt).content.strip())
+
+    async def _validate_and_heal(self, source: str) -> tuple[bool, str]:
+        """Validate source; self-heal on syntax error (max 2 retries). Returns (ok, source)."""
+        for attempt in range(3):
+            error = _validate_source(source)
+            if error is None:
+                return True, source
+
+            self._log(f"[yellow]⚠  Syntax error (attempt {attempt + 1}/3): {error}[/yellow]")
+            if attempt == 2:
+                self._log("[red]Could not heal source after 3 attempts — aborting.[/red]")
+                return False, source
+
+            lines  = source.splitlines(keepends=True)
+            m      = re.search(r'line (\d+)', error)
+            err_ln = int(m.group(1)) if m else len(lines)
+            start  = max(0, err_ln - 15)
+            end    = min(len(lines), err_ln + 15)
+            region = "".join(
+                f"{start + i + 1:5d} {ln}" for i, ln in enumerate(lines[start:end])
             )
 
-    # ── /apply command ────────────────────────────────────────────────────────
+            heal_prompt = "\n".join([
+                f"Fix this Python syntax error: {error}",
+                "",
+                "Problematic region:",
+                region,
+                "",
+                f"Return ONLY the corrected code for lines {start + 1}–{end}. No explanation.",
+            ])
+            fixed  = await asyncio.to_thread(lambda: coding_llm.invoke(heal_prompt).content.strip())
+            fixed  = re.sub(r'(?m)^\s*\d+\s+', '', fixed)
+            source = "".join(lines[:start]) + fixed + "\n" + "".join(lines[end:])
+
+        return False, source
+
+    # ── /apply command ────────────────────────────────────────────────────────────────
 
     @work
     async def _cmd_apply(self, _args: str = "") -> None:
-        if not self._pending_patch:
-            self._log("[dim]No pending patch — run /update first.[/dim]")
+        if not self._pending_source:
+            self._log("[dim]No pending changes — run /update first.[/dim]")
             return
 
-        self._log("[bold yellow]⚠  Apply pending patch to chatui.py?[/bold yellow]")
+        self._log("[bold yellow]⚠  Apply pending changes to chatui.py?[/bold yellow]")
         self._log("[dim]Type [bold]yes[/bold] to apply, anything else to cancel.[/dim]")
 
         inp = self.query_one(Input)
@@ -1051,41 +1272,27 @@ class ChatApp(App[None]):
             self._log("[dim]Cancelled.[/dim]")
             return
 
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        patch_data = self._pending_patch
-
-        def _run_patch(p_level: int, dry_run: bool) -> subprocess.CompletedProcess:
-            args = ["patch", f"-p{p_level}"]
-            if dry_run:
-                args.append("--dry-run")
-            return subprocess.run(
-                args, input=patch_data, capture_output=True, text=True, cwd=script_dir
-            )
-
-        # Try dry-run at -p1 (git-style headers) then -p0 (bare filename headers)
-        chosen = None
-        result = None
-        for level in (1, 0):
-            result = await asyncio.to_thread(_run_patch, level, True)
-            if result.returncode == 0:
-                chosen = level
-                break
-
-        if chosen is None:
-            self._log("[red]✗  Patch cannot be applied cleanly:[/red]")
-            if result:
-                self._log(f"[dim]{(result.stdout + result.stderr).strip()}[/dim]")
-            self._log("[dim]Edit chatui.py manually using the diff shown above.[/dim]")
+        target = os.path.abspath(__file__)
+        tmp    = target + ".tmp"
+        try:
+            with open(tmp, "w", encoding="utf-8") as f:
+                f.write(self._pending_source)
+            os.replace(tmp, target)
+        except OSError as e:
+            self._log(f"[red]✗  Write failed: {e}[/red]")
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
             return
 
-        result = await asyncio.to_thread(_run_patch, chosen, False)
-        if result.returncode == 0:
-            self._log("[green]✓  Patch applied successfully.[/green]")
-            self._log("[dim]Quit and restart chatui.py to load the changes.[/dim]")
-            self._pending_patch = None
-        else:
-            self._log(f"[red]✗  patch failed:[/red] {(result.stdout + result.stderr).strip()}")
+        head = _git_head_hash()
+        if head:
+            _set_sync_hash(head)
 
+        self._pending_source = None
+        self._log("[green]✓  Changes written to chatui.py.[/green]")
+        self._log("[dim]Quit and restart to load the new code.[/dim]")
     # ── /browse command + Ctrl+B ──────────────────────────────────────────────
 
     def action_browse(self) -> None:
@@ -1297,7 +1504,9 @@ class ChatApp(App[None]):
 
     # ── Streaming LLM helper ──────────────────────────────────────────────────
 
-    async def _stream_llm(self, prompt: str, *, model: ChatOllama | None = None) -> str:
+    async def _stream_llm(
+        self, prompt: str, *, model: ChatOllama | None = None, log_result: bool = True
+    ) -> str:
         m = model if model is not None else llm
         stream_widget = self.query_one("#stream", Static)
         stream_widget.display = True
@@ -1309,7 +1518,7 @@ class ChatApp(App[None]):
         finally:
             stream_widget.display = False
         accumulated = "".join(parts)
-        if accumulated:
+        if accumulated and log_result:
             self._log_md(accumulated)
         return accumulated
 
