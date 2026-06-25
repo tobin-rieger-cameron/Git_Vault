@@ -929,11 +929,17 @@ class ChatApp(App[None]):
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 
-    def _log(self, markup: str) -> None:
+    def _log(self, markup: str, save: bool = True) -> None:
         self.query_one(RichLog).write(Text.from_markup(markup))
+        if save:
+            plain = re.sub(r'\[/?[^\]]*\]', '', markup).strip()
+            if plain:
+                self._append_to_session("assistant", plain)
 
-    def _log_md(self, text: str) -> None:
+    def _log_md(self, text: str, save: bool = True) -> None:
         self.query_one(RichLog).write(Markdown(text))
+        if save:
+            self._append_to_session("assistant", text)
 
     def _update_subtitle(self) -> None:
         parts = [CHAT_MODEL]
@@ -978,7 +984,7 @@ class ChatApp(App[None]):
             self._dispatch_command(text)
         else:
             self._busy = True
-            self._log(f"\n[bold #ce9178]> {text}[/bold #ce9178]")
+            self._log(f"\n[bold #ce9178]> {text}[/bold #ce9178]", save=False)
             self._append_to_session("user", text)
             self._process(text)
 
@@ -1572,7 +1578,7 @@ class ChatApp(App[None]):
             stream_widget.display = False
         accumulated = "".join(parts)
         if accumulated and log_result:
-            self._log_md(accumulated)
+            self._log_md(accumulated, save=False)
         return accumulated
 
     # ── RAG chat worker ───────────────────────────────────────────────────────
