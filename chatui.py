@@ -905,6 +905,8 @@ _HELP_TEXT = """\
   [bold #5f87af]/web[/bold #5f87af]          toggle web search fallback on / off
   [bold #5f87af]/update[/bold #5f87af]       detect config directives and propose code changes
   [bold #5f87af]/apply[/bold #5f87af]        apply the diff proposed by /update (asks yes/no first)
+  [bold #5f87af]/edit[/bold #5f87af]         LLM-guided edit of a vault file (or the open file)
+  [bold #5f87af]/daily[/bold #5f87af]        summarise today's chat sessions; optionally save
   [bold #5f87af]/status[/bold #5f87af]       show current session state (web, file, history, vault)
   [bold #5f87af]/stats[/bold #5f87af]        show vault chunk count and DB size on disk
   [bold #5f87af]/version[/bold #5f87af]      print the chatui.py version string
@@ -1064,6 +1066,8 @@ class ChatApp(App[None]):
             "web":      self._cmd_web,
             "update":   self._cmd_update,
             "apply":    self._cmd_apply,
+            "edit":     self._cmd_edit,
+            "daily":    self._cmd_daily,
             "version":  lambda _: self._cmd_version(),
             "status":   lambda _: self._cmd_status(),
             "stats":    lambda _: self._cmd_stats(),
@@ -1109,6 +1113,129 @@ class ChatApp(App[None]):
             f"  patch pending: {'yes' if self._pending_source else 'no'}",
         ]
         self._log("\n".join(lines))
+
+    @work
+    async def _cmd_edit(self, args: str = "") -> None:
+        if args:
+            candidates = glob.glob(os.path.join(VAULT_PATH, "**", args), recursive=True)
+            if not candidates:
+                candidates = glob.glob(os.path.join(VAULT_PATH, f"**/*{args}*.md"), recursive=True)
+            if not candidates:
+                self._log(f"[red]No file matching '{args}' found in vault.[/red]")
+                return
+            target_path = candidates[0]
+        elif self._open_file:
+            target_path = self._open_file.path
+        else:
+            self._log("[yellow]Usage: /edit <filename>  (or /browse a file first)[/yellow]")
+            return
+
+        rel = os.path.relpath(target_path, VAULT_PATH)
+        try:
+            with open(target_path, encoding="utf-8") as f:
+                original = f.read()
+        except OSError as e:
+            self._log(f"[red]Could not read {rel}: {e}[/red]")
+            return
+
+        self._log(f"[dim]✏️   Proposing edits for [bold]{rel}[/bold]…[/dim]")
+        history_ctx = _format_history(self._history) if self._history else ""
+        prompt = "\n".join([
+            "You are editing a personal knowledge vault note. Improve the content by:",
+            "- Fixing any factual errors",
+            "- Adding missing information revealed in the conversation history",
+            "- Improving clarity and structure",
+            "- Preserving existing YAML frontmatter exactly",
+            "",
+            *(["--- CONVERSATION HISTORY ---", history_ctx, "--- END ---", ""] if history_ctx else []),
+            "--- FILE ---",
+            original,
+            "--- END FILE ---",
+            "",
+            "Return ONLY the complete updated file content. No explanation, no fences.",
+        ])
+        self._set_status("✏️ Generating edits…")
+        proposed = await self._stream_llm(prompt, model=coding_llm, log_result=False)
+
+        diff_lines = list(difflib.unified_diff(
+            original.splitlines(keepends=True),
+            proposed.splitlines(keepends=True),
+            fromfile=f"{rel} (current)",
+            tofile=f"{rel} (proposed)",
+            n=3,
+        ))
+        if not diff_lines:
+            self._log("[dim]No changes proposed.[/dim]")
+            return
+
+        self._log_md("```diff\n" + "".join(diff_lines) + "\n```")
+        self._log("[dim]Type [bold]yes[/bold] to apply, anything else to cancel.[/dim]")
+
+        inp = self.query_one(Input)
+        inp.placeholder = "yes / no…"
+        self._apply_queue = asyncio.Queue()
+        try:
+            resp = (await self._apply_queue.get()).strip().lower()
+        finally:
+            self._apply_queue = None
+            inp.placeholder = "Ask anything, or type /help for commands..."
+
+        if resp != "yes":
+            self._log("[dim]Cancelled.[/dim]")
+            return
+
+        try:
+            with open(target_path, "w", encoding="utf-8") as f:
+                f.write(proposed)
+            self._log(f"[green]✓  Saved edits to {rel}[/green]")
+            if self._open_file and self._open_file.path == target_path:
+                self._open_file = OpenFile(path=target_path, rel=rel, content=proposed)
+                self._update_subtitle()
+        except OSError as e:
+            self._log(f"[red]Write failed: {e}[/red]")
+
+    @work
+    async def _cmd_daily(self, _args: str = "") -> None:
+        today       = datetime.now().strftime("%Y-%m-%d")
+        today_files = sorted(glob.glob(os.path.join(CONVERSATIONS_DIR, f"{today}_*.md")))
+        if not today_files:
+            self._log(f"[dim]No conversation sessions for today ({today}).[/dim]")
+            return
+
+        self._log(f"[dim]📅  Summarising {len(today_files)} session(s) from {today}…[/dim]")
+        segments: list[str] = []
+        for path in today_files:
+            try:
+                with open(path, encoding="utf-8") as f:
+                    segments.append(f.read())
+            except OSError:
+                pass
+
+        combined = "\n\n---\n\n".join(segments)
+        summary_prompt = (
+            f"Summarise what was discussed across these {len(segments)} chat sessions "
+            f"from {today}. Be concise. Cover: key topics, questions answered, notes saved.\n\n"
+            f"{combined[:4000]}\n\nSummary:"
+        )
+        self._log(f"[bold]📅  Daily summary — {today}[/bold]")
+        self._set_status("📅 Summarising sessions…")
+        summary = await self._stream_llm(summary_prompt, model=coding_llm)
+
+        daily_path = os.path.join(CONVERSATIONS_DIR, f"{today}_daily.md")
+        if not os.path.exists(daily_path):
+            self._log("[dim]Save as daily note? Type [bold]yes[/bold] or anything else to skip.[/dim]")
+            inp = self.query_one(Input)
+            inp.placeholder = "yes / no…"
+            self._apply_queue = asyncio.Queue()
+            try:
+                resp = (await self._apply_queue.get()).strip().lower()
+            finally:
+                self._apply_queue = None
+                inp.placeholder = "Ask anything, or type /help for commands..."
+            if resp == "yes":
+                with open(daily_path, "w", encoding="utf-8") as f:
+                    f.write(f"# Daily Summary — {today}\n\n{summary}\n")
+                self._log(f"[dim]📅  Saved to {os.path.relpath(daily_path, VAULT_PATH)}[/dim]")
 
     def _cmd_stats(self) -> None:
         db_size = 0
