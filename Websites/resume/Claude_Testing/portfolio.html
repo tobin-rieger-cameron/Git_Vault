@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tobin Rieger Cameron — Portfolio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg0:     #FBF1C7;
+      --bg1:     #F4E8BE;
+      --bg2:     #EEE0B7;
+      --bg3:     #E5D5AD;
+      --bg4:     #DDCCAB;
+      --fg0:     #3c3836;
+      --fg1:     #504945;
+      --fg2:     #665c54;
+      --grey0:   #A89984;
+      --grey1:   #928374;
+      --orange:  #C35E0A;
+      --red:     #C14A4A;
+      --blu:     #45707A;
+      --grn:     #6C782E;
+      --radius:  3px;
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--sans);
+      background-color: var(--bg0);
+      color: var(--fg0);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* ── PAGE TRANSITION ─────────────────────────────────── */
+    #page-wrapper {
+      opacity: 0;
+      transform: translateY(18px);
+      transition: opacity 0.48s ease, transform 0.48s ease;
+    }
+
+    #page-wrapper.visible {
+      opacity: 1;
+      transform: translateY(0px);
+    }
+
+    #page-wrapper.exiting {
+      opacity: 0;
+      transform: translateY(-18px);
+      pointer-events: none;
+    }
+
+    /* ── NAVBAR ─────────────────────────────────────────── */
+    .navbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background-color: var(--bg2);
+      border-bottom: 1px solid var(--bg3);
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+
+    .navbar-inner {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 52px;
+    }
+
+    .navbar-name {
+      font-family: var(--mono);
+      font-size: .85rem;
+      font-weight: 600;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--orange);
+    }
+
+    .nav-list {
+      list-style: none;
+      display: flex;
+      gap: 1.75rem;
+    }
+
+    .nav-list a {
+      font-family: var(--mono);
+      font-size: .78rem;
+      font-weight: 400;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: var(--fg1);
+      text-decoration: none;
+      padding-bottom: 2px;
+      border-bottom: 1px solid transparent;
+      transition: color .15s, border-color .15s;
+    }
+
+    .nav-list a:hover,
+    .nav-list a:focus {
+      color: var(--orange);
+      border-bottom-color: var(--orange);
+      outline: none;
+    }
+
+    .nav-list a.active {
+      color: var(--orange);
+      border-bottom-color: var(--orange);
+    }
+
+    /* ── PORTFOLIO PAGE ──────────────────────────────────── */
+    .portfolio-page {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 4rem;
+    }
+
+    .portfolio-header {
+      padding-bottom: 2rem;
+      border-bottom: 1px solid var(--bg3);
+      margin-bottom: 2.5rem;
+    }
+
+    .portfolio-header h1 {
+      font-family: var(--mono);
+      font-size: 2rem;
+      font-weight: 600;
+      letter-spacing: -.01em;
+      color: var(--fg0);
+      line-height: 1.15;
+    }
+
+    .portfolio-header .tagline {
+      font-family: var(--mono);
+      font-size: .8rem;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--orange);
+      margin-top: .4rem;
+    }
+
+    .portfolio-header p {
+      margin-top: .75rem;
+      font-size: .88rem;
+      color: var(--fg2);
+      max-width: 520px;
+    }
+
+    /* ── FILTER BAR ──────────────────────────────────────── */
+    .filter-bar {
+      display: flex;
+      gap: .4rem;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+    }
+
+    .filter-btn {
+      font-family: var(--mono);
+      font-size: .68rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      padding: .25rem .7rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--bg3);
+      background: var(--bg1);
+      color: var(--fg1);
+      cursor: pointer;
+      transition: border-color .15s, color .15s, background .15s;
+    }
+
+    .filter-btn:hover,
+    .filter-btn.active {
+      border-color: var(--orange);
+      color: var(--orange);
+      background: transparent;
+    }
+
+    /* ── PHOTO GRID ──────────────────────────────────────── */
+    .photo-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: .75rem;
+    }
+
+    @media (max-width: 600px) {
+      .photo-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .photo-item {
+      position: relative;
+      aspect-ratio: 3 / 2;
+      overflow: hidden;
+      border-radius: var(--radius);
+      border: 1px solid var(--bg3);
+      background-color: var(--bg2);
+      cursor: pointer;
+      transition: transform .2s, box-shadow .2s, border-color .2s;
+    }
+
+    .photo-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(0,0,0,.1);
+      border-color: var(--orange);
+    }
+
+    .photo-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform .35s ease;
+    }
+
+    .photo-item:hover img {
+      transform: scale(1.04);
+    }
+
+    /* Placeholder for when no real image is provided */
+    .photo-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: .5rem;
+    }
+
+    .photo-placeholder-icon {
+      font-size: 1.6rem;
+      opacity: .35;
+    }
+
+    .photo-placeholder-label {
+      font-family: var(--mono);
+      font-size: .62rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--grey1);
+    }
+
+    .photo-caption {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(60,56,54,.72) 0%, transparent 55%);
+      opacity: 0;
+      transition: opacity .2s;
+      display: flex;
+      align-items: flex-end;
+      padding: .65rem .7rem;
+    }
+
+    .photo-item:hover .photo-caption {
+      opacity: 1;
+    }
+
+    .photo-caption span {
+      font-family: var(--mono);
+      font-size: .65rem;
+      letter-spacing: .06em;
+      color: #FBF1C7;
+      text-transform: uppercase;
+    }
+
+    /* ── LIGHTBOX ────────────────────────────────────────── */
+    #lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(40,36,34,.88);
+      z-index: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .25s;
+    }
+
+    #lightbox.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    #lightbox img {
+      max-width: 90vw;
+      max-height: 85vh;
+      object-fit: contain;
+      border-radius: var(--radius);
+      box-shadow: 0 8px 48px rgba(0,0,0,.5);
+    }
+
+    #lightbox-close {
+      position: absolute;
+      top: 1.2rem;
+      right: 1.4rem;
+      font-family: var(--mono);
+      font-size: .9rem;
+      color: var(--grey0);
+      cursor: pointer;
+      background: none;
+      border: none;
+      letter-spacing: .1em;
+      transition: color .15s;
+    }
+
+    #lightbox-close:hover { color: var(--bg0); }
+
+    /* ── FOOTER ──────────────────────────────────────────── */
+    .footer {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--bg3);
+      font-family: var(--mono);
+      font-size: .7rem;
+      color: var(--grey1);
+      letter-spacing: .05em;
+    }
+  </style>
+</head>
+
+<body>
+    <!-- NAVBAR -->
+    <header class="navbar" role="banner">
+      <div class="navbar-inner">
+        <span class="navbar-name">Tobin Rieger Cameron</span>
+        <nav role="navigation" aria-label="Page sections">
+          <ul class="nav-list">
+            <li><a href="index.html" onclick="event.preventDefault(); window.__navigateTo('claude_index_V2.html')">Home</a></li>
+            <!-- <li><a href="index.html#experience" onclick="event.preventDefault(); window.__navigateTo('claude_index_V2.html#experience')">Experience</a></li> -->
+            <!-- <li><a href="index.html#volunteering" onclick="event.preventDefault(); window.__navigateTo('claude_index_V2.html#volunteering')">Volunteering</a></li> -->
+            <!-- <li><a href="index.html#education" onclick="event.preventDefault(); window.__navigateTo('claude_index_V2.html#education')">Education</a></li> -->
+            <li><a href="portfolio.html" class="active">Portfolio</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+<div id="page-wrapper">
+
+
+  <div class="portfolio-page">
+
+    <!-- HEADER -->
+    <div class="portfolio-header">
+      <h1>Photography</h1>
+      <p class="tagline">Capturing Light</p>
+      <p>A selection of images shot on film and digital. Replace the placeholder cards below with your own images.</p>
+    </div>
+
+    <!-- FILTER BAR -->
+    <div class="filter-bar" id="filter-bar">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="film">Film</button>
+      <button class="filter-btn" data-filter="digital">Digital</button>
+      <button class="filter-btn" data-filter="portrait">Portrait</button>
+      <button class="filter-btn" data-filter="street">Street</button>
+    </div>
+
+    <!-- PHOTO GRID -->
+    <!-- To add real images, replace the .photo-placeholder div inside each .photo-item
+         with:  <img src="your-image.jpg" alt="description">
+         Keep the .photo-caption div for the hover label. -->
+    <div class="photo-grid" id="photo-grid">
+
+      <div class="photo-item" data-category="film" data-caption="Film · 35mm">
+        <div class="photo-placeholder">
+          <span class="photo-placeholder-icon">⬛</span>
+          <span class="photo-placeholder-label">Film · 35mm</span>
+        </div>
+        <div class="photo-caption"><span>Film · 35mm</span></div>
+      </div>
+
+      <div class="photo-item" data-category="digital" data-caption="Digital · 2023">
+        <div class="photo-placeholder">
+          <span class="photo-placeholder-icon">⬛</span>
+          <span class="photo-placeholder-label">Digital · 2023</span>
+        </div>
+        <div class="photo-caption"><span>Digital · 2023</span></div>
+      </div>
+
+      <div class="photo-item" data-category="portrait" data-caption="Portrait">
+        <div class="photo-placeholder">
+          <span class="photo-placeholder-icon">⬛</span>
+          <span class="photo-placeholder-label">Portrait</span>
+        </div>
+        <div class="photo-caption"><span>Portrait</span></div>
+      </div>
+
+      <div class="photo-item" data-category="street" data-caption="Street · Montréal">
+        <div class="photo-placeholder">
+          <span class="photo-placeholder-icon">⬛</span>
+          <span class="photo-placeholder-label">Street · Montréal</span>
+        </div>
+        <div class="photo-caption"><span>Street · Montréal</span></div>
+      </div>
+
+      <div class="photo-item" data-category="film" data-caption="Film · B&W">
+        <div class="photo-placeholder">
+          <span class="photo-placeholder-icon">⬛</span>
+          <span class="photo-placeholder-label">Film · B&amp;W</span>
+        </div>
+        <div class="photo-caption"><span>Film · B&amp;W</span></div>
+      </div>
+
+      <div class="photo-item" data-category="digital" data-caption="Digital · 2022">
+        <div class="photo-placeholder">
+          <span class="photo-placeholder-icon">⬛</span>
+          <span class="photo-placeholder-label">Digital · 2022</span>
+        </div>
+        <div class="photo-caption"><span>Digital · 2022</span></div>
+      </div>
+
+      <div class="photo-item" data-category="portrait" data-caption="Portrait · Natural Light">
+        <div class="photo-placeholder">
+          <span class="photo-placeholder-icon">⬛</span>
+          <span class="photo-placeholder-label">Portrait · Natural light</span>
+        </div>
+        <div class="photo-caption"><span>Portrait · Natural light</span></div>
+      </div>
+
+      <div class="photo-item" data-category="street" data-caption="Street · Chelsea">
+        <div class="photo-placeholder">
+          <span class="photo-placeholder-icon">⬛</span>
+          <span class="photo-placeholder-label">Street · Chelsea</span>
+        </div>
+        <div class="photo-caption"><span>Street · Chelsea</span></div>
+      </div>
+
+      <div class="photo-item" data-category="film" data-caption="Film · Colour">
+        <div class="photo-placeholder">
+          <span class="photo-placeholder-icon">⬛</span>
+          <span class="photo-placeholder-label">Film · Colour</span>
+        </div>
+        <div class="photo-caption"><span>Film · Colour</span></div>
+      </div>
+
+    </div><!-- /.photo-grid -->
+  </div><!-- /.portfolio-page -->
+
+  <footer class="footer">
+    <span>tobincameron@gmail.com · (613) 290-2791 · Gatineau, QC</span>
+  </footer>
+
+</div><!-- /#page-wrapper -->
+
+<!-- LIGHTBOX (activates when items have real <img> tags) -->
+<div id="lightbox">
+  <button id="lightbox-close">[ close ]</button>
+  <img id="lightbox-img" src="" alt="">
+</div>
+
+<script>
+  // ── Fade in on load ──────────────────────────────────────
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      document.getElementById('page-wrapper').classList.add('visible');
+    });
+  });
+
+  // ── Page transition out ──────────────────────────────────
+  window.__navigateTo = function(href) {
+    const wrapper = document.getElementById('page-wrapper');
+    wrapper.classList.remove('visible');
+    wrapper.classList.add('exiting');
+    setTimeout(() => { window.location.href = href; }, 520);
+  };
+
+  // ── Filter buttons ───────────────────────────────────────
+  document.getElementById('filter-bar').addEventListener('click', e => {
+    const btn = e.target.closest('.filter-btn');
+    if (!btn) return;
+
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    const filter = btn.dataset.filter;
+    document.querySelectorAll('.photo-item').forEach(item => {
+      const match = filter === 'all' || item.dataset.category === filter;
+      item.style.display = match ? '' : 'none';
+    });
+  });
+
+  // ── Lightbox (for when real images are added) ────────────
+  const lightbox    = document.getElementById('lightbox');
+  const lightboxImg = document.getElementById('lightbox-img');
+
+  document.getElementById('photo-grid').addEventListener('click', e => {
+    const item = e.target.closest('.photo-item');
+    if (!item) return;
+    const img = item.querySelector('img');
+    if (!img) return; // no real image yet — placeholder, skip
+
+    lightboxImg.src = img.src;
+    lightboxImg.alt = img.alt;
+    lightbox.classList.add('open');
+  });
+
+  document.getElementById('lightbox-close').addEventListener('click', () => {
+    lightbox.classList.remove('open');
+  });
+
+  lightbox.addEventListener('click', e => {
+    if (e.target === lightbox) lightbox.classList.remove('open');
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') lightbox.classList.remove('open');
+  });
+</script>
+</body>
+</html>
