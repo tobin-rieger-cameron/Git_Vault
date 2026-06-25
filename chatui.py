@@ -87,7 +87,7 @@ CHUNK_OVERLAP        = int(_cfg.get("chunk_overlap",        50))
 SIMILARITY_THRESHOLD = float(_cfg.get("similarity_threshold", 0.5))
 HISTORY_WINDOW       = int(_cfg.get("history_window",       4))
 
-_SKIP_DIRS        = {"__pycache__", "local_db", "conversations", ".git", "config"}
+_SKIP_DIRS        = {"__pycache__", "local_db", ".git", "config"}
 _UNCERTAIN_PREFIX = "i'm not certain"
 
 
