@@ -999,6 +999,12 @@ class ChatApp(App[None]):
         except Exception:
             pass
 
+    def _set_status(self, label: str) -> None:
+        try:
+            self.query_one("#busy-bar", Static).update(f"  ⏳  {label}")
+        except Exception:
+            pass
+
     def _queue_note(self, question: str, answer: str, source: str, suggestion: str) -> None:
         self._pending.append(PendingNote(question, answer, source, suggestion))
         self._update_subtitle()
@@ -1708,6 +1714,7 @@ class ChatApp(App[None]):
                 return
 
             # ── Vault retrieval with tag-aware second pass ─────────────────────
+            self._set_status("🔍 Searching vault…")
             results   = await asyncio.to_thread(
                 lambda: self.db.similarity_search_with_relevance_scores(question, k=TOP_K)
             )
@@ -1731,7 +1738,12 @@ class ChatApp(App[None]):
             self._log(f"[dim]🔍  Best vault match: {top_score:.2f}[/dim]")
 
             if top_score >= SIMILARITY_THRESHOLD:
-                self._log("[dim]📓  Source: vault notes[/dim]")
+                sources = sorted({
+                    os.path.relpath(d.metadata["source"], VAULT_PATH)
+                    for d in chunks if d.metadata.get("source")
+                })
+                self._log(f"[dim]📓  Source: {', '.join(sources[:3]) if sources else 'vault notes'}[/dim]")
+                self._set_status("✍ Generating from vault…")
                 answer = await self._stream_llm(build_vault_prompt(question, chunks, self._history[:-1], file_ctx))
                 self._history.append({"role": "assistant", "content": answer})
                 self._append_to_session("assistant", answer)
@@ -1739,6 +1751,7 @@ class ChatApp(App[None]):
 
             # ── Model knowledge (always shown) ─────────────────────────────────
             self._log("[dim]🧠  Vault score too low — asking model[/dim]")
+            self._set_status("✍ Generating…")
             model_answer = await self._stream_llm(build_knowledge_prompt(question, self._history[:-1], file_ctx))
             uncertain = model_answer.strip().lower().startswith(_UNCERTAIN_PREFIX)
             self._log(f"[dim]🧠  Model knowledge{'  (uncertain)' if uncertain else ''}[/dim]")
@@ -1750,11 +1763,13 @@ class ChatApp(App[None]):
 
             # ── Web search supplement when uncertain ───────────────────────────
             if uncertain and self._web_on:
+                self._set_status("🌐 Searching web…")
                 self._log("[dim]🌐  Supplementing with web search…[/dim]")
                 web_ctx = await asyncio.to_thread(lambda: web_search(question))
 
                 if not web_ctx.startswith(("No results", "Web search failed", "duckduckgo")):
                     self._log("[dim]🌐  Web result:[/dim]")
+                    self._set_status("✍ Generating from web…")
                     web_answer = await self._stream_llm(build_web_prompt(question, web_ctx, self._history))
                     web_suggestion = await asyncio.to_thread(lambda: get_concept_suggestion(question, web_answer))
                     self._queue_note(question, web_answer, "web search", web_suggestion)
