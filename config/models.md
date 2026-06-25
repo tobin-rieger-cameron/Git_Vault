@@ -21,8 +21,7 @@ models:
 | Role | Model | Purpose |
 |---|---|---|
 | `chat_model` | `llama3.2:3b` | Live streaming responses — speed over depth |
-| `coding_model` | `qwen2.5-coder:7b` | `/organize`, concept suggestions — fast, good enough |
-| `patch_model` | `qwen2.5-coder:14b` | `/update` code generation only — quality over speed |
+| `coding_model` | `qwen2.5-coder:7b` | `/organize`, `/update` code generation, concept suggestions |
 | `embed_model` | `nomic-embed-text` | Vault ingestion and similarity search |
 
 ## Installed models
@@ -33,8 +32,7 @@ Models listed under `models:` in the frontmatter are pulled automatically on lau
 |---|---|---|
 | `llama3.2:3b` | 2.0 GB | Fast chat model |
 | `qwen2.5-coder:7b` | 4.7 GB | Coding-specific model (kept as fallback) |
-| `qwen2.5-coder:14b` | 9.0 GB | Larger coding model — OOM on 16GB systems with typical background RAM use |
-| `deepseek-r1:8b` | 5.0 GB | Reasoning model — strong at following multi-step instructions |
+| `deepseek-r1:8b` | 5.0 GB | Reasoning model — strong at following multi-step instructions; good `coding_model` alternative |
 | `nomic-embed-text` | 274 MB | Embedding — do not change without re-ingesting |
 
 ## Notes
