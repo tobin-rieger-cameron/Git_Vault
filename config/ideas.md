@@ -58,7 +58,7 @@ summary: Backlog of improvement ideas for chatui.py — not yet directives, just
 
 ### Issues found
 
-- **Web fallback not firing when it should** — `_UNCERTAIN_PREFIX = "i'm not certain"` is the only trigger. llama3.2:3b almost never produces this exact phrase. Should expand to check for uncertainty signals in the response (e.g. "I don't know", "I'm not sure", "my knowledge may be").
+- **Web fallback not firing when it should** — `_UNCERTAIN_PREFIX = "i'm not certain"` is the only trigger. llama3.2:3b almost never produces this exact phrase. Should expand to a list of uncertainty signals: "i don't know", "i'm not sure", "i cannot", "i'm unable", "my knowledge may be", "i don't have information", or check if vault score was below threshold (fallback to model knowledge path) as a proxy for "the vault doesn't know either".
 - **Duplicate prompts sent** — polling condition `grep -q "Ask anything"` matches the input placeholder which is always visible. Need to poll on session file growth + "Source:" appearing instead. (Bug in testing harness, not in chatui.)
 - **`/savefile` not prompted after 25 model-knowledge answers** — all answers that used model knowledge queued as pending notes, but no `/savefile` was run. These would be lost when the session ends. Consider auto-prompting `/savefile` reminder when pending count exceeds a threshold (e.g. 5).
 - **Conversation chunks in DB are large and noisy** — daily log and claude-code transcript are now embedded alongside vault notes. They score as "vault matches" for almost any query due to broad vocabulary coverage, potentially pushing out more relevant dedicated notes. May want to exclude certain conversation files from ingestion, or weight them differently.
