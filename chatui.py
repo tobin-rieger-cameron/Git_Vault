@@ -653,13 +653,13 @@ Footer { background: #252526; color: #6c6c6c; }
 RichLog {
     height: 1fr;
     background: #1e1e1e;
-    padding: 1 2;
+    padding: 1 4;
     scrollbar-color: #454545;
     scrollbar-background: #1e1e1e;
 }
 
 Input {
-    margin: 0 1 1 1;
+    margin: 0 4 1 4;
     background: #252526;
     color: #d4d4d4;
     border: tall #454545;
@@ -670,9 +670,17 @@ Input:focus { border: tall #5f87af; }
 
 #stream {
     display: none;
-    margin: 0 2;
+    margin: 0 4;
     padding: 0 1;
     color: #d4d4d4;
+}
+
+#busy-bar {
+    display: none;
+    height: 1;
+    background: #252526;
+    color: #5f87af;
+    text-align: center;
 }
 """
 
@@ -869,6 +877,7 @@ _HELP_TEXT = """\
   [bold #5f87af]/update[/bold #5f87af]       detect config directives and propose code changes
   [bold #5f87af]/apply[/bold #5f87af]        apply the diff proposed by /update (asks yes/no first)
   [bold #5f87af]/status[/bold #5f87af]       show current session state (web, file, history, vault)
+  [bold #5f87af]/stats[/bold #5f87af]        show vault chunk count and DB size on disk
   [bold #5f87af]/version[/bold #5f87af]      print the chatui.py version string
 [dim]Ctrl+S  /savefile  ·  Ctrl+B  /browse  ·  Ctrl+Q  quit[/dim]\
 """
@@ -908,6 +917,7 @@ class ChatApp(App[None]):
         yield Header()
         yield RichLog(id="log", markup=True, wrap=True, highlight=False)
         yield Static("", id="stream")
+        yield Static("", id="busy-bar")
         yield Input(placeholder="Ask anything, or type /help for commands...", id="input")
         yield Footer()
 
@@ -951,6 +961,15 @@ class ChatApp(App[None]):
             parts.append(f"📄 {self._open_file.rel}")
         self.sub_title = "  ·  ".join(parts)
 
+    def _set_busy(self, busy: bool, label: str = "Processing…") -> None:
+        self._busy = busy
+        try:
+            bar = self.query_one("#busy-bar", Static)
+            bar.update(f"  ⏳  {label}" if busy else "")
+            bar.display = busy
+        except Exception:
+            pass
+
     def _queue_note(self, question: str, answer: str, source: str, suggestion: str) -> None:
         self._pending.append(PendingNote(question, answer, source, suggestion))
         self._update_subtitle()
@@ -983,7 +1002,7 @@ class ChatApp(App[None]):
         if text.startswith("/"):
             self._dispatch_command(text)
         else:
-            self._busy = True
+            self._set_busy(True)
             self._log(f"\n[bold #ce9178]> {text}[/bold #ce9178]", save=False)
             self._append_to_session("user", text)
             self._process(text)
@@ -1006,8 +1025,9 @@ class ChatApp(App[None]):
             "web":      self._cmd_web,
             "update":   self._cmd_update,
             "apply":    self._cmd_apply,
-            "version":   lambda _: self._cmd_version(),
-            "status":    lambda _: self._cmd_status(),
+            "version":  lambda _: self._cmd_version(),
+            "status":   lambda _: self._cmd_status(),
+            "stats":    lambda _: self._cmd_stats(),
         }
 
         if cmd in handlers:
@@ -1035,15 +1055,8 @@ class ChatApp(App[None]):
         state = "[green]on[/green]" if self._web_on else "[red]off[/red]"
         self._log(f"[dim]Web search fallback: {state}[/dim]")
 
-    @work
-    async def _cmd_version(self, args: str = "") -> None:
-        version = "0.1.0"  # Default version string
-        try:
-            with open("VERSION", "r") as file:
-                version = file.read().strip()
-        except FileNotFoundError:
-            pass
-        self._log(f"[dim]ChatUI.py version: {version}[/dim]")
+    def _cmd_version(self) -> None:
+        self._log("[dim]ChatUI version 0.2.0[/dim]")
 
     def _cmd_status(self) -> None:
         web = "[green]on[/green]" if self._web_on else "[red]off[/red]"
@@ -1055,6 +1068,29 @@ class ChatApp(App[None]):
             f"  pending notes: {len(self._pending)}",
             f"  vault:         {'loaded' if self.db else '[yellow]not loaded — run /ingest[/yellow]'}",
             f"  patch pending: {'yes' if self._pending_source else 'no'}",
+        ]
+        self._log("\n".join(lines))
+
+    def _cmd_stats(self) -> None:
+        db_size = 0
+        if os.path.exists(DB_PATH):
+            for dirpath, _, filenames in os.walk(DB_PATH):
+                for fname in filenames:
+                    try:
+                        db_size += os.path.getsize(os.path.join(dirpath, fname))
+                    except OSError:
+                        pass
+        n_chunks = self.db._collection.count() if self.db else 0
+        n_convs  = len(glob.glob(os.path.join(CONVERSATIONS_DIR, "*.md")))
+        db_mb    = db_size / (1024 * 1024)
+        md_files = glob.glob(os.path.join(VAULT_PATH, "*.md"))
+        lines = [
+            "[bold]Vault statistics[/bold]",
+            f"  chunks indexed:    {n_chunks}",
+            f"  DB size on disk:   {db_mb:.1f} MB",
+            f"  vault notes:       {len(md_files)}",
+            f"  saved sessions:    {n_convs}",
+            f"  vault path:        {VAULT_PATH}",
         ]
         self._log("\n".join(lines))
 
@@ -1377,7 +1413,7 @@ class ChatApp(App[None]):
 
     @work
     async def _cmd_ingest(self, _args: str = "") -> None:
-        self._busy = True
+        self._set_busy(True, "Ingesting vault…")
         self._log("[dim]📚 Ingesting vault…[/dim]")
         try:
             new_db   = await asyncio.to_thread(ingest_vault)
@@ -1387,7 +1423,7 @@ class ChatApp(App[None]):
         except Exception as e:
             self._log(f"[red]Ingest failed: {e}[/red]")
         finally:
-            self._busy = False
+            self._set_busy(False)
             self.query_one(Input).focus()
 
     # ── /organize command ─────────────────────────────────────────────────────
@@ -1535,6 +1571,47 @@ class ChatApp(App[None]):
                 notes[stem]["content"] = new_content
                 self._log("  [green]✓ Links added.[/green]")
 
+        # ── Pass 3: Condense short conversation sessions ──────────────────────────
+        self._log("\n[bold]Checking conversation logs for short/command-only sessions…[/bold]")
+        conv_files = sorted(glob.glob(os.path.join(CONVERSATIONS_DIR, "*.md")))
+        to_condense: list[tuple[str, str]] = []
+        for conv_path in conv_files:
+            try:
+                with open(conv_path, encoding="utf-8") as fh:
+                    conv_content = fh.read()
+            except OSError:
+                continue
+            user_msgs = re.findall(r'^## \[\d+:\d+\] User\s*$', conv_content, re.MULTILINE)
+            cmd_msgs  = re.findall(r'^/\w+', conv_content, re.MULTILINE)
+            if len(user_msgs) <= 3 and len(conv_content) < 3000:
+                to_condense.append((conv_path, conv_content))
+
+        if not to_condense:
+            self._log("[dim]No short sessions found.[/dim]")
+        else:
+            self._log(f"[dim]Found {len(to_condense)} short session(s).[/dim]")
+            for conv_path, conv_content in to_condense:
+                basename = os.path.basename(conv_path)
+                preview  = conv_content.replace("\n", " ")[:120]
+                self._log(f"\n[bold #5f87af]{basename}[/bold #5f87af]")
+                self._log(f"  [dim]{preview}…[/dim]")
+                raw = await self._org_prompt("  Enter=condense  ·  skip=keep:")
+                if raw.lower() == "skip":
+                    continue
+                summary_prompt = (
+                    "Summarise this chat session in 1-2 lines. "
+                    "Focus on what was accomplished.\n\n"
+                    f"{conv_content[:1500]}\n\nSummary:"
+                )
+                summary = await asyncio.to_thread(
+                    lambda p=summary_prompt: coding_llm.invoke(p).content.strip()
+                )
+                ts_m = re.search(r'# Chat Session — (.+)', conv_content)
+                ts   = ts_m.group(1).strip() if ts_m else basename
+                with open(conv_path, "w", encoding="utf-8") as fh:
+                    fh.write(f"# Chat Session — {ts}\n\n*[condensed by /organize]*\n\n{summary}\n")
+                self._log("  [green]✓ Condensed.[/green]")
+
         self._log("\n[bold green]✓ Vault organisation complete.[/bold green]")
 
     # ── /savemd command + Ctrl+S ──────────────────────────────────────────────
@@ -1652,7 +1729,7 @@ class ChatApp(App[None]):
                     self._log("[dim]🌐  No web results.[/dim]")
 
         finally:
-            self._busy = False
+            self._set_busy(False)
             self.query_one(Input).focus()
 
     # ── Actions ───────────────────────────────────────────────────────────────
