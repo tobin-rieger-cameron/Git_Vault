@@ -45,6 +45,13 @@ try:
 except ImportError:
     _DDG_AVAILABLE = False
 
+try:
+    from watchdog.observers import Observer
+    from watchdog.events import FileSystemEventHandler
+    _WATCHDOG_AVAILABLE = True
+except ImportError:
+    _WATCHDOG_AVAILABLE = False
+
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
@@ -521,6 +528,33 @@ def load_existing_db() -> Chroma | None:
     return Chroma(persist_directory=DB_PATH, embedding_function=embeddings)
 
 
+def _reingest_file(path: str, db: Chroma) -> int:
+    """Incrementally update a single file's chunks in an existing ChromaDB."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            content = f.read()
+    except OSError:
+        return 0
+    db._collection.delete(where={"source": path})
+    tags = _extract_frontmatter_tags(content)
+    meta: dict = {"source": path}
+    meta.update(_tags_to_metadata(tags))
+    doc = Document(page_content=content, metadata=meta)
+    _MD_HEADERS  = [("#", "h1"), ("##", "h2"), ("###", "h3")]
+    md_sp  = MarkdownHeaderTextSplitter(headers_to_split_on=_MD_HEADERS, strip_headers=False)
+    ch_sp  = RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
+    try:
+        splits = md_sp.split_text(content)
+    except Exception:
+        splits = [doc]
+    for s in splits:
+        s.metadata.update(meta)
+    chunks = ch_sp.split_documents(splits)
+    if chunks:
+        db.add_documents(chunks)
+    return len(chunks)
+
+
 # ── Web Search ────────────────────────────────────────────────────────────────
 
 def web_search(query: str) -> str:
@@ -670,6 +704,32 @@ def build_web_prompt(question: str, web_context: str, history: list[dict]) -> st
         "Answer:",
     ]
     return "\n".join(parts)
+
+
+# ── Vault file watcher ───────────────────────────────────────────────────────
+
+if _WATCHDOG_AVAILABLE:
+    class _VaultEventHandler(FileSystemEventHandler):
+        _SKIP = {"conversations", "config", "local_db", "__pycache__", ".git"}
+
+        def __init__(self, app: "ChatApp") -> None:
+            self._app = app
+
+        def _handle(self, path: str) -> None:
+            if not path.endswith(".md"):
+                return
+            rel = os.path.relpath(path, VAULT_PATH)
+            if any(rel.startswith(s) for s in self._SKIP):
+                return
+            self._app.call_from_thread(self._app._on_vault_file_changed, path)
+
+        def on_modified(self, event) -> None:  # type: ignore[override]
+            if not event.is_directory:
+                self._handle(event.src_path)
+
+        def on_created(self, event) -> None:  # type: ignore[override]
+            if not event.is_directory:
+                self._handle(event.src_path)
 
 
 # ── Shared CSS ────────────────────────────────────────────────────────────────
@@ -907,6 +967,7 @@ _HELP_TEXT = """\
   [bold #5f87af]/apply[/bold #5f87af]        apply the diff proposed by /update (asks yes/no first)
   [bold #5f87af]/edit[/bold #5f87af]         LLM-guided edit of a vault file (or the open file)
   [bold #5f87af]/daily[/bold #5f87af]        summarise today's chat sessions; optionally save
+  [bold #5f87af]/export[/bold #5f87af]       export Q&A pairs as fine-tuning data (jsonl/alpaca/csv)
   [bold #5f87af]/status[/bold #5f87af]       show current session state (web, file, history, vault)
   [bold #5f87af]/stats[/bold #5f87af]        show vault chunk count and DB size on disk
   [bold #5f87af]/version[/bold #5f87af]      print the chatui.py version string
@@ -966,7 +1027,29 @@ class ChatApp(App[None]):
         else:
             self._log("[dim]Vault loaded. Ask anything, or type /help for commands.[/dim]\n")
 
+        if _WATCHDOG_AVAILABLE and self.db is not None:
+            self._observer = Observer()
+            self._observer.schedule(_VaultEventHandler(self), VAULT_PATH, recursive=True)
+            self._observer.start()
+            self._log("[dim]👁  Vault watcher active — edits auto-reingest.[/dim]")
+
         self.query_one(Input).focus()
+
+    def on_unmount(self) -> None:
+        if _WATCHDOG_AVAILABLE and hasattr(self, "_observer") and self._observer:
+            self._observer.stop()
+
+    @work
+    async def _on_vault_file_changed(self, path: str) -> None:
+        if self.db is None or self._busy:
+            return
+        await asyncio.sleep(1.0)
+        rel = os.path.relpath(path, VAULT_PATH)
+        try:
+            n = await asyncio.to_thread(_reingest_file, path, self.db)
+            self._log(f"[dim]🔄  Auto-reingested {rel} ({n} chunk(s))[/dim]")
+        except Exception as e:
+            self._log(f"[dim][yellow]Auto-reingest failed for {rel}: {e}[/yellow][/dim]")
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -1068,6 +1151,7 @@ class ChatApp(App[None]):
             "apply":    self._cmd_apply,
             "edit":     self._cmd_edit,
             "daily":    self._cmd_daily,
+            "export":   self._cmd_export,
             "version":  lambda _: self._cmd_version(),
             "status":   lambda _: self._cmd_status(),
             "stats":    lambda _: self._cmd_stats(),
@@ -1236,6 +1320,75 @@ class ChatApp(App[None]):
                 with open(daily_path, "w", encoding="utf-8") as f:
                     f.write(f"# Daily Summary — {today}\n\n{summary}\n")
                 self._log(f"[dim]📅  Saved to {os.path.relpath(daily_path, VAULT_PATH)}[/dim]")
+
+    @work
+    async def _cmd_export(self, args: str = "") -> None:
+        import json as _json
+        fmt = args.strip().lower() or "jsonl"
+        if fmt not in ("jsonl", "alpaca", "csv"):
+            self._log(f"[yellow]Unknown format '{fmt}'. Use: jsonl (default), alpaca, csv[/yellow]")
+            return
+
+        pairs: list[dict] = []
+
+        # Q&A blocks saved by /savefile
+        for path in glob.glob(os.path.join(VAULT_PATH, "*.md")):
+            try:
+                with open(path, encoding="utf-8") as f:
+                    content = f.read()
+            except OSError:
+                continue
+            for q, a in re.findall(
+                r'## Q: (.+?)\n(?:.*?\n)?\n(.*?)(?=\n## Q:|\Z)', content, re.DOTALL
+            ):
+                if q.strip() and a.strip():
+                    pairs.append({"instruction": q.strip(), "response": a.strip()})
+
+        # High-quality exchanges from recent session logs
+        conv_files = sorted(glob.glob(os.path.join(CONVERSATIONS_DIR, "*.md")))[-20:]
+        for path in conv_files:
+            try:
+                with open(path, encoding="utf-8") as f:
+                    content = f.read()
+            except OSError:
+                continue
+            sections = re.split(r'^## \[\d+:\d+\] (User|Assistant)\s*$', content, flags=re.MULTILINE)
+            role, last_q = None, ""
+            for part in sections:
+                part = part.strip()
+                if part in ("User", "Assistant"):
+                    role = part
+                elif role == "User" and part and not part.startswith("/"):
+                    last_q = part
+                elif role == "Assistant" and last_q and len(part) > 80:
+                    pairs.append({"instruction": last_q, "response": part})
+                    last_q = ""
+
+        if not pairs:
+            self._log("[dim]No Q&A pairs found to export.[/dim]")
+            return
+
+        ext      = "jsonl" if fmt == "jsonl" else fmt
+        out_path = os.path.join(VAULT_PATH, f"training_data.{ext}")
+        with open(out_path, "w", encoding="utf-8") as f:
+            if fmt == "jsonl":
+                for p in pairs:
+                    f.write(_json.dumps({"instruction": p["instruction"], "output": p["response"]}) + "\n")
+            elif fmt == "alpaca":
+                _json.dump(
+                    [{"instruction": p["instruction"], "input": "", "output": p["response"]} for p in pairs],
+                    f, indent=2, ensure_ascii=False,
+                )
+            elif fmt == "csv":
+                f.write("instruction,response\n")
+                for p in pairs:
+                    q = p["instruction"].replace('"', '""')
+                    a = p["response"].replace('"', '""')
+                    f.write(f'"{q}","{a}"\n')
+
+        rel = os.path.relpath(out_path, VAULT_PATH)
+        self._log(f"[green]✓  Exported {len(pairs)} Q&A pairs → {rel}[/green]")
+        self._log(f"[dim]Format: {fmt.upper()} — ready for fine-tuning tools (unsloth, axolotl, llama.cpp)[/dim]")
 
     def _cmd_stats(self) -> None:
         db_size = 0
