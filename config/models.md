@@ -21,7 +21,8 @@ models:
 | Role | Model | Purpose |
 |---|---|---|
 | `chat_model` | `llama3.2:3b` | Live streaming responses — speed over depth |
-| `coding_model` | `qwen2.5-coder:7b` | `/organize`, `/update` patches, concept suggestions |
+| `coding_model` | `qwen2.5-coder:7b` | `/organize`, concept suggestions — fast, good enough |
+| `patch_model` | `qwen2.5-coder:14b` | `/update` code generation only — quality over speed |
 | `embed_model` | `nomic-embed-text` | Vault ingestion and similarity search |
 
 ## Installed models

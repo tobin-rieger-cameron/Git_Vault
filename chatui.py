@@ -869,6 +869,7 @@ _HELP_TEXT = """\
   [bold #5f87af]/update[/bold #5f87af]       detect config drift and propose code patches
   [bold #5f87af]/apply[/bold #5f87af]        apply the diff proposed by /update (asks yes/no first)
 
+  [bold #5f87af]/version[/bold #5f87af]       add a /version command that prints the chatui.py versio
 [dim]Ctrl+S  /savefile  ·  Ctrl+B  /browse  ·  Ctrl+Q  quit[/dim]\
 """
 
@@ -996,6 +997,7 @@ class ChatApp(App[None]):
             "web":      self._cmd_web,
             "update":   self._cmd_update,
             "apply":    self._cmd_apply,
+            "version":   lambda _: self._cmd_version(),
         }
 
         if cmd in handlers:
@@ -1019,6 +1021,16 @@ class ChatApp(App[None]):
             self._web_on = not self._web_on
         state = "[green]on[/green]" if self._web_on else "[red]off[/red]"
         self._log(f"[dim]Web search fallback: {state}[/dim]")
+
+    @work
+    async def _cmd_version(self, args: str = "") -> None:
+        version = "0.1.0"  # Default version string
+        try:
+            with open("VERSION", "r") as file:
+                version = file.read().strip()
+        except FileNotFoundError:
+            pass
+        self._log(f"[dim]ChatUI.py version: {version}[/dim]")
 
     # ── /update command ─────────────────────────────────────────────────────────────
 
@@ -1129,13 +1141,32 @@ class ChatApp(App[None]):
             source      = source.replace(help_block, new_help, 1)
 
         # Method body (model-generated, ~60-line context)
-        if f"_cmd_{name}" not in source:
+        if f"def _cmd_{name}" not in source:
             examples    = "\n\n".join(filter(None, [
                 _extract_method_block(source, "_cmd_clear"),
                 _extract_method_block(source, "_cmd_web"),
             ]))
             method_code = await self._generate_new_method(name, description, examples)
             if method_code:
+                # Strip markdown fences and normalise to 4-space class-method indent
+                method_code = re.sub(r'^```\w*\s*\n?', '', method_code)
+                method_code = re.sub(r'\n?```\s*$', '', method_code).strip()
+                lines_m = method_code.splitlines()
+                min_ind = min((len(l) - len(l.lstrip()) for l in lines_m if l.strip()), default=0)
+                if min_ind != 4:
+                    method_code = "\n".join(
+                        "    " + l[min_ind:] if l.strip() else l for l in lines_m
+                    )
+                # Validate in isolation before inserting into the full source
+                import ast as _ast
+                try:
+                    _ast.parse("class _T:\n" + method_code + "\n")
+                except SyntaxError as e:
+                    self._log(f"[yellow]⚠  Generated /{name} method invalid ({e.msg}) — inserting stub[/yellow]")
+                    method_code = (
+                        f"    def _cmd_{name}(self, _args: str = \"\") -> None:\n"
+                        f"        self._log(\"[dim]/{name} — stub (edit manually)[/dim]\")\n"
+                    )
                 source = _insert_method_after(source, "_cmd_web", method_code)
 
         return source
@@ -1243,7 +1274,9 @@ class ChatApp(App[None]):
                 f"Return ONLY the corrected code for lines {start + 1}–{end}. No explanation.",
             ])
             fixed  = await asyncio.to_thread(lambda: coding_llm.invoke(heal_prompt).content.strip())
-            fixed  = re.sub(r'(?m)^\s*\d+\s+', '', fixed)
+            fixed  = re.sub(r'^```\w*\s*\n?', '', fixed)
+            fixed  = re.sub(r'\n?```\s*$', '', fixed)
+            fixed  = re.sub(r'(?m)^\d+\s+', '', fixed)  # strip leading line numbers only
             source = "".join(lines[:start]) + fixed + "\n" + "".join(lines[end:])
 
         return False, source
