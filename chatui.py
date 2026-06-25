@@ -37,7 +37,7 @@ from langchain_ollama import OllamaEmbeddings, ChatOllama
 from langchain_community.vectorstores import Chroma
 from langchain_community.document_loaders import DirectoryLoader
 from langchain_core.documents import Document
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
 
 try:
     from duckduckgo_search import DDGS
@@ -484,8 +484,22 @@ def ingest_vault() -> Chroma:
             except OSError:
                 pass
 
-    splitter = RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
-    chunks   = splitter.split_documents(docs)
+    _MD_HEADERS   = [("#", "h1"), ("##", "h2"), ("###", "h3")]
+    md_splitter   = MarkdownHeaderTextSplitter(headers_to_split_on=_MD_HEADERS, strip_headers=False)
+    char_splitter = RecursiveCharacterTextSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
+
+    chunks: list[Document] = []
+    for doc in docs:
+        try:
+            md_splits = md_splitter.split_text(doc.page_content)
+        except Exception:
+            md_splits = [doc]
+        for split in md_splits:
+            split.metadata.update(doc.metadata)
+        chunks.extend(char_splitter.split_documents(md_splits))
+
+    if not chunks:
+        raise RuntimeError("No content chunks produced from vault.")
 
     if os.path.exists(DB_PATH):
         shutil.rmtree(DB_PATH)
@@ -552,24 +566,39 @@ def get_concept_suggestion(question: str, answer: str) -> str:
 
 
 def save_to_vault(concept: str, question: str, answer: str, source: str, db: Chroma) -> None:
-    filepath  = os.path.join(VAULT_PATH, f"{concept}.md")
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-    entry     = f"\n## Q: {question}\n*Source: {source} — {timestamp}*\n\n{answer}\n"
+    filepath   = os.path.join(VAULT_PATH, f"{concept}.md")
+    timestamp  = datetime.now().strftime("%Y-%m-%d %H:%M")
+    entry      = f"\n## Q: {question}\n*Source: {source} — {timestamp}*\n\n{answer}\n"
+    write_path = filepath
 
     if os.path.exists(filepath):
         with open(filepath, "a", encoding="utf-8") as f:
             f.write(entry)
     else:
-        with open(filepath, "w", encoding="utf-8") as f:
-            f.write(f"# {concept.replace('-', ' ').title()}\n{entry}")
+        # Check for a semantically similar existing note before creating a new file
+        try:
+            hits = db.similarity_search_with_relevance_scores(f"Q: {question}", k=1)
+            if hits and hits[0][1] >= 0.85:
+                existing = hits[0][0].metadata.get("source", "")
+                if existing and existing.endswith(".md") and os.path.exists(existing):
+                    write_path = existing
+        except Exception:
+            pass
+
+        if write_path == filepath:
+            with open(write_path, "w", encoding="utf-8") as f:
+                f.write(f"# {concept.replace('-', ' ').title()}\n{entry}")
+        else:
+            with open(write_path, "a", encoding="utf-8") as f:
+                f.write(entry)
 
     try:
-        with open(filepath, encoding="utf-8") as fh:
+        with open(write_path, encoding="utf-8") as fh:
             tags = _extract_frontmatter_tags(fh.read())
     except OSError:
         tags = []
 
-    meta = {"source": filepath}
+    meta = {"source": write_path}
     meta.update(_tags_to_metadata(tags))
     db.add_documents([Document(page_content=f"Q: {question}\n\n{answer}", metadata=meta)])
 
@@ -989,10 +1018,14 @@ class ChatApp(App[None]):
         event.input.value = ""
 
         if self._organize_queue is not None:
+            if text:
+                self._append_to_session("user", text)
             self._organize_queue.put_nowait(text)
             return
 
         if self._apply_queue is not None:
+            if text:
+                self._append_to_session("user", text)
             self._apply_queue.put_nowait(text)
             return
 
@@ -1744,4 +1777,12 @@ class ChatApp(App[None]):
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
+    import argparse as _argparse
+    _parser = _argparse.ArgumentParser(description="ChatUI — local vault RAG assistant")
+    _parser.add_argument("--vault", metavar="PATH", help="Vault path (overrides config/settings.md)")
+    _args = _parser.parse_args()
+    if _args.vault:
+        VAULT_PATH        = os.path.abspath(_args.vault)
+        DB_PATH           = os.path.join(VAULT_PATH, "local_db")
+        CONVERSATIONS_DIR = os.path.join(VAULT_PATH, "conversations")
     ChatApp(load_existing_db()).run()
