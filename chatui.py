@@ -1095,6 +1095,7 @@ _HELP_TEXT = """\
   [bold #5f87af]/version[/bold #5f87af]      print the chatui.py version string
   [bold #5f87af]/readme[/bold #5f87af]        regenerate README.md from current source + config
   [bold #5f87af]/harvest[/bold #5f87af]       promote INDEX topics into vault notes with [[links]]
+  [bold #5f87af]/distill[/bold #5f87af]       distil a session file into structured vault articles
 [dim]Ctrl+S  /savefile  ·  Ctrl+B  /browse  ·  Ctrl+Q  quit[/dim]\
 """
 
@@ -1294,6 +1295,7 @@ class ChatApp(App[None]):
             "stats":    lambda _: self._cmd_stats(),
             "readme":   lambda _: self._cmd_readme(),
             "harvest":   lambda _: self._cmd_harvest(),
+            "distill":   lambda a: self._cmd_distill(a),
         }
 
         if cmd in handlers:
@@ -1397,6 +1399,147 @@ class ChatApp(App[None]):
     
         self._set_busy(False)
         self._log(f"[green]✓ Harvest complete — {created} created, {updated} linked.[/green]")
+
+    @work
+    async def _cmd_distill(self, args: str = "") -> None:
+        """Distil a conversation session into structured vault articles."""
+        self._set_busy(True, "Distilling session…")
+
+        # ── 1. Resolve session file ───────────────────────────────────────────
+        target = args.strip()
+        if not target:
+            self._log("[yellow]Usage: /distill <session_file>[/yellow]", save=False)
+            self._set_busy(False)
+            return
+        for candidate in [target,
+                          os.path.join(CONVERSATIONS_DIR, target),
+                          os.path.join(CONVERSATIONS_DIR, target + ".md")]:
+            if os.path.exists(candidate):
+                target = candidate
+                break
+        if not os.path.exists(target):
+            self._log(f"[red]Session file not found: {target}[/red]", save=False)
+            self._set_busy(False)
+            return
+
+        # ── 2. Bootstrap article guide if missing ─────────────────────────────
+        guide_path = os.path.join(VAULT_PATH, "_article-guide.md")
+        if not os.path.exists(guide_path):
+            self._set_status("Bootstrapping article guide…")
+            guide = await asyncio.to_thread(lambda: llm.invoke(
+                "Write a concise guide (under 300 words) for writing structured markdown "
+                "knowledge-base articles. Cover: YAML frontmatter with title + tags, H1 title, "
+                "opening summary paragraph, H2 sections for key concepts, [[wikilinks]] for related "
+                "notes, See also section. Focus on clarity and scannability. Output only the guide, "
+                "no preamble or explanation."
+            ).content.strip())
+            with open(guide_path, "w", encoding="utf-8") as fh:
+                fh.write(f"---\ntitle: Article Writing Guide\ntags: [meta]\n---\n\n"
+                         f"# Article Writing Guide\n\n{guide}\n")
+            self._log("[dim]📝 Created _article-guide.md[/dim]")
+            if self._db:
+                await asyncio.to_thread(lambda: _reingest_file(guide_path, self._db))
+        with open(guide_path, encoding="utf-8") as fh:
+            guide_ctx = fh.read()[:700]
+
+        # ── 3. Load taxonomy for hierarchy + tag awareness ────────────────────
+        taxonomy_ctx = ""
+        taxonomy_path = os.path.join(VAULT_PATH, "taxonomy.md")
+        if os.path.exists(taxonomy_path):
+            with open(taxonomy_path, encoding="utf-8") as fh:
+                taxonomy_ctx = fh.read()[:1500]
+
+        # ── 4. Parse Q&A pairs from the session file ──────────────────────────
+        with open(target, encoding="utf-8") as fh:
+            text = fh.read()
+        all_blocks = re.findall(
+            r'^## \[\d+:\d+\] (User|Assistant)\n\n(.*?)(?=^## \[|\Z)',
+            text, re.MULTILINE | re.DOTALL
+        )
+        qa_pairs: list[tuple[str, str]] = []
+        i = 0
+        while i < len(all_blocks):
+            role, content = all_blocks[i]
+            content = content.strip()
+            if role == "User" and content and not content.startswith("/"):
+                answer_parts = []
+                j = i + 1
+                while j < len(all_blocks) and all_blocks[j][0] == "Assistant":
+                    part = all_blocks[j][1].strip()
+                    # Skip status/emoji-only lines
+                    if part and not re.match(r'^[🔍📓🏷🧠⏳👁📚✅⚠➕✏]\s', part):
+                        answer_parts.append(part)
+                    j += 1
+                if answer_parts:
+                    qa_pairs.append((content, "\n\n".join(answer_parts)))
+                i = j
+            else:
+                i += 1
+
+        if not qa_pairs:
+            self._log("[yellow]No Q&A pairs found in session.[/yellow]")
+            self._set_busy(False)
+            return
+        self._log(f"[dim]Found {len(qa_pairs)} Q&A pairs.[/dim]")
+
+        # ── 5. Existing vault stems for wikilink candidates ───────────────────
+        vault_stems = [
+            os.path.splitext(f)[0] for f in os.listdir(VAULT_PATH)
+            if f.endswith(".md") and not f.startswith("_") and f != "README.md"
+        ]
+        stems_str = ", ".join(vault_stems)
+
+        # ── 6. Generate one article per Q&A pair ──────────────────────────────
+        created, updated = 0, 0
+        for question, answer in qa_pairs:
+            self._set_status(f"Writing article {created + updated + 1}/{len(qa_pairs)}…")
+
+            # Derive filename slug from question
+            slug_raw = await asyncio.to_thread(lambda q=question: llm.invoke(
+                f"Give a 1-3 word lowercase hyphenated slug for this topic. "
+                f"No articles, no verbs. Examples: 'lora-fine-tuning', 'vector-databases', "
+                f"'knowledge-taxonomy'.\nTopic: {q}\nReply with ONLY the slug, nothing else."
+            ).content.strip().lower())
+            slug = re.sub(r'[^a-z0-9-]', '-', slug_raw).strip('-')[:50]
+            if len(slug) < 3:
+                continue
+
+            fpath = os.path.join(VAULT_PATH, slug + ".md")
+            already_exists = os.path.exists(fpath)
+
+            art_prompt = "\n\n".join(filter(None, [
+                "Write a well-structured knowledge-base article in markdown.",
+                f"STYLE GUIDE:\n{guide_ctx}",
+                f"KNOWLEDGE TAXONOMY (use to choose tags and parent [[wikilinks]]):\n{taxonomy_ctx}" if taxonomy_ctx else "",
+                f"EXISTING VAULT NOTES — use [[note-name]] wikilink syntax where relevant:\n{stems_str}",
+                f"QUESTION/TOPIC:\n{question}",
+                f"SOURCE CONTENT (distil into article prose — do not quote verbatim):\n{answer[:2500]}",
+                "Output the complete article starting with YAML frontmatter (title, tags list drawn "
+                "from the taxonomy), then H1 heading, summary paragraph, H2 sections for key concepts, "
+                "[[wikilinks]] inline, and a '## See also' section at the end. No preamble.",
+            ]))
+
+            article = await asyncio.to_thread(lambda p=art_prompt: llm.invoke(p).content.strip())
+            # Strip any stray markdown fences
+            article = re.sub(r'^```\w*\n?', '', article, flags=re.MULTILINE).strip()
+            article = re.sub(r'\n?```\s*$', '', article, flags=re.MULTILINE).strip()
+
+            if already_exists:
+                with open(fpath, "a", encoding="utf-8") as fh:
+                    fh.write(f"\n\n---\n\n## Additional notes\n\n{article}\n")
+                self._log(f"[dim]✏️  Updated: {slug}.md[/dim]")
+                updated += 1
+            else:
+                with open(fpath, "w", encoding="utf-8") as fh:
+                    fh.write(article + "\n")
+                self._log(f"[dim]📝 Created: {slug}.md[/dim]")
+                created += 1
+
+            if self._db:
+                await asyncio.to_thread(lambda p=fpath: _reingest_file(p, self._db))
+
+        self._log(f"✅ Distilled {os.path.basename(target)}: {created} created, {updated} updated.")
+        self._set_busy(False)
 
     @work
     async def _cmd_readme(self, _args: str = "") -> None:

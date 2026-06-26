@@ -60,3 +60,4 @@ See `conversations/claude_transcript.md` for the full session context behind eac
 | claude | Rename `Machine Learning.md` → `machine-learning.md` | Spaces in filenames break shell tools and wikilinks | _(this session)_ |
 | claude | Delete obsidian_brain.py, ChatUI.md, test.txt, "first file!.md" | Dead code and junk files cluttering vault root | _(this session)_ |
 | claude | Clean settings.md — move applied directives to changelog.md; fix stale Architecture section | settings.md had 16 applied directives buried in it; Architecture section described old patch-based pipeline | _(this session)_ |
+| claude | Add /distill command — extract Q&A pairs from a session file, bootstrap `_article-guide.md` if missing, generate structured articles with taxonomy-aware YAML tags and [[wikilinks]], append to existing vault files | Core workflow: conversation logs → rich vault articles that expand over time | _(this session)_ |

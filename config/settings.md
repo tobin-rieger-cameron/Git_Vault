@@ -164,7 +164,7 @@ chatui.py
     │   ├── /savefile            — triggers NoteReviewScreen modal
     │   ├── /update              — collect git diff of config/, apply CHANGE:/FIX: directives
     │   ├── /apply               — write validated patch atomically, advance .chatui_sync
-    │   ├── /readme, /harvest, /edit, /daily, /export, /stats
+    │   ├── /readme, /harvest, /distill, /edit, /daily, /export, /stats
     │   ├── /clear, /web, /help, /version, /status
     │   ├── _stream_llm()        — streams tokens (llm or coding_llm), writes Markdown when done
     │   └── _process()           — RAG pipeline with tag-aware second pass + open file injection
