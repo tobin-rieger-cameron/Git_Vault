@@ -1333,13 +1333,11 @@ class ChatApp(App[None]):
                 continue
             for phrase in re.split(r";", m.group(1)):
                 phrase = re.sub(r"^(?:what\s+(?:is|are)|how\s+(?:does|do|is|are)|why\s+is|what|how|why)\s+", "", phrase.strip(), flags=re.IGNORECASE)
-                phrase = re.sub(r"^(?:a|an|the)\s+", "", phrase, flags=re.IGNORECASE).strip()
+                phrase = re.sub(r"^(?:a|an|the)\s+", "", phrase, flags=re.IGNORECASE)
                 words = phrase.split()
                 if len(words) > 2:
-                    words = words[:2]
-                while words and words[-1].lower() in {"in", "of", "a", "an", "the", "to", "and", "or", "for", "between"}:
-                    words.pop()
-                phrase = " ".join(words)
+                    phrase = " ".join(words[:2])
+                phrase = re.sub(r"\b(?:in|of|a|an|the|to|and|or|for|between)\b\s*$", "", phrase, flags=re.IGNORECASE)
                 if len(phrase) >= 4:
                     topics.add(phrase)
     
