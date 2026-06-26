@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -241,10 +242,6 @@
     }
 
     /* ── ASCII CONTAINER ─────────────────────────────────── */
-    #ascii-container table {
-      line-height: 1 !important;
-    }
-
     #ascii-container {
       width: 220px;
       height: 220px;
@@ -578,7 +575,7 @@
   import { TeapotGeometry } from 'three/addons/geometries/TeapotGeometry.js';
 
   let camera, scene, renderer, effect;
-  let teapot;
+  let cube, teapot;
 
   // ── Interaction state ───────────────────────────────────
   let isDragging = false;
@@ -591,26 +588,10 @@
 
   // Zoom
   let targetZ   = 30;
-  const Z_MIN   = 14;
+  const Z_MIN   = 15;
   const Z_MAX   = 60;
+  const Z_STEP  = 2;
   const Z_LERP  = 0.12;
-
-  // 15 LOD stages: stage 0 = most zoomed-in, stage 14 = most zoomed-out
-  // Each stage: resolution (AsciiEffect sampling density),
-  //             scale     (font size multiplier — higher = bigger chars),
-  //             fontWeight (CSS font-weight)
-  const LOD_STAGES = [
-    { resolution: 0.175, scale: 1.0001, fontWeight: '700' },
-    { resolution: 0.250, scale: 1.0001, fontWeight: '700' },
-    { resolution: 0.500, scale: 1.0001, fontWeight: '700' },
-    { resolution: 0.750, scale: 1.0001, fontWeight: '700' },
-    { resolution: 1.000, scale: 1.0001, fontWeight: '700' },
-  ];
-  let currentStage = 2;
-
-  function zForStage(stage) {
-    return Z_MIN + (stage / (LOD_STAGES.length - 1)) * (Z_MAX - Z_MIN);
-  }
 
   init();
 
@@ -634,15 +615,29 @@
 
     scene.add(new THREE.AmbientLight(0xffffff, 0.25));
 
+    cube = new THREE.Mesh(
+      new THREE.BoxGeometry(20, 20, 20),
+      new THREE.MeshPhongMaterial({ flatShading: true })
+    );
+    // scene.add(cube);
+
     const geometry = new TeapotGeometry(8, 5, true, true, true, false, true);
     const material = new THREE.MeshPhongMaterial({ color: 0xffffff, flatShading: true });
     teapot = new THREE.Mesh(geometry, material);
-    scene.add(teapot);
+    scene.add(teapot); // swap to teapot if you want
 
     renderer = new THREE.WebGLRenderer();
 
-    targetZ = zForStage(currentStage);
-    rebuildEffect(LOD_STAGES[currentStage]);
+    effect = new AsciiEffect(renderer, ' .:-+*=%@#', {
+      invert: true,
+      resolution: 1,
+      scale: 1.0001,
+    });
+
+    effect.setSize(width, height);
+    effect.domElement.style.color = '#928374';
+    effect.domElement.style.backgroundColor = 'transparent';
+    container.appendChild(effect.domElement);
 
     // ── Mouse drag to rotate ───────────────────────────────
     container.addEventListener('mousedown', e => {
@@ -657,6 +652,8 @@
       if (!isDragging) return;
       const dx = e.clientX - prevMouse.x;
       const dy = e.clientY - prevMouse.y;
+      cube.rotation.y += dx * 0.012;
+      cube.rotation.x += dy * 0.012;
       teapot.rotation.y += dx * 0.012;
       teapot.rotation.x += dy * 0.012;
       rotationVelocity = { x: dy * 0.008, y: dx * 0.008 };
@@ -682,50 +679,17 @@
     container.addEventListener('keydown', e => {
       if (!isHovered) return;
       if (e.key === '+' || e.key === '=' || e.key === 'ArrowUp') {
-        if (currentStage >= LOD_STAGES.length - 1) return;
-        currentStage++;
+        targetZ = Math.max(Z_MIN, targetZ - Z_STEP);
         e.preventDefault();
-      } else if (e.key === '-' || e.key === 'ArrowDown') {
-        if (currentStage <= 0) return;
-        currentStage--;
-        e.preventDefault();
-      } else {
-        return;
       }
-      rebuildEffect(LOD_STAGES[currentStage]);
+      if (e.key === '-' || e.key === 'ArrowDown') {
+        targetZ = Math.min(Z_MAX, targetZ + Z_STEP);
+        e.preventDefault();
+      }
     });
-
-    // ── Scroll wheel zoom (desktop only) ──────────────────
-    // TODO: add pinch-to-zoom for mobile touch screens
-    container.addEventListener('wheel', e => {
-      e.preventDefault();
-      // Normalize across deltaMode: 0=pixels, 1=lines, 2=pages
-      const delta = e.deltaMode === 2 ? e.deltaY * 400
-                  : e.deltaMode === 1 ? e.deltaY * 20
-                  : e.deltaY;
-      targetZ = Math.max(Z_MIN, Math.min(Z_MAX, targetZ + delta * 0.1));
-    }, { passive: false });
 
     window.addEventListener('resize', onWindowResize);
     renderer.setAnimationLoop(animate);
-  }
-
-  function rebuildEffect(stage) {
-    const container = document.getElementById('ascii-container');
-    const width  = container.clientWidth;
-    const height = container.clientHeight;
-    if (effect) container.removeChild(effect.domElement);
-    effect = new AsciiEffect(renderer, '    .:-+*=%@#', {
-      invert: true,
-      resolution: stage.resolution,
-      scale: stage.scale,
-    });
-    effect.setSize(width, height);
-    effect.domElement.style.color = '#928374';
-    effect.domElement.style.backgroundColor = 'transparent';
-    const table = effect.domElement.querySelector('table');
-    if (table) table.style.fontWeight = stage.fontWeight;
-    container.appendChild(effect.domElement);
   }
 
   function onWindowResize() {
@@ -741,10 +705,17 @@
     // Smooth zoom
     camera.position.z += (targetZ - camera.position.z) * Z_LERP;
 
-    if (autoRotate) {
+    if (isDragging) {
+      // Handled live in mousemove
+    } else if (autoRotate) {
+      cube.rotation.x   += 0.0005;
+      cube.rotation.y   += 0.001;
       teapot.rotation.x += 0.0005;
       teapot.rotation.y += 0.001;
-    } else if (!isDragging) {
+    } else {
+      // Momentum coast
+      cube.rotation.x   += rotationVelocity.x;
+      cube.rotation.y   += rotationVelocity.y;
       teapot.rotation.x += rotationVelocity.x;
       teapot.rotation.y += rotationVelocity.y;
       rotationVelocity.x *= DRAG_DECAY;
@@ -772,8 +743,8 @@
       <ul class="nav-list">
         <li><a href="#">Home</a></li>
         <li><a href="#experience">Experience</a></li>
-        <li><a href="#volunteering">Volunteering</a></li>
         <li><a href="#education">Education</a></li>
+        <li><a href="#volunteering">Volunteering</a></li>
         <li><a href="portfolio.html" onclick="event.preventDefault(); window.__navigateTo('portfolio.html')">Portfolio</a></li>
       </ul>
     </nav>
@@ -792,8 +763,8 @@
   <ul class="nav-drawer-list">
     <li><a href="#">Home</a></li>
     <li><a href="#experience">Experience</a></li>
-    <li><a href="#volunteering">Volunteering</a></li>
     <li><a href="#education">Education</a></li>
+    <li><a href="#volunteering">Volunteering</a></li>
     <li><a href="portfolio.html" onclick="event.preventDefault(); window.__navigateTo('portfolio.html')">Portfolio</a></li>
   </ul>
 </nav>
@@ -820,7 +791,7 @@
     <div class="left-col">
 
       <div id="ascii-container">
-        <span id="ascii-hint">drag · scroll · +/−</span>
+        <span id="ascii-hint">drag · +/− to zoom</span>
       </div>
 
     <!-- SIDEBAR -->
@@ -974,6 +945,38 @@
         </article>
       </section>
 
+      <section class="education" id="education">
+        <h2 class="section-label">Education</h2>
+        <article class="box">
+          <header class="box-header">
+            <h4 class="box-title">Computer Science</h4>
+            <p class="box-subtitle">Heritage College, Gatineau</p>
+            <p class="box-dates">
+              <time datetime="2019-09">Sep 2019</time> – <time datetime="2020-06">Jun 2020</time>
+            </p>
+          </header>
+          <ul class="box-highlights">
+            <li>HTML, JavaScript, CSS: Web Development</li>
+            <li>Java: Object Oriented Programming</li>
+            <li>Developed ability to apply logic and critical thinking to problems</li>
+          </ul>
+        </article>
+        <article class="box">
+          <header class="box-header">
+            <h4 class="box-title">Photography</h4>
+            <p class="box-subtitle">Dawson College, Montréal</p>
+            <p class="box-dates">
+              <time datetime="2022-09">Sep 2022</time> – <time datetime="2023-01">Jan 2023</time>
+            </p>
+          </header>
+          <ul class="box-highlights">
+            <li>Refined compositional eye</li>
+            <li>Developed ability to edit industry-standard photographs</li>
+            <li>Learned how to develop film</li>
+          </ul>
+        </article>
+      </section>
+
       <section class="volunteering" id="volunteering">
         <h2 class="section-label">Volunteering</h2>
         <article class="box">
@@ -1015,37 +1018,6 @@
         </article>
       </section>
 
-      <section class="education" id="education">
-        <h2 class="section-label">Education</h2>
-        <article class="box">
-          <header class="box-header">
-            <h4 class="box-title">Computer Science</h4>
-            <p class="box-subtitle">Heritage College, Gatineau</p>
-            <p class="box-dates">
-              <time datetime="2019-09">Sep 2019</time> – <time datetime="2020-06">Jun 2020</time>
-            </p>
-          </header>
-          <ul class="box-highlights">
-            <li>HTML, JavaScript, CSS: Web Development</li>
-            <li>Java: Object Oriented Programming</li>
-            <li>Developed ability to apply logic and critical thinking to problems</li>
-          </ul>
-        </article>
-        <article class="box">
-          <header class="box-header">
-            <h4 class="box-title">Photography</h4>
-            <p class="box-subtitle">Dawson College, Montréal</p>
-            <p class="box-dates">
-              <time datetime="2022-09">Sep 2022</time> – <time datetime="2023-01">Jan 2023</time>
-            </p>
-          </header>
-          <ul class="box-highlights">
-            <li>Refined compositional eye</li>
-            <li>Developed ability to edit industry-standard photographs</li>
-            <li>Learned how to develop film</li>
-          </ul>
-        </article>
-      </section>
     </main>
 
   </div><!-- /.page -->
