@@ -581,8 +581,14 @@ def _finalize_session(path: str | None) -> None:
     user_turns = len(user_blocks)
     commands = sorted({m for b in user_blocks for m in re.findall(r'^/\w+', b, re.MULTILINE)})
     questions = [b.strip() for b in user_blocks if not b.strip().startswith("/")]
-    _qs = re.compile(r"^(?:what\s+(?:is|are)|how\s+(?:does|do|is|are)|why\s+is|what|how|why)\s+", re.IGNORECASE)
-    topics = "; ".join(_qs.sub("", q).strip()[:50].replace("\n", " ") for q in questions[:3] if _qs.sub("", q).strip())
+    try:
+        prompt = f"Extract 2-4 short topic keywords or noun phrases from these questions. Reply ONLY with a comma-separated list, nothing else.\n" + "\n".join(f"- {q[:120].replace(chr(10), ' ')}" for q in questions[:5])
+        raw_topics = llm.invoke(prompt).content.strip()
+        items = [item.strip() for item in raw_topics.split(",") if len(item.strip()) >= 3]
+        topics = "; ".join(items[:4])
+    except Exception:
+        _qs = re.compile(r"^(?:what\s+(?:is|are)|how\s+(?:does|do|is|are)|why\s+is|what|how|why)\s+", re.IGNORECASE)
+        topics = "; ".join(_qs.sub("", q).strip()[:50].replace("\n", " ") for q in questions[:3] if _qs.sub("", q).strip())
 
     fm_lines = ["---", f"date: {date_str}", f"user_turns: {user_turns}"]
     if commands:

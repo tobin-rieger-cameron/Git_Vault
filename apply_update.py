@@ -149,7 +149,7 @@ def _validate(source):
 # ── Directive application ─────────────────────────────────────────────────────
 
 def _generate_method(cmd_name, description, examples):
-    print(f"  🤖  Generating _cmd_{cmd_name} via {CODING_MODEL}…")
+    print(f"  🤖  Generating _cmd_{cmd_name} via {CODING_MODEL}…", flush=True)
     prompt = "\n".join([
         f'Write a `_cmd_{cmd_name}(self, _args: str = "")` method for the ChatApp Textual TUI class.',
         f"Purpose: {description}",
@@ -169,7 +169,7 @@ def _generate_method(cmd_name, description, examples):
 
 def _apply_fix(source, instruction):
     """Model-guided targeted fix; extracts relevant function body as context."""
-    print(f"  🔧  FIX: {instruction[:70]}…")
+    print(f"  🔧  FIX: {instruction[:70]}…", flush=True)
 
     # Find any function name mentioned in the instruction
     relevant_block = ""
@@ -179,7 +179,7 @@ def _apply_fix(source, instruction):
         if block:
             relevant_block = block
             fn_found = fn_name
-            print(f"       context: {fn_name} ({len(block.splitlines())} lines)")
+            print(f"       context: {fn_name} ({len(block.splitlines())} lines)", flush=True)
             break
 
     # Detect indentation and decorators from the original block
@@ -212,11 +212,11 @@ def _apply_fix(source, instruction):
     updated = re.sub(r'\n?```\s*$', '', updated).strip()
 
     if not updated or updated.strip() == relevant_block.strip():
-        print("  ⚠  No replacement made (model returned same or empty).")
+        print("  ⚠  No replacement made (model returned same or empty).", flush=True)
         return source
 
     # ── Self-review pass ──────────────────────────────────────────────────────
-    print("  🔍  Self-review pass…")
+    print("  🔍  Self-review pass…", flush=True)
     review_prompt = "\n".join([
         "Review the following Python function for correctness. The original change request was:",
         instruction,
@@ -237,10 +237,10 @@ def _apply_fix(source, instruction):
     reviewed = re.sub(r'^```\w*\s*\n?', '', reviewed)
     reviewed = re.sub(r'\n?```\s*$', '', reviewed).strip()
     if reviewed and reviewed.strip() != updated.strip():
-        print("  ✏️   Reviewer made corrections.")
+        print("  ✏️   Reviewer made corrections.", flush=True)
         updated = reviewed
     else:
-        print("  ✅  Reviewer approved (no changes).")
+        print("  ✅  Reviewer approved (no changes).", flush=True)
 
     # Re-add decorators if model dropped them
     first_def = next((i for i, l in enumerate(updated.splitlines()) if re.match(r'\s*(async )?def ', l)), None)
@@ -248,7 +248,7 @@ def _apply_fix(source, instruction):
         existing_decorators = [l for l in updated.splitlines()[:first_def] if l.strip().startswith("@")]
         missing = [d for d in decorators if not any(d.strip() in e for e in existing_decorators)]
         if missing:
-            print(f"  ↩  Re-adding dropped decorators: {missing}")
+            print(f"  ↩  Re-adding dropped decorators: {missing}", flush=True)
             lines_u = updated.splitlines(keepends=True)
             updated = "".join(
                 [base_indent + d.strip() + "\n" for d in missing] + lines_u[first_def:]
@@ -266,16 +266,16 @@ def _apply_fix(source, instruction):
 
     if relevant_block:
         if relevant_block not in source:
-            print("  ⚠  Original block no longer in source (already patched by a parallel run?) — skipping.")
+            print("  ⚠  Original block no longer in source (already patched by a parallel run?) — skipping.", flush=True)
             return source
         return source.replace(relevant_block, updated + "\n", 1)
 
-    print("  ⚠  No original block to replace.")
+    print("  ⚠  No original block to replace.", flush=True)
     return source
 
 
 def _apply_add_command(source, name, description):
-    print(f"  ➕  Adding /{name}…")
+    print(f"  ➕  Adding /{name}…", flush=True)
 
     # Handler entry
     handlers_block = _extract_handlers_block(source)
@@ -316,7 +316,7 @@ def _apply_add_command(source, name, description):
         try:
             ast.parse("class _T:\n" + method_code + "\n")
         except SyntaxError as e:
-            print(f"  ⚠  Generated method invalid ({e.msg}) — inserting stub")
+            print(f"  ⚠  Generated method invalid ({e.msg}) — inserting stub", flush=True)
             method_code = (
                 f"    def _cmd_{name}(self, _args: str = \"\") -> None:\n"
                 f"        self._log(\"[dim]/{name} — stub (edit manually)[/dim]\")\n"
@@ -330,26 +330,26 @@ def _apply_add_command(source, name, description):
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
-    print("🔄  ChatUI headless update\n")
+    print("🔄  ChatUI headless update\n", flush=True)
 
     diffs = _collect_diffs()
     if not diffs:
-        print("No config changes found since last sync.")
+        print("No config changes found since last sync.", flush=True)
         sys.exit(0)
 
     for rel, diff in sorted(diffs.items()):
         n = sum(1 for ln in diff.splitlines()
                 if ln.startswith(("+", "-")) and not ln.startswith(("+++", "---")))
-        print(f"  📝 {rel}  ({n} changed lines)")
+        print(f"  📝 {rel}  ({n} changed lines)", flush=True)
 
     directives = _extract_directives(diffs)
     if not directives:
-        print("No actionable CHANGE:/FIX: directives found.")
+        print("No actionable CHANGE:/FIX: directives found.", flush=True)
         sys.exit(0)
 
-    print(f"\nDirectives found: {len(directives)}")
+    print(f"\nDirectives found: {len(directives)}", flush=True)
     for d in directives:
-        print(f"  • [{d['type'].upper()}] {d['text'][:80]}…")
+        print(f"  • [{d['type'].upper()}] {d['text'][:80]}…", flush=True)
 
     with open(CHATUI_PY, encoding="utf-8") as f:
         source = f.read()
@@ -361,7 +361,7 @@ def main():
             if cmd_m:
                 name = cmd_m.group(1)
                 if f"def _cmd_{name}" in result:
-                    print(f"  ⏭  /{name} already exists — skipping CHANGE")
+                    print(f"  ⏭  /{name} already exists — skipping CHANGE", flush=True)
                     continue
                 result = _apply_add_command(result, name, d["text"])
         elif d["type"] == "fix":
@@ -370,7 +370,7 @@ def main():
     # Validate
     err = _validate(result)
     if err:
-        print(f"\n❌  Syntax error after applying: {err}")
+        print(f"\n❌  Syntax error after applying: {err}", flush=True)
         sys.exit(1)
 
     # Show diff
@@ -382,18 +382,18 @@ def main():
         n=3,
     ))
     if not diff_lines:
-        print("\nNo changes generated.")
+        print("\nNo changes generated.", flush=True)
         sys.exit(0)
 
-    print(f"\n{'='*60}")
-    print("".join(diff_lines[:120]))
+    print(f"\n{'='*60}", flush=True)
+    print("".join(diff_lines[:120]), flush=True)
     if len(diff_lines) > 120:
-        print(f"… ({len(diff_lines) - 120} more lines)")
-    print(f"{'='*60}")
+        print(f"… ({len(diff_lines) - 120} more lines)", flush=True)
+    print(f"{'='*60}", flush=True)
 
     ans = input("\nApply? [y/N] ").strip().lower()
     if ans != "y":
-        print("Aborted.")
+        print("Aborted.", flush=True)
         sys.exit(0)
 
     with open(CHATUI_PY, "w", encoding="utf-8") as f:
@@ -403,7 +403,7 @@ def main():
     if head:
         _set_sync_hash(head)
 
-    print("\n✅  chatui.py updated. Restart ChatUI to load the new commands.")
+    print("\n✅  chatui.py updated. Restart ChatUI to load the new commands.", flush=True)
 
 
 if __name__ == "__main__":
