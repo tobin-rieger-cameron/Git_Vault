@@ -581,7 +581,8 @@ def _finalize_session(path: str | None) -> None:
     user_turns = len(user_blocks)
     commands = sorted({m for b in user_blocks for m in re.findall(r'^/\w+', b, re.MULTILINE)})
     questions = [b.strip() for b in user_blocks if not b.strip().startswith("/")]
-    topics = "; ".join(q[:80].replace("\n", " ") for q in questions[:3])
+    _qs = re.compile(r"^(?:what\s+(?:is|are)|how\s+(?:does|do|is|are)|why\s+is|what|how|why)\s+", re.IGNORECASE)
+    topics = "; ".join(_qs.sub("", q).strip()[:50].replace("\n", " ") for q in questions[:3] if _qs.sub("", q).strip())
 
     fm_lines = ["---", f"date: {date_str}", f"user_turns: {user_turns}"]
     if commands:
@@ -1315,42 +1316,49 @@ class ChatApp(App[None]):
         self._set_busy(True, "Harvesting topics…")
         created = 0
         updated = 0
-
+    
         index_path = os.path.join(CONVERSATIONS_DIR, "INDEX.md")
         if not os.path.exists(index_path):
             self._log("[red]conversations/INDEX.md not found — run /organize first.[/red]")
             self._set_busy(False)
             return
-
+    
         with open(index_path, encoding="utf-8") as fh:
             lines = fh.readlines()
-
+    
         topics: set[str] = set()
         for line in lines:
             m = re.search(r"— (.+)$", line.rstrip())
             if not m:
                 continue
-            for phrase in re.split(r"[;,]", m.group(1)):
-                phrase = phrase.strip().rstrip(".")
+            for phrase in re.split(r";", m.group(1)):
+                phrase = re.sub(r"^(?:what\s+(?:is|are)|how\s+(?:does|do|is|are)|why\s+is|what|how|why)\s+", "", phrase.strip(), flags=re.IGNORECASE).strip()[:40]
                 if len(phrase) >= 4:
                     topics.add(phrase)
-
+    
         if not topics:
             self._log("[dim]No topics found in INDEX.md.[/dim]")
             self._set_busy(False)
             return
-
+    
         self._log(f"[dim]Found {len(topics)} topic(s) to harvest…[/dim]")
-
+    
         existing = {
             os.path.splitext(os.path.basename(p))[0].lower(): p
             for p in glob.glob(os.path.join(VAULT_PATH, "*.md"))
         }
-
+    
         for topic in sorted(topics):
             slug = re.sub(r"[^\w]+", "-", topic.lower()).strip("-")
             existing_path = existing.get(slug) or existing.get(slug.replace("-", " "))
-
+    
+            if not existing_path:
+                topic_words = [w for w in re.split(r"\W+", slug) if len(w) >= 5]
+                for stem, path in existing.items():
+                    if any(w in stem for w in topic_words):
+                        existing_path = path
+                        break
+    
             if existing_path:
                 with open(existing_path, encoding="utf-8") as fh:
                     content = fh.read()
@@ -1371,7 +1379,7 @@ class ChatApp(App[None]):
                     fh.write(f"# {title}\n\n{desc}\n\nSee also: [[INDEX]]\n")
                 self._log(f"[dim]  📄  Created {slug}.md[/dim]")
                 created += 1
-
+    
         self._set_busy(False)
         self._log(f"[green]✓ Harvest complete — {created} created, {updated} linked.[/green]")
 
