@@ -1082,6 +1082,8 @@ _HELP_TEXT = """\
   [bold #5f87af]/status[/bold #5f87af]       show current session state (web, file, history, vault)
   [bold #5f87af]/stats[/bold #5f87af]        show vault chunk count and DB size on disk
   [bold #5f87af]/version[/bold #5f87af]      print the chatui.py version string
+  [bold #5f87af]/readme[/bold #5f87af]        regenerate README.md from current source + config
+  [bold #5f87af]/harvest[/bold #5f87af]       promote INDEX topics into vault notes with [[links]]
 [dim]Ctrl+S  /savefile  ·  Ctrl+B  /browse  ·  Ctrl+Q  quit[/dim]\
 """
 
@@ -1279,6 +1281,8 @@ class ChatApp(App[None]):
             "version":  lambda _: self._cmd_version(),
             "status":   lambda _: self._cmd_status(),
             "stats":    lambda _: self._cmd_stats(),
+            "readme":   lambda _: self._cmd_readme(),
+            "harvest":   lambda _: self._cmd_harvest(),
         }
 
         if cmd in handlers:
@@ -1305,6 +1309,125 @@ class ChatApp(App[None]):
         self._update_subtitle()
         state = "[green]on[/green]" if self._web_on else "[red]off[/red]"
         self._log(f"[dim]Web search fallback: {state}[/dim]")
+
+    @work
+    async def _cmd_harvest(self, _args: str = "") -> None:
+        self._set_busy(True, "Harvesting topics…")
+        created = 0
+        updated = 0
+
+        index_path = os.path.join(CONVERSATIONS_DIR, "INDEX.md")
+        if not os.path.exists(index_path):
+            self._log("[red]conversations/INDEX.md not found — run /organize first.[/red]")
+            self._set_busy(False)
+            return
+
+        with open(index_path, encoding="utf-8") as fh:
+            lines = fh.readlines()
+
+        topics: set[str] = set()
+        for line in lines:
+            m = re.search(r"— (.+)$", line.rstrip())
+            if not m:
+                continue
+            for phrase in re.split(r"[;,]", m.group(1)):
+                phrase = phrase.strip().rstrip(".")
+                if len(phrase) >= 4:
+                    topics.add(phrase)
+
+        if not topics:
+            self._log("[dim]No topics found in INDEX.md.[/dim]")
+            self._set_busy(False)
+            return
+
+        self._log(f"[dim]Found {len(topics)} topic(s) to harvest…[/dim]")
+
+        existing = {
+            os.path.splitext(os.path.basename(p))[0].lower(): p
+            for p in glob.glob(os.path.join(VAULT_PATH, "*.md"))
+        }
+
+        for topic in sorted(topics):
+            slug = re.sub(r"[^\w]+", "-", topic.lower()).strip("-")
+            existing_path = existing.get(slug) or existing.get(slug.replace("-", " "))
+
+            if existing_path:
+                with open(existing_path, encoding="utf-8") as fh:
+                    content = fh.read()
+                if "[[INDEX]]" not in content:
+                    with open(existing_path, "a", encoding="utf-8") as fh:
+                        fh.write("\n\nSee also: [[INDEX]]\n")
+                    self._log(f"[dim]  🔗  Linked {os.path.basename(existing_path)}[/dim]")
+                    updated += 1
+            else:
+                stub_path = os.path.join(VAULT_PATH, f"{slug}.md")
+                desc = await asyncio.to_thread(
+                    lambda t=topic: llm.invoke(
+                        f"In one sentence, describe the concept '{t}'. Be concise and factual."
+                    ).content.strip()
+                )
+                title = topic[0].upper() + topic[1:]
+                with open(stub_path, "w", encoding="utf-8") as fh:
+                    fh.write(f"# {title}\n\n{desc}\n\nSee also: [[INDEX]]\n")
+                self._log(f"[dim]  📄  Created {slug}.md[/dim]")
+                created += 1
+
+        self._set_busy(False)
+        self._log(f"[green]✓ Harvest complete — {created} created, {updated} linked.[/green]")
+
+    @work
+    async def _cmd_readme(self, _args: str = "") -> None:
+        self._set_busy(True, "Generating README…")
+        try:
+            with open(os.path.abspath(__file__), encoding="utf-8") as fh:
+                source = fh.read()
+
+            handlers_raw = _extract_handlers_block(source)
+            cmd_names    = re.findall(r'"(\w+)":', handlers_raw)
+            help_raw     = _extract_help_block(source)
+
+            help_rows: list[str] = []
+            for name in cmd_names:
+                m       = re.search(rf'\[bold[^\]]*\]/{re.escape(name)}\[/bold[^\]]*\]\s*(.+)', help_raw)
+                purpose = re.sub(r'\[/?[^\]]*\]', '', m.group(1)).strip() if m else ""
+                help_rows.append(f"| `/{name}` | {purpose} |")
+            commands_table = "| Command | Description |\n|---|---|\n" + "\n".join(help_rows)
+
+            cfg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config", "settings.md")
+            with open(cfg_path, encoding="utf-8") as fh:
+                cfg_text = fh.read()
+            cfg_m = re.search(r'(## Settings.*?)(?=## |\Z)', cfg_text, re.DOTALL)
+            cfg_section = cfg_m.group(1).strip() if cfg_m else ""
+
+            prompt = "\n".join([
+                "Write a concise README.md for ChatUI, a local-first vault RAG assistant.",
+                "Include sections: Overview, Commands, Configuration, Architecture, Stack.",
+                "",
+                "COMMANDS (use these exact entries):",
+                commands_table,
+                "",
+                "CONFIGURATION:",
+                cfg_section,
+                "",
+                "ARCHITECTURE: local Ollama LLMs + ChromaDB vector store + Textual TUI.",
+                "STACK: llama3.2:3b (chat), qwen2.5-coder:7b (code/organize), nomic-embed-text (embeddings),"
+                " ChromaDB, LangChain, Textual.",
+                "",
+                "Tone: terse technical docs. No fluff. Markdown tables where appropriate.",
+                "Return only the README markdown, no fences.",
+            ])
+            self._set_status("✍ Writing README…")
+            readme_text = await asyncio.to_thread(lambda: coding_llm.invoke(prompt).content.strip())
+
+            readme_path = os.path.join(VAULT_PATH, "README.md")
+            with open(readme_path, "w", encoding="utf-8") as fh:
+                fh.write(readme_text)
+
+            self._log(f"[green]✓ README written → {os.path.relpath(readme_path, VAULT_PATH)}[/green]")
+        except Exception as e:
+            self._log(f"[red]README generation failed: {e}[/red]")
+        finally:
+            self._set_busy(False)
 
     def _cmd_version(self) -> None:
         self._log("[dim]ChatUI version 0.2.0[/dim]")
