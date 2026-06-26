@@ -1437,8 +1437,8 @@ class ChatApp(App[None]):
                 fh.write(f"---\ntitle: Article Writing Guide\ntags: [meta]\n---\n\n"
                          f"# Article Writing Guide\n\n{guide}\n")
             self._log("[dim]📝 Created _article-guide.md[/dim]")
-            if self._db:
-                await asyncio.to_thread(lambda: _reingest_file(guide_path, self._db))
+            if self.db:
+                await asyncio.to_thread(lambda: _reingest_file(guide_path, self.db))
         with open(guide_path, encoding="utf-8") as fh:
             guide_ctx = fh.read()[:700]
 
@@ -1507,22 +1507,35 @@ class ChatApp(App[None]):
             fpath = os.path.join(VAULT_PATH, slug + ".md")
             already_exists = os.path.exists(fpath)
 
-            art_prompt = "\n\n".join(filter(None, [
-                "Write a well-structured knowledge-base article in markdown.",
-                f"STYLE GUIDE:\n{guide_ctx}",
-                f"KNOWLEDGE TAXONOMY (use to choose tags and parent [[wikilinks]]):\n{taxonomy_ctx}" if taxonomy_ctx else "",
-                f"EXISTING VAULT NOTES — use [[note-name]] wikilink syntax where relevant:\n{stems_str}",
-                f"QUESTION/TOPIC:\n{question}",
-                f"SOURCE CONTENT (distil into article prose — do not quote verbatim):\n{answer[:2500]}",
-                "Output the complete article starting with YAML frontmatter (title, tags list drawn "
-                "from the taxonomy), then H1 heading, summary paragraph, H2 sections for key concepts, "
-                "[[wikilinks]] inline, and a '## See also' section at the end. No preamble.",
-            ]))
+            # Trim source to clean prose (drop raw Q&A artifact lines)
+            clean_answer = re.sub(r'^#+\s+Q:.*$', '', answer[:2000], flags=re.MULTILINE).strip()
+
+            # Build minimal prompt — small models lose coherence with long style guides inline
+            taxonomy_hint = (
+                f"\nTAXONOMY (pick tags from this):\n{taxonomy_ctx[:600]}"
+                if taxonomy_ctx else ""
+            )
+            art_prompt = (
+                f"Write a markdown knowledge-base article about this topic.\n\n"
+                f"TOPIC: {question}\n\n"
+                f"SOURCE (distil into prose, do not quote verbatim):\n{clean_answer}\n\n"
+                f"VAULT NOTES (ONLY use [[note-name]] wikilinks from this exact list — no others): {stems_str}"
+                f"{taxonomy_hint}\n\n"
+                f"FORMAT: Start with YAML frontmatter (title, tags list). "
+                f"Then # H1 title. Then a 1-2 sentence summary. "
+                f"Then ## sections for key concepts. "
+                f"Use [[wikilinks]] inline only for vault notes listed above. End with ## See also.\n\n"
+                f"Write the complete article:"
+            )
 
             article = await asyncio.to_thread(lambda p=art_prompt: llm.invoke(p).content.strip())
             # Strip any stray markdown fences
             article = re.sub(r'^```\w*\n?', '', article, flags=re.MULTILINE).strip()
             article = re.sub(r'\n?```\s*$', '', article, flags=re.MULTILINE).strip()
+            # Ensure YAML frontmatter exists
+            if not article.startswith('---'):
+                title_line = question.strip()[:80].replace('\n', ' ')
+                article = f"---\ntitle: \"{title_line}\"\ntags: []\n---\n\n{article}"
 
             if already_exists:
                 with open(fpath, "a", encoding="utf-8") as fh:
@@ -1535,8 +1548,8 @@ class ChatApp(App[None]):
                 self._log(f"[dim]📝 Created: {slug}.md[/dim]")
                 created += 1
 
-            if self._db:
-                await asyncio.to_thread(lambda p=fpath: _reingest_file(p, self._db))
+            if self.db:
+                await asyncio.to_thread(lambda p=fpath: _reingest_file(p, self.db))
 
         self._log(f"✅ Distilled {os.path.basename(target)}: {created} created, {updated} updated.")
         self._set_busy(False)
