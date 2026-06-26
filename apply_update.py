@@ -265,6 +265,9 @@ def _apply_fix(source, instruction):
         )
 
     if relevant_block:
+        if relevant_block not in source:
+            print("  ⚠  Original block no longer in source (already patched by a parallel run?) — skipping.")
+            return source
         return source.replace(relevant_block, updated + "\n", 1)
 
     print("  ⚠  No original block to replace.")
