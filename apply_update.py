@@ -167,6 +167,40 @@ def _generate_method(cmd_name, description, examples):
     ])
     return _llm().invoke(prompt).content.strip()
 
+def _apply_fix(source, instruction):
+    """Model-guided targeted fix; extracts relevant function body as context."""
+    print(f"  🔧  FIX: {instruction[:70]}…")
+
+    # Find any function name mentioned in the instruction
+    relevant_block = ""
+    for fn_name in re.findall(r'\b(_\w+)\b', instruction):
+        block = _extract_method_block(source, fn_name)
+        if block:
+            relevant_block = block
+            print(f"       context: {fn_name} ({len(block.splitlines())} lines)")
+            break
+
+    prompt = "\n".join([
+        "Make the following targeted change to chatui.py:",
+        instruction,
+        "",
+        *(["CURRENT CODE OF RELEVANT FUNCTION:", relevant_block, ""] if relevant_block else []),
+        "Rules:",
+        "  - Return ONLY the updated function definition with the same indentation.",
+        "  - No explanation, no fences, no surrounding code.",
+        "  - Preserve the function signature and decorators exactly.",
+    ])
+    updated = _llm().invoke(prompt).content.strip()
+    updated = re.sub(r'^```\w*\s*\n?', '', updated)
+    updated = re.sub(r'\n?```\s*$', '', updated).strip()
+
+    if relevant_block and updated and updated.strip() != relevant_block.strip():
+        return source.replace(relevant_block, updated + "\n", 1)
+
+    print("  ⚠  No replacement made (model returned same or empty).")
+    return source
+
+
 def _apply_add_command(source, name, description):
     print(f"  ➕  Adding /{name}…")
 
@@ -244,23 +278,21 @@ def main():
     for d in directives:
         print(f"  • [{d['type'].upper()}] {d['text'][:80]}…")
 
-    # Only process NEW directives (skip old already-applied ones)
-    new_directives = [d for d in directives
-                      if any(kw in d['text'] for kw in ["/readme", "/harvest"])]
-
-    if not new_directives:
-        print("\nNo new directives to apply (old ones already applied).")
-        sys.exit(0)
-
     with open(CHATUI_PY, encoding="utf-8") as f:
         source = f.read()
 
     result = source
-    for d in new_directives:
+    for d in directives:
         if d["type"] == "change":
             cmd_m = re.search(r'/(\w+)', d["text"])
             if cmd_m:
-                result = _apply_add_command(result, cmd_m.group(1), d["text"])
+                name = cmd_m.group(1)
+                if f"def _cmd_{name}" in result:
+                    print(f"  ⏭  /{name} already exists — skipping CHANGE")
+                    continue
+                result = _apply_add_command(result, name, d["text"])
+        elif d["type"] == "fix":
+            result = _apply_fix(result, d["text"])
 
     # Validate
     err = _validate(result)
