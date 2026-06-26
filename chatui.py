@@ -33,6 +33,8 @@ from textual.widgets import Footer, Header, Input, Label, ListItem, ListView, Ri
 from rich.markdown import Markdown
 from rich.text import Text
 
+import chromadb
+
 from langchain_ollama import OllamaEmbeddings, ChatOllama
 from langchain_community.vectorstores import Chroma
 from langchain_community.document_loaders import DirectoryLoader
@@ -512,7 +514,8 @@ def ingest_vault() -> Chroma:
         shutil.rmtree(DB_PATH)
 
     try:
-        return Chroma.from_documents(documents=chunks, embedding=embeddings, persist_directory=DB_PATH)
+        client = chromadb.PersistentClient(path=DB_PATH)
+        return Chroma.from_documents(documents=chunks, embedding=embeddings, client=client, collection_name="vault")
     except Exception as e:
         if "readonly" in str(e).lower():
             raise RuntimeError(
@@ -525,7 +528,8 @@ def ingest_vault() -> Chroma:
 def load_existing_db() -> Chroma | None:
     if not os.path.exists(DB_PATH):
         return None
-    return Chroma(persist_directory=DB_PATH, embedding_function=embeddings)
+    client = chromadb.PersistentClient(path=DB_PATH)
+    return Chroma(embedding_function=embeddings, client=client, collection_name="vault")
 
 
 def _reingest_file(path: str, db: Chroma) -> int:

@@ -36,25 +36,6 @@ directive is only processed once.
 
 ---
 
-CHANGE: move suggested changes up here for ease of access
-CHANGE: add action ability, so chatui can start making guided changes to files
-CHANGE: find a way to refine/improve/train my model 
-CHANGE: ui overhaul with loading bars to know when chatui is processing something. text should wrap and there should be margins on the left and right to keep text centered
-CHANGE: /organize should also clean up conversation logs — condense single-command and testing sessions to 1-2 line summaries
-CHANGE: all output from /commands should be appended to chat logs
-CHANGE: add /readme command — reads chatui.py source using _extract_handlers_block to list all commands, reads config/settings.md frontmatter for current parameter values, reads the existing README.md if present, then uses coding_llm to generate a fresh README covering: Overview, Commands table (name + one-line purpose from _HELP_TEXT), Configuration table (key/default/description from settings.md), Architecture summary, and Stack table. Writes result to os.path.join(VAULT_PATH, "README.md"). Decorated with @work async. Uses self._set_busy and self._log.
-CHANGE: add /harvest command — reads conversations/INDEX.md, extracts topic strings from lines matching "— <topics>" at end of each bullet, splits topics on semicolons to get individual phrases, deduplicates (case-insensitive), skips phrases under 4 chars, then for each topic: searches vault root for a .md file whose stem matches the topic (case-insensitive, spaces→hyphens); if found, appends a wikilink reference "See also: [[INDEX]]" to that file if not already present; if not found, creates a new stub file named <topic-as-kebab-case>.md with a H1 heading, a one-sentence description from llm.invoke(), and "See also: [[INDEX]]". Reports counts of created and updated files. Decorated with @work async. Uses self._set_busy and self._log.
-FIX: _cmd_harvest has two bugs. Bug 1 — topic cleaning: after the line `for phrase in re.split(r"[;,]", m.group(1)):` add `phrase = re.sub(r"^(?:what\s+(?:is|are)|how\s+(?:does|do|is|are)|why\s+is|what|how|why)\s+", "", phrase, flags=re.IGNORECASE).strip()[:40]` to strip interrogative starters from each phrase before adding to topics. Bug 2 — vault matching: after the line `existing_path = existing.get(slug) or existing.get(slug.replace("-", " "))` add a fallback loop `if not existing_path:\n    topic_words = [w for w in re.split(r"\\W+", slug) if len(w) >= 5]\n    for stem, path in existing.items():\n        if any(w in stem for w in topic_words):\n            existing_path = path\n            break` so that "taxonomy" from "difference-between-a-taxonomy" matches taxonomy.md.
-FIX: _finalize_session has one bug — replace the line `topics = "; ".join(q[:80].replace("\n", " ") for q in questions[:3])` with these two lines: `_qs = re.compile(r"^(?:what\s+(?:is|are)|how\s+(?:does|do|is|are)|why\s+is|what|how|why)\s+", re.IGNORECASE)` then `topics = "; ".join(_qs.sub("", q).strip()[:50].replace("\n", " ") for q in questions[:3] if _qs.sub("", q).strip())`
-FIX: _cmd_harvest concept naming produces ugly long slugs like "fine-tuning-in-the-context-of-large-lang.md". After the existing line that strips the interrogative starter and does `.strip()[:40]`, replace that `[:40]` truncation with smarter extraction: (1) also strip a leading article with `re.sub(r"^(?:a|an|the)\s+", "", phrase, flags=re.IGNORECASE)`; (2) split on whitespace and take the first 2 words only; (3) strip trailing connector words ("in", "of", "a", "an", "the", "to", "and", "or", "for", "between") from the end of that 2-word result. Example: "fine-tuning in the context of large language models" becomes "fine-tuning"; "the difference between a taxonomy" becomes "difference".
-FIX: _directive_model_guided only finds context for _cmd_* function names. Change the regex in `for m in re.finditer(r'_cmd_\w+', instruction):` to `for m in re.finditer(r'\b(_\w+)\b', instruction):` so any underscore-prefixed function name mentioned in a FIX directive (e.g. _finalize_session, _reingest_file) is tried as a context source, not just _cmd_* methods.
-FIX: _generate_new_method should add a self-review pass after the initial coding_llm call. After `result = await asyncio.to_thread(lambda: coding_llm.invoke(prompt).content.strip())`, add a second asyncio.to_thread call with a review_prompt that shows the purpose, the proposed method code, and asks the model to check for: wrong variable names (VAULT_PATH/CONVERSATIONS_DIR/llm/coding_llm are module-level, not self.xxx), missing @work decorator for async ops, logic errors, off-by-one, incorrect regex escapes. If the reviewed result differs from result, use reviewed. Return whichever is non-empty.
-FIX: _cmd_harvest fuzzy vault matching misses cases where the topic slug is a short substring of a vault stem (e.g. "math" in "mathematics"). In the fuzzy fallback block, after the existing `if any(w in stem for w in topic_words)` check, also add `or slug in stem` to the condition so a direct substring match is tried even when topic_words is empty.
-FIX: ingest_vault uses DirectoryLoader with exclude=["conversations/**", "config/**", "local_db/**"]. Add "conversations/INDEX.md" to that exclude list so the auto-generated conversation index file is never chunked and embedded into ChromaDB (it is a navigation aid, not a knowledge note, and would pollute retrieval results).
-FIX: _finalize_session builds the topics field using a simple regex that strips question starters, producing low-quality summaries. Replace lines 584-585 in chatui.py (the `_qs = re.compile(...)` and `topics = "; ".join(...)` lines) with an llm.invoke() call: build a prompt `"Extract 2-4 short topic keywords or noun phrases from these questions. Reply ONLY with a comma-separated list, nothing else.\n" + "\n".join(f"- {q[:120].replace(chr(10), ' ')}" for q in questions[:5])`, call `llm.invoke(prompt).content.strip()` and assign the result to `raw_topics`. Then split raw_topics on commas, strip each item, filter out empty strings and items under 3 chars, take the first 4, and join with "; " for the topics string. Wrap the entire llm.invoke block in try/except, falling back to the old `_qs` regex approach on any exception.
-
----
-
 # Settings
 
 | Key | Default | Description |
@@ -121,15 +102,16 @@ Two-pass worker using `coding_llm`:
 
 ### 8. Config-Driven Self-Update (`/update` + `/apply`)
 
-At startup, `chatui.py` snapshots the full text of every `config/*.md` file into `_startup_config_texts`. `/update` re-reads all those files, computes a unified diff of anything that changed (frontmatter values OR body text), and passes the complete set of diffs to `qwen2.5-coder:7b`.
+Write `CHANGE:` or `FIX:` directives anywhere in any `config/*.md` file body. `/update` picks them up via `git diff` against `.chatui_sync` (the last-applied commit hash stored in the project root). Each directive is classified and applied as a targeted surgical edit:
 
-The model receives the config diffs alongside three targeted `chatui.py` sections — `_HELP_TEXT`, the `handlers` dict, and a `_cmd_*` example — and reasons about what code changes (if any) are implied. It returns either a unified diff for `chatui.py` or "No code changes required."
+- `CHANGE: add /X …` — inserts handler entry, help line, and generates a `_cmd_X` method body via `qwen2.5-coder:7b`
+- `FIX: description` — extracts the relevant function block by name, sends it + the instruction to the model, applies the result, then runs a **self-review pass** (second LLM call checks for dropped decorators, wrong variable names, regex mistakes)
 
-`/update` also shows a structured frontmatter-drift summary (changed setting/model values) so you can see numeric or string changes at a glance even when no code patch is needed.
+The result is validated with `ast.parse` + `py_compile` before being shown as a diff. `/apply` writes atomically via `os.replace` and advances `.chatui_sync` to `HEAD` so each directive is only applied once.
 
-`/apply` prompts yes/no, dry-runs `patch` at `-p1` then `-p0`, and writes the patch on a clean dry-run. Restart to load the changes.
+`apply_update.py` is a headless version of the same pipeline (no TUI required) — useful for bulk directive runs from Claude Code.
 
-See `config/commands.md` for the full step-by-step workflow and a table of what triggers a code change proposal.
+Applied directives are logged in `config/changelog.md`.
 
 ---
 
@@ -146,12 +128,12 @@ chatui.py
 ├── Config
 │   ├── _load_config_file()  — parse YAML frontmatter from a config/*.md file
 │   ├── _load_all_config()   — merge settings.md + models.md into one dict
-│   ├── _ensure_models()     — pull any model in models: list not yet installed
-│   └── _startup_cfg         — snapshot for /update drift detection
+│   └── _ensure_models()     — pull any model in models: list not yet installed
 │
 ├── Database
-│   ├── ingest_vault()       — load, chunk, embed, persist to ChromaDB
-│   └── load_existing_db()   — load persisted ChromaDB from disk
+│   ├── ingest_vault()       — load, chunk, embed, persist via chromadb.PersistentClient
+│   ├── load_existing_db()   — open existing PersistentClient DB from disk
+│   └── _reingest_file()     — incremental re-embed of a single changed file (used by watchdog)
 │
 ├── Tag Helpers
 │   ├── _extract_frontmatter_tags()
@@ -180,9 +162,10 @@ chatui.py
     │   ├── /ingest              — @work coroutine, non-blocking
     │   ├── /organize            — async worker, uses coding_llm
     │   ├── /savefile            — triggers NoteReviewScreen modal
-    │   ├── /update              — config drift check; coding model streams a unified diff
-    │   ├── /apply               — dry-run + apply pending patch; prompt to restart
-    │   ├── /clear, /web, /help
+    │   ├── /update              — collect git diff of config/, apply CHANGE:/FIX: directives
+    │   ├── /apply               — write validated patch atomically, advance .chatui_sync
+    │   ├── /readme, /harvest, /edit, /daily, /export, /stats
+    │   ├── /clear, /web, /help, /version, /status
     │   ├── _stream_llm()        — streams tokens (llm or coding_llm), writes Markdown when done
     │   └── _process()           — RAG pipeline with tag-aware second pass + open file injection
     ├── FileBrowserScreen        — modal: navigate vault files, select to load as context

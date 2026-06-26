@@ -34,7 +34,6 @@ summary: Backlog of improvement ideas for chatui.py — not yet directives, just
 
 ## Vault hygiene
 
-- `individual-sized-cakes.md` — rename to `cupcakes.md`; fix the YAML tags field which contains a rename request instead of actual tags.
 - `taxonomy.md` — missing YAML frontmatter; `/organize` didn't tag it.
 
 ---
