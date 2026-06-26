@@ -1,65 +1,63 @@
 ---
-title: Article Writing Guide
+title: "Article Writing Guide"
 tags: [meta]
 ---
 
 # Article Writing Guide
 
-**Markdown Article Structure Guide**
+Guidelines for writing knowledge-base articles. Follow this template for every article generated from conversation content.
 
-### Frontmatter (Top of the File)
+## Structure
 
-* Use YAML format to store metadata
-* Include:
-	+ `title`: Article title
-	+ `tags`: Keywords for categorization
-
-Example frontmatter:
-```yml
+```
 ---
-title: Introduction to Structured Markdown
-tags: markdown, knowledge-base
+title: "Exact topic name"
+tags: [tag1, tag2]   ← from taxonomy hierarchy
 ---
+
+# Topic Name
+
+One or two sentences saying what this is and why it matters.
+
+## How It Works  (or: Core Mechanism, Key Concepts, etc.)
+
+Explain the mechanism with concrete detail. Include:
+- The actual process step by step
+- Numbers and dimensions where relevant (e.g. "rank r=8 means 65K params vs 16M")
+- What it does NOT do (common misconceptions)
+
+## [Subtopic A]
+
+...
+
+## Comparison / When to Use
+
+A table comparing alternatives is often the most useful thing in an article.
+
+## Limitations
+
+What breaks, what the tradeoffs are, when NOT to use this.
+
+## See Also
+
+- [[related-note-1]]
+- [[related-note-2]]
 ```
 
-### H1 Title (Top of the Section)
+## Rules
 
-* Use `#` symbol followed by space and article title
+1. **Accuracy over completeness.** If you're not sure of a detail, omit it rather than guessing.
+2. **Use reference material from the vault.** If REFERENCE MATERIAL FROM VAULT is provided, treat it as ground truth and build the article from it. Do not contradict it.
+3. **Only link to vault notes that exist.** [[wikilinks]] in See Also must match real vault files listed under EXISTING VAULT NOTES. Never invent link targets.
+4. **No redundant See Also links.** Only include notes that are genuinely related to the topic. Do not link to photosynthesis in a machine learning article.
+5. **No frontmatter.** The system adds frontmatter automatically — do not write `---` blocks.
+6. **Tables beat paragraphs** for comparisons. Use them.
+7. **Concrete beats vague.** "r=8 gives 256× fewer trainable params" beats "significantly reduces parameters".
 
-### Opening Summary Paragraph (Introduction)
+## Anti-patterns to Avoid
 
-* Briefly introduce the topic and provide context
-
-Example:
-```markdown
-## Introduction to Structured Markdown
-Structured Markdown is a format for writing formatted text using plain text syntax. It's widely used in knowledge bases, documentation, and online content.
-```
-
-### H2 Sections (Key Concepts)
-
-* Use `##` symbol followed by space and section title
-* Break down complex topics into smaller sections
-
-Example:
-```markdown
-## Key Concepts
-
-Structured Markdown uses a combination of plain text syntax and special characters to format text. The most commonly used elements include headers, links, lists, and images.
-```
-
-### [[Wikilinks]] (Related Notes)
-
-* Use double square brackets `[[ ]]` with the link text and target URL
-* Provide links to related notes or documentation
-
-Example:
-```markdown
-## Related Notes
-See also: [Markdown Syntax](https://example.com/markdown-syntax) for more information on structured Markdown syntax.
-```
-
-### See Also Section (Conclusion)
-
-* Summarize key points and provide additional resources
-* Encourage further learning or exploration
+- Listing the vault stems verbatim in See Also
+- Starting every section with "In the context of..."
+- Saying things are "complex" without explaining them
+- Ending with "I hope this was helpful"
+- Including a Table of Contents for articles under 600 words

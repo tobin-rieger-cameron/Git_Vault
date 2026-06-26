@@ -1,42 +1,64 @@
 ---
-title: "LoRA (Low-Rank Adaptation) in Deep Learning"
+title: "LoRA: Low-Rank Adaptation"
 tags: [ai, machinelearning]
 ---
 
-# LoRA (Low-Rank Adaptation) in Deep Learning
-## A Practical Approach to Fine-Tuning on Consumer Hardware
+# LoRA: Low-Rank Adaptation
 
-LoRA stands for Low-Rank Adaptation, a technique used in deep learning to reduce the computational complexity of models, making them more efficient and practical for deployment on consumer hardware.
+LoRA is a parameter-efficient fine-tuning technique that adds small trainable adapter matrices alongside **frozen** pretrained weights. It does not modify or compress existing weights — the base model is untouched during training.
 
-### Key Concepts
+## How It Works
 
-#### What is LoRA?
-LoRA is a method that reduces the effective rank of a matrix representing the adaptation process. This reduction in rank leads to a decrease in the number of parameters that need to be updated during fine-tuning, resulting in significant computational savings.
+Standard fine-tuning learns a full weight update ΔW ∈ ℝ^(d×k) for each matrix — the same size as the original. LoRA constrains this update to a low-rank decomposition:
 
-#### Traditional Fine-Tuning Methods
-Traditional methods like learning rate scheduling or weight decay can be computationally expensive and require significant amounts of memory.
+```
+ΔW = B · A    where B ∈ ℝ^(d×r),  A ∈ ℝ^(r×k),  r << min(d, k)
+```
 
-### Why LoRA Makes Fine-Tuning Practical
+- **W** — original pretrained weight, kept frozen throughout training
+- **A** — initialised randomly; trained
+- **B** — initialised to zero (so the adapter starts as a no-op); trained
+- **r** — the rank, a hyperparameter (typically 8–64)
+- **α** — a scaling constant; the effective update is (α/r) · B·A
 
-LoRA makes fine-tuning practical on consumer hardware for several reasons:
+After training, the adapter merges into the base: `W' = W + (α/r)·B·A`. The merged model is identical in size and speed to the original — zero inference overhead.
 
-1. **Reduced Computational Complexity**: By reducing the effective rank of the model's parameters, LoRA significantly reduces the number of operations required for each update, making it much faster.
-2. **Lower Memory Requirements**: With fewer parameters to update, LoRA requires less memory, which is essential for consumer hardware that often has limited resources.
-3. **Scalability**: LoRA enables fine-tuning on smaller models or with fewer updates, making it more scalable and practical for deployment on a wide range of devices.
+## Why the Low-Rank Assumption Works
 
-### Benefits of LoRA
+Empirically, the weight changes needed for fine-tuning have a low intrinsic rank — most of the "useful" adaptation lies in a low-dimensional subspace. Full fine-tuning wastes capacity updating many near-zero directions.
 
-LoRA provides several benefits in the context of deep learning:
+## Parameter Efficiency
 
-*   Faster computation
-*   Reduced memory requirements
-*   Increased scalability
+For a typical attention weight matrix (d=k=4096):
+- Full update: 4096 × 4096 = **16.8M parameters**
+- LoRA at r=8: (4096×8) + (8×4096) = **65K parameters** — 256× fewer
 
-Overall, LoRA offers an efficient way to perform fine-tuning on consumer hardware by reducing the computational complexity and memory requirements associated with traditional fine-tuning methods.
+Across a 7B model fine-tuned with LoRA on Q and V projections: ~4M trainable parameters vs 7 billion. VRAM for the adapter is negligible.
+
+## QLoRA
+
+QLoRA extends LoRA by also quantising the frozen base weights to 4-bit NF4 format. This reduces a 7B model from ~14 GB to ~4–5 GB VRAM during training, making fine-tuning feasible on consumer GPUs (8 GB).
+
+## Choosing Rank
+
+| Rank | Suitable for |
+|---|---|
+| r = 4–8 | Style, tone, format adaptation |
+| r = 16 | General instruction tuning (good default) |
+| r = 32–64 | Domain knowledge injection, complex reasoning tasks |
+
+## Compared to Full Fine-Tuning
+
+| | Full FT | LoRA (r=16) | QLoRA (r=16) |
+|---|---|---|---|
+| Trainable params | 100% | ~0.5% | ~0.5% |
+| VRAM (7B) | ~60 GB | ~16 GB | ~5 GB |
+| Quality ceiling | Highest | Near-full | Slight degradation |
+| Catastrophic forgetting | Risk | Low | Low |
 
 ## See Also
 
-*   [[Machine Learning]]
-*   [[Taxonomy]]
-*   [[Mathematics]]
-*   [[Cupcakes]]
+- [[fine-tuning-methods]]
+- [[rlhf-alignment]]
+- [[machine-learning]]
+- [[knowledge-distillation-methods]]

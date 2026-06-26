@@ -1,44 +1,51 @@
 ---
-title: "Knowledge Distillation Methods"
-tags: [machinelearning]
+title: "Knowledge Distillation"
+tags: [machinelearning, ai]
 ---
 
-Knowledge Distillation
-=====================
+# Knowledge Distillation
 
-### Tags: #MachineLearning #NaturalLanguageProcessing
+Knowledge distillation is a model compression technique where a smaller **student** model is trained to mimic the behaviour of a larger **teacher** model. The student learns from the teacher's output distributions rather than just hard labels, allowing it to capture more of the teacher's learned representations.
 
-### Summary
-Knowledge distillation is a machine learning technique where a smaller model (the student) is trained to mimic the behavior of a larger, pre-trained model (the teacher). The goal of knowledge distillation is to transfer knowledge from the teacher model to the student model, allowing the student model to perform well on tasks similar to those performed by the teacher model.
+## Core Mechanism
 
-### Key Concepts
+During standard training, a model learns from one-hot ground-truth labels (the correct class gets probability 1, all others 0). Knowledge distillation instead trains the student on the teacher's **soft probability outputs** (e.g., a model might assign 0.7 to "cat", 0.2 to "dog", 0.1 to "tiger"). These soft targets carry richer information about class similarities.
 
-#### Pre-training
-A large, pre-trained teacher model is trained on a massive dataset. This step allows the teacher model to learn complex features and representations that can be transferred to the student model.
+The distillation loss combines:
+- **Distillation loss** — KL divergence between student and teacher softmax outputs (at temperature T > 1 to soften the distribution)
+- **Student loss** — standard cross-entropy against ground truth labels
+- A weighting factor α balances the two terms
 
-#### Knowledge Distillation
-The output of the teacher model is used as the input to a smaller student model. The student model learns to replicate the outputs of the teacher model, while also learning its own features and representations.
+Hinton et al. (2015) showed that a student trained with distillation significantly outperforms a student trained on hard labels alone.
 
-#### Loss Function
-A loss function is defined that measures the difference between the output of the student model and the output of the teacher model. This loss function encourages the student model to minimize the gap between its predictions and the teacher's predictions.
+## Temperature Scaling
 
-### Benefits
+At temperature T, logits z are divided before softmax: `σ(z_i / T)`. Higher T produces softer distributions that reveal more structure in the teacher's beliefs. T=1 is standard softmax; T=3–5 is common for distillation.
 
-* Reduce the computational requirements of training a large model
-* Leverage pre-trained models with limited data or computational resources
-* Improve the performance of small models on tasks that require complex reasoning and knowledge representation
+## Types of Knowledge to Distill
 
-#### Transfer Learning and Knowledge Distillation
-Knowledge distillation is often used in combination with transfer learning, where a pre-trained model (teacher) is fine-tuned on an offline dataset to adapt to a new task or domain.
+**Response-based** — distil from the teacher's final output (logits). Simplest, most common.
 
-### Applications in Local LLMs
-Knowledge distillation can be particularly useful for:
+**Feature-based** — match intermediate layer activations between teacher and student. Transfers internal representations, not just outputs.
 
-* Fine-tuning a smaller model on a specific task or domain
-* Transferring knowledge from a larger pre-trained model to a smaller, more specialized model
+**Relation-based** — match the relationships between different samples' activations. Captures geometric structure in representation space.
 
-### Note
-Please note that knowledge distillation is a powerful technique, but it requires careful tuning of hyperparameters and may not always guarantee the desired results.
+## Applications in LLMs
 
-### See Also
-[[Machine Learning]] [[Natural Language Processing]]
+- **Model compression** — distil a 70B model into a 7B student for cheaper inference
+- **Speculative decoding** — a small draft model (student) generates tokens quickly; a large model (teacher) verifies them in parallel
+- **Dataset generation** — use a teacher (e.g., GPT-4) to generate training data (responses) for fine-tuning a student (e.g., Llama-3-8B). Mistral, Phi-2, and many open models were trained this way
+- **Task-specific compression** — distil a general model into a smaller domain-specific one
+
+## Limits
+
+- The student is bounded by the teacher's capability ceiling
+- Architectural mismatch between teacher and student can limit transfer
+- Feature-based distillation requires the student to have compatible intermediate dimensions
+
+## See Also
+
+- [[machine-learning]]
+- [[fine-tuning-methods]]
+- [[lo-ra-adaptations]]
+- [[language-models]]

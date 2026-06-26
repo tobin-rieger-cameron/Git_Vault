@@ -1,48 +1,59 @@
 ---
+title: "Dewey Decimal System"
+tags: [taxonomy]
 ---
 
-Dewey Decimal System
-=====================
+# Dewey Decimal System
 
-### Tags: #Taxonomy, #KnowledgeOrganization
+The Dewey Decimal Classification (DDC) is a hierarchical library classification system devised by Melvil Dewey in 1876. It divides all knowledge into ten main classes, each subdivided decimally, and is the most widely used library classification system in the world.
 
-**Title:** Understanding the Dewey Decimal System: A Framework for Dividing Knowledge
+## The Ten Main Classes
 
-The Dewey Decimal System is a method of categorizing books and other materials in libraries. It divides knowledge into ten main classes, providing a logical and consistent way to organize knowledge.
+| Class | Domain |
+|---|---|
+| 000 | Computer science, knowledge, information |
+| 100 | Philosophy and psychology |
+| 200 | Religion |
+| 300 | Social sciences |
+| 400 | Language |
+| 500 | Natural sciences and mathematics |
+| 600 | Technology and applied sciences |
+| 700 | Arts and recreation |
+| 800 | Literature |
+| 900 | History and geography |
 
-## Overview
+## Decimal Subdivision
 
-The Dewey Decimal System has its roots in the 19th century, developed by Melvil Dewey with the goal of creating a universal system for organizing knowledge. While it has been widely adopted for books and other written materials, its applicability to all forms of human knowledge remains uncertain.
+Each class subdivides further with decimal notation. For example:
+- **500** Natural sciences
+  - **510** Mathematics
+    - **516** Geometry
+      - **516.3** Analytic geometries
 
-## Main Classes
+This allows arbitrarily fine classification while preserving hierarchical relationships through the numeric prefix.
 
-The Dewey Decimal System divides knowledge into ten main classes:
+## As a Knowledge Taxonomy
 
-*   0 - General Works
-*   1 - Philosophy and Psychology
-*   2 - Religion
-*   3 - Social Sciences
-*   4 - Language
-*   5 - Science
-*   6 - Technology
-*   7 - Arts and Recreation
-*   8 - Literature
-*   9 - History and Geography
+The DDC is one of the earliest formal taxonomies of human knowledge. It reflects a 19th-century Western academic view of disciplines — critics note it treats Christianity as the default (200s), marginalises non-Western literature, and struggles to classify interdisciplinary fields cleanly.
+
+Compared to ontology-based systems, DDC is a **hierarchical classification** (one parent per node) rather than a graph (multiple parent relationships). This makes it simpler to shelve books but limits expressiveness for cross-disciplinary knowledge.
 
 ## Limitations
 
-While the Dewey Decimal System has been successful in organizing written materials, it may not be suitable for all forms of human knowledge. As mentioned earlier, there is ongoing debate among experts and scholars about the feasibility of a single system to capture the full scope of human knowledge.
+- Bias toward Western, Christian, English-language perspectives in original edition
+- Interdisciplinary fields (cognitive science, bioinformatics) don't fit neatly
+- Designed for physical book shelving — doesn't capture the relational structure of concepts
+- New fields require DDC revision, which lags behind research
 
-## Alternative Approaches
+## Alternatives
 
-Different approaches have been proposed by experts and scholars to organize human knowledge:
-
-1.  **Taxonomy**: A widely used method for categorizing objects or concepts based on their relationships and characteristics.
-2.  **Knowledge Organization Systems (KOS)**: These systems aim to provide a more comprehensive and flexible framework for organizing knowledge, taking into account the complexities of human knowledge.
+- **Library of Congress Classification (LCC)** — alphanumeric, used in US academic libraries
+- **Universal Decimal Classification (UDC)** — extends DDC with relational notation
+- **Faceted Classification** (S.R. Ranganathan's Colon Classification) — combines multiple orthogonal facets rather than a single hierarchy
 
 ## See Also
 
-*   [[Taxonomy]]
-*   [[KnowledgeOrganizationSystems]]
-
-Note: While the Dewey Decimal System has been widely adopted, its limitations in capturing all forms of human knowledge are acknowledged. As our understanding of human knowledge evolves, new approaches and systems will likely emerge to address these challenges.
+- [[taxonomy]]
+- [[taxonomy-hierarchy-differences]]
+- [[folksonomy-differences]]
+- [[disciplines-hierarchies]]

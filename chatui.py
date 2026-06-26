@@ -1565,6 +1565,19 @@ class ChatApp(App[None]):
                 close = body.find('\n---', 3)
                 body = body[close + 4:].lstrip('\n') if close != -1 else re.sub(r'^-+\s*', '', body)
 
+            # Strip invented wikilinks — only keep [[X]] where X matches a real vault stem
+            vault_stems_set = {s.lower().replace('-', ' ') for s in vault_stems}
+            vault_stems_set.update(s.lower().replace(' ', '-') for s in vault_stems)
+            vault_stems_set.update(s.lower() for s in vault_stems)
+            body = re.sub(
+                r'\[\[([^\]]+)\]\]',
+                lambda m: f'[[{m.group(1)}]]' if m.group(1).lower() in vault_stems_set
+                          or m.group(1).lower().replace('-', ' ') in vault_stems_set
+                          or m.group(1).lower().replace(' ', '-') in vault_stems_set
+                          else m.group(1),
+                body
+            )
+
             article = frontmatter + body
 
             if already_exists:

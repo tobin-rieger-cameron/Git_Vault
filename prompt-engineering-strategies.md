@@ -40,47 +40,18 @@ Role prompting involves specifying the role or perspective from which the prompt
 
 Self-consistency involves ensuring that the prompt is logically consistent and coherent throughout. This pattern helps to prevent the model from generating responses that are contradictory or nonsensical.
 
-[[self-consistency]] is a crucial aspect of prompt engineering, as it ensures that the model generates accurate and relevant responses.
+Self-consistency is a crucial aspect of prompt engineering — it ensures that the model generates accurate and relevant responses.
 
-## Additional Patterns and Techniques
+## Additional Patterns
 
-* [[question-answer-pairs]] provide clear question-answer pairs to elicit specific and accurate responses.
-* [[contextual-hints]] add contextual hints, such as location or time, to provide important context for the prompt.
-* [[emphasis-on-key-concepts]] emphasizes key concepts or entities in the prompt to help the model focus on the most relevant information.
-
-## See Also
-
-* [[kinematics]]: a fundamental concept in physics that describes the motion of objects.
-* [[language-models]]: artificial intelligence systems designed to process and generate human language.
-* [[photosynthesis]]: the process by which plants convert sunlight into energy.
-* [[taxonomy]]: a method for categorizing objects or concepts based on their relationships and characteristics.
-
-
----
-
-## Additional notes
-
----
-
-# Prompt Engineering for Language Models
-### Effective Patterns and Techniques for Crafting High-Quality Prompts
-
-Prompt engineering is the process of designing high-quality input prompts that elicit specific responses from AI models. Effective prompt engineering can significantly impact the performance and behavior of language models.
-
-### Chain of Thought
-Presenting a sequence of related questions or statements to the model, simulating a human's train of thought, can encourage coherence and relevance in responses. By providing context and connections between ideas, you can help the model generate more effective answers.
-
-### Few-Shot Examples
-Few-shot learning involves providing the model with a small number of examples that demonstrate the desired behavior or concept. This approach can help the model learn quickly and efficiently by leveraging pre-existing knowledge and patterns.
-
-### Role Prompting
-Specifying the role or persona that the model should adopt when responding to a prompt, such as a doctor, lawyer, or customer service representative, can help generate responses tailored to specific contexts and domains.
-
-### Self-Consistency
-Encouraging the model to generate responses consistent with itself, by asking it to explain concepts in its own internal representations or knowledge graph, can help develop coherence and consistency in its answers.
+- **Question-answer pairs** — provide clear Q&A examples to elicit specific structured responses
+- **Contextual hints** — add location, time, or persona context to anchor the model's framing
+- **Emphasis on key concepts** — repeat or highlight the most critical constraints in the prompt
 
 ## See Also
 
-* [[Machine Learning]]: A subset of artificial intelligence that enables machines to learn from data.
-* [[Language Models]]: AI models designed to process and generate human language.
-* [[Taxonomy]]: A method for categorizing objects or concepts based on their relationships and characteristics.
+- [[language-models]]
+- [[rlhf-alignment]]
+- [[fine-tuning-methods]]
+
+

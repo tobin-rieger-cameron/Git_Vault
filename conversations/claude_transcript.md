@@ -1,7 +1,7 @@
 ---
 title: Claude Code Session Transcript
 last_updated: 2026-06-26
-sessions: 6
+sessions: 7
 ---
 
 # Claude Code Session Transcript
@@ -20,6 +20,7 @@ Ongoing log of all Claude Code sessions for this project. Use the **Quick Index*
 | [4](#session-4----2026-06-25-ui-commands--watchdog) | 2026-06-25 | UI overhaul, /stats, /edit, /daily, status labels, smarter chunking, watchdog, /export | `7fe0492` → `a200842` |
 | [5](#session-5----2026-06-26-llm-efficient-sessions--readme--harvest) | 2026-06-26 (morning) | Session frontmatter/audit trail/INDEX; /readme and /harvest via self-update pipeline; harvest quality fixes | `2e663aa` → `940ae25` |
 | [6](#session-6----2026-06-26-8x-fix-improvements) | 2026-06-26 (afternoon) | 8x FIX improvements through pipeline; apply_update.py hardening; _finalize_session LLM extraction | `031a42e` → `1b6d28c` |
+| [7](#session-7----2026-06-26-distill-command--vault-pre-seeding) | 2026-06-26 (evening) | /distill command; vault pre-seeding with accurate reference files; article quality assessment + fixes | `ef3094c` → `95a7340` + this session |
 
 ### Key decisions & constraints (read this first)
 - **Self-update pipeline**: FIX:/CHANGE: directives in `config/settings.md` → `apply_update.py` reads git diff → `coding_llm` generates fix → self-review pass → writes `chatui.py`
@@ -269,3 +270,67 @@ there's a claude transcript somewhere in the conversations file, I'd like you to
 
 ### Assistant
 Renamed `2026-06-24_22-40-26.md` → `conversations/claude_transcript.md`. Added Quick Index at top with session table and key decisions/constraints. Backfilled Sessions 3-6 with transcripts/reconstructions. This file is the result.
+
+---
+
+## Session 7 — 2026-06-26: /distill Command + Vault Pre-seeding
+
+**Commits:** `ef3094c` `42aca01` `95a7340` + session-end commit
+
+### Context
+Continued from compacted session. User wanted core workflow: conversation logs → structured vault articles. ChatUI should be taxonomy-aware, generate `[[wikilinks]]` to existing notes, and self-seed reference material when it lacks context for a task.
+
+### Key decisions & constraints
+- `/distill` generates frontmatter programmatically (never from model — llama3.2:3b produces unclosed `---` blocks)
+- `_distill_tags()` helper: keyword-to-tag map, no LLM call needed per article
+- Pipeline directive EOFError: `apply_update.py` requires interactive stdin for "Apply? [y/N]" — background runs always fail at that step; applied patch manually
+- RAG during distill (FIX 2) failed with "No original block to replace" — not yet implemented
+- Reference files prefixed `_ref-` are excluded from distill article generation by the `startswith("_")` filter in vault_stems
+
+### What was built
+
+**`/distill <session_file>`** (`ef3094c`):
+- Parses Q&A pairs from a session `.md` file (filters status lines, skips `/command` turns)
+- Bootstraps `_article-guide.md` if missing (LLM writes its own formatting guide)
+- Loads `taxonomy.md` for tag/hierarchy awareness without being told explicitly
+- Generates one article per Q&A pair with programmatic YAML frontmatter + tag extraction
+- Post-processes to strip invented `[[wikilinks]]` (only real vault stems survive)
+- Re-ingests each article into ChromaDB immediately
+
+**First distill run** (`42aca01`): 24 articles from `2026-06-24_23-52-49.md` — fine-tuning, LoRA, RLHF, RAG, retrieval, embeddings, vector databases, prompt engineering, taxonomy, Dewey Decimal, folksonomy, kinematics, natural/formal/social sciences, interdisciplinary fields.
+
+**Frontmatter fix** (`95a7340`): All 22 articles missing valid frontmatter were retro-fixed with a Python script. Root cause: model generates opening `---` then drifts into content. Fix: strip any model frontmatter, build it in code with `_distill_tags()`.
+
+**Article quality assessment** (this session): Reviewed 8 articles. Issues found:
+1. LoRA mechanism described backwards ("reduces effective rank of existing matrices" — wrong; adds adapter matrices alongside frozen weights)
+2. RLHF simplified to "humans give feedback → model updates" — missing the 3-stage pipeline (SFT → reward model → PPO)
+3. Sparse-vs-dense had Q&A contamination at bottom (taxonomy question bled into retrieval article)
+4. `prompt-engineering-strategies.md` had duplicate content from append collision
+5. `dewey-decimal-system.md` and `knowledge-distillation-methods.md` had `---\n---` empty frontmatter
+6. Wikilinks: model invented `[[chain-of-thought-pattern]]`, `[[RAG_systems]]`, `[[Cupcakes]]` in LoRA article
+
+**Vault pre-seeding** (this session): Written directly as accurate reference material:
+- `language-models.md` — complete rewrite: transformer architecture, tokenisation, KV cache, quantisation (GGUF/GPTQ), hallucination causes, sampling strategies
+- `machine-learning.md` — complete rewrite: learning paradigms, training loop, Adam/AdamW, overfitting, backpropagation
+- `_ref-lora.md` — accurate LoRA: ΔW=B·A decomposition, A/B init, rank selection, QLoRA, param savings table
+- `_ref-rlhf.md` — accurate RLHF: SFT → reward model → PPO with KL penalty; DPO/RLAIF/Constitutional AI alternatives
+- `_ref-fine-tuning.md` — fine-tuning spectrum: full FT → PEFT → LoRA/QLoRA → DPO/RLHF; when to use which
+- `_ref-rag.md` — RAG pipeline: ingestion, chunking strategies, sparse vs dense, embedding models, similarity thresholds
+
+**Inaccurate articles rewritten** (this session):
+- `lo-ra-adaptations.md` — corrected: LoRA adds B·A adapters, W stays frozen; added rank table and QLoRA explanation
+- `rlhf-alignment.md` — corrected: full 3-stage pipeline; alternatives table (DPO, RLAIF, Constitutional AI, KTO)
+- `knowledge-distillation-methods.md` — corrected: soft targets, temperature scaling, response/feature/relation-based types
+- `dewey-decimal-system.md` — fixed frontmatter; added 10-class table, limitations, alternatives (LCC, UDC)
+- `sparse-vs-dense-retrieval.md` — stripped Q&A contamination; fixed See Also
+- `prompt-engineering-strategies.md` — removed duplicate section; fixed irrelevant wikilinks
+
+**`_article-guide.md` replaced** with a prescriptive template emphasising: accuracy over completeness, use reference material from vault, concrete numbers over vague prose, no invented wikilinks, tables for comparisons, anti-patterns list.
+
+**Wikilink filter applied** to `_cmd_distill`: post-processes generated body with regex, strips `[[X]]` where X doesn't match any vault stem (normalised lowercase, spaces↔hyphens). Prevents invented notes polluting articles.
+
+### User
+can you update claude transcript and commit
+
+### Assistant
+Updating transcript and committing all session work.
