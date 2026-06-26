@@ -42,6 +42,8 @@ CHANGE: find a way to refine/improve/train my model
 CHANGE: ui overhaul with loading bars to know when chatui is processing something. text should wrap and there should be margins on the left and right to keep text centered
 CHANGE: /organize should also clean up conversation logs — condense single-command and testing sessions to 1-2 line summaries
 CHANGE: all output from /commands should be appended to chat logs
+CHANGE: add /readme command — reads chatui.py source using _extract_handlers_block to list all commands, reads config/settings.md frontmatter for current parameter values, reads the existing README.md if present, then uses coding_llm to generate a fresh README covering: Overview, Commands table (name + one-line purpose from _HELP_TEXT), Configuration table (key/default/description from settings.md), Architecture summary, and Stack table. Writes result to os.path.join(VAULT_PATH, "README.md"). Decorated with @work async. Uses self._set_busy and self._log.
+CHANGE: add /harvest command — reads conversations/INDEX.md, extracts topic strings from lines matching "— <topics>" at end of each bullet, splits topics on semicolons to get individual phrases, deduplicates (case-insensitive), skips phrases under 4 chars, then for each topic: searches vault root for a .md file whose stem matches the topic (case-insensitive, spaces→hyphens); if found, appends a wikilink reference "See also: [[INDEX]]" to that file if not already present; if not found, creates a new stub file named <topic-as-kebab-case>.md with a H1 heading, a one-sentence description from llm.invoke(), and "See also: [[INDEX]]". Reports counts of created and updated files. Decorated with @work async. Uses self._set_busy and self._log.
 
 ---
 
