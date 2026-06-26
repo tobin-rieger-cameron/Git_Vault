@@ -1,5 +1,4 @@
 local_db/
-conversations/
 __pycache__/
 *.pyc
 .obsidian/
