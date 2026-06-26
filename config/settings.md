@@ -185,3 +185,11 @@ chatui.py
 | LLM framework | LangChain (`langchain-ollama`, `langchain-community`) |
 | Web search | DuckDuckGo Search (`duckduckgo-search`) |
 | Terminal UI | Textual + Rich |
+
+---
+
+## Pending Directives
+
+FIX: _cmd_distill — after stripping model-generated frontmatter from `body`, apply a wikilink filter. Use re.sub with a lambda to find every [[X]] in body. For each match, normalise X by lowercasing and replacing spaces↔hyphens, then check if the normalised form matches any entry in vault_stems (also normalised the same way). If no match found, replace [[X]] with just X (strip the brackets but keep the display text). This removes invented wikilinks while preserving real ones.
+
+FIX: _cmd_distill — before building art_prompt for each Q&A pair, query the vault for reference material: if self.db is not None, call self.db.similarity_search_with_score(question, k=3) in asyncio.to_thread, filter to results with score >= 0.45, take the top 2 doc.page_content values and join them with "\n---\n" as vault_ref_ctx. Add vault_ref_ctx as a "REFERENCE MATERIAL FROM VAULT (prioritise this for accuracy):" block in art_prompt, placed between the SOURCE block and the FORMAT block. If db is None or no results pass the threshold, omit the block entirely.
