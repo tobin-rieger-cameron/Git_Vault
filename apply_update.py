@@ -215,6 +215,33 @@ def _apply_fix(source, instruction):
         print("  ⚠  No replacement made (model returned same or empty).")
         return source
 
+    # ── Self-review pass ──────────────────────────────────────────────────────
+    print("  🔍  Self-review pass…")
+    review_prompt = "\n".join([
+        "Review the following Python function for correctness. The original change request was:",
+        instruction,
+        "",
+        "ORIGINAL CODE:",
+        relevant_block,
+        "",
+        "PROPOSED CODE:",
+        updated,
+        "",
+        "Check for: logic errors, edge cases, dropped decorators, wrong indentation,",
+        "regex mistakes (e.g. escaped backslashes), off-by-one in slices, missing strips.",
+        "If the proposed code is correct, return it unchanged.",
+        "If you find issues, return the corrected version.",
+        "Return ONLY the function definition. No explanation, no fences.",
+    ])
+    reviewed = _llm().invoke(review_prompt).content.strip()
+    reviewed = re.sub(r'^```\w*\s*\n?', '', reviewed)
+    reviewed = re.sub(r'\n?```\s*$', '', reviewed).strip()
+    if reviewed and reviewed.strip() != updated.strip():
+        print("  ✏️   Reviewer made corrections.")
+        updated = reviewed
+    else:
+        print("  ✅  Reviewer approved (no changes).")
+
     # Re-add decorators if model dropped them
     first_def = next((i for i, l in enumerate(updated.splitlines()) if re.match(r'\s*(async )?def ', l)), None)
     if first_def is not None:
