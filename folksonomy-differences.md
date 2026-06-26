@@ -1,4 +1,7 @@
 ---
+title: "Folksonomy"
+tags: [taxonomy]
+---
 
 # Folksonomy
 ## Understanding the Difference from Taxonomy

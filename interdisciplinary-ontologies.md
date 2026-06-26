@@ -1,4 +1,8 @@
 ---
+title: "Interdisciplinary Fields"
+tags: [taxonomy]
+---
+
 # Interdisciplinary Fields
 ## Category: Taxonomy
 ## Tags: #KnowledgeTaxonomy, #InterdisciplinaryFields

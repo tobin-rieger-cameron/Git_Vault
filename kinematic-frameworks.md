@@ -1,4 +1,7 @@
 ---
+title: "Kinematics in the Context of Physics and Natural Sciences"
+tags: [physics]
+---
 
 # Kinematics in the Context of Physics and Natural Sciences
 ### Tags: physics, kinematics, taxonomy

@@ -1,4 +1,7 @@
 ---
+title: "Natural Sciences"
+tags: [general]
+---
 
 # Natural Sciences
 ## Tags: science, knowledge organization

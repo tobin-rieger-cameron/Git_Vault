@@ -1,4 +1,7 @@
 ---
+title: "Social Sciences Knowledge Base"
+tags: [general]
+---
 
 # Social Sciences Knowledge Base
 ## Tags: social sciences, taxonomy, categorization of human knowledge

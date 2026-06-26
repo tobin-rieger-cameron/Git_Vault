@@ -708,6 +708,34 @@ class PendingNote:
     suggestion: str
 
 
+_DISTILL_TAG_MAP: list[tuple[str, list[str]]] = [
+    ("machinelearning", ["machine learning", "fine tun", "fine-tun", "lora", "lo ra", "rlhf",
+                         "distillation", "embedding", "transformer", "language model",
+                         "neural network", "training", "llm", "pre train", "pre-train",
+                         "knowledge distil"]),
+    ("ai",             ["artificial intelligence", "deep learning", "llm", "language model",
+                         "rag", "retrieval augmented", "retrieval-augmented", "prompt engineer",
+                         "vector search", "vector database", "sparse retrieval", "dense retrieval",
+                         "agentic", "agent pattern", "chatbot", "alignment", "constitutional"]),
+    ("physics",        ["kinematic", "motion", "velocity", "mechanics", "dynamics", "force"]),
+    ("mathematics",    ["math", "formal science", "logic", "algebra", "calculus", "statistic",
+                         "set theory", "proof"]),
+    ("biology",        ["biology", "photosynthesis", "evolution", "genetic", "organism",
+                         "ecology", "cell"]),
+    ("taxonomy",       ["taxonomy", "ontolog", "classification", "categor", "hierarch",
+                         "folksonomy", "dewey", "knowledge organi", "discipline", "knowledge branch"]),
+    ("philosophy",     ["philosophy", "epistemology", "metaphysics", "ethics"]),
+    ("language",       ["linguistic", "grammar", "syntax", "semantic", "natural language",
+                         "morpholog"]),
+    ("history",        ["history", "historical", "civilization", "era", "ancient"]),
+]
+
+
+def _distill_tags(question: str, slug: str) -> list[str]:
+    text = (question + " " + slug.replace("-", " ")).lower()
+    return sorted(tag for tag, kws in _DISTILL_TAG_MAP if any(kw in text for kw in kws)) or ["general"]
+
+
 def get_concept_suggestion(question: str, answer: str) -> str:
     prompt = (
         "Identify the single core concept this question and answer are about.\n"
@@ -1510,32 +1538,34 @@ class ChatApp(App[None]):
             # Trim source to clean prose (drop raw Q&A artifact lines)
             clean_answer = re.sub(r'^#+\s+Q:.*$', '', answer[:2000], flags=re.MULTILINE).strip()
 
-            # Build minimal prompt — small models lose coherence with long style guides inline
-            taxonomy_hint = (
-                f"\nTAXONOMY (pick tags from this):\n{taxonomy_ctx[:600]}"
-                if taxonomy_ctx else ""
-            )
+            # Don't ask the 3b model to generate frontmatter — it produces malformed output.
+            # Build it programmatically from the slug + keyword-based tag extraction.
+            tags = _distill_tags(question, slug)
+            title = question.strip()[:80].replace('\n', ' ').replace('"', "'")
+            frontmatter = f'---\ntitle: "{title}"\ntags: [{", ".join(tags)}]\n---\n\n'
+
             art_prompt = (
                 f"Write a markdown knowledge-base article about this topic.\n\n"
                 f"TOPIC: {question}\n\n"
                 f"SOURCE (distil into prose, do not quote verbatim):\n{clean_answer}\n\n"
                 f"VAULT NOTES (ONLY use [[note-name]] wikilinks from this exact list — no others): {stems_str}"
-                f"{taxonomy_hint}\n\n"
-                f"FORMAT: Start with YAML frontmatter (title, tags list). "
-                f"Then # H1 title. Then a 1-2 sentence summary. "
+                f"{f'{chr(10)}TAXONOMY CONTEXT:{chr(10)}{taxonomy_ctx[:400]}' if taxonomy_ctx else ''}\n\n"
+                f"FORMAT: # H1 title. Then 1-2 sentence summary. "
                 f"Then ## sections for key concepts. "
                 f"Use [[wikilinks]] inline only for vault notes listed above. End with ## See also.\n\n"
-                f"Write the complete article:"
+                f"Write the article body (no YAML frontmatter — it will be added automatically):"
             )
 
-            article = await asyncio.to_thread(lambda p=art_prompt: llm.invoke(p).content.strip())
-            # Strip any stray markdown fences
-            article = re.sub(r'^```\w*\n?', '', article, flags=re.MULTILINE).strip()
-            article = re.sub(r'\n?```\s*$', '', article, flags=re.MULTILINE).strip()
-            # Ensure YAML frontmatter exists
-            if not article.startswith('---'):
-                title_line = question.strip()[:80].replace('\n', ' ')
-                article = f"---\ntitle: \"{title_line}\"\ntags: []\n---\n\n{article}"
+            body = await asyncio.to_thread(lambda p=art_prompt: llm.invoke(p).content.strip())
+            # Strip stray markdown fences
+            body = re.sub(r'^```\w*\n?', '', body, flags=re.MULTILINE).strip()
+            body = re.sub(r'\n?```\s*$', '', body, flags=re.MULTILINE).strip()
+            # Strip any frontmatter the model added anyway (unclosed --- blocks etc.)
+            if body.startswith('---'):
+                close = body.find('\n---', 3)
+                body = body[close + 4:].lstrip('\n') if close != -1 else re.sub(r'^-+\s*', '', body)
+
+            article = frontmatter + body
 
             if already_exists:
                 with open(fpath, "a", encoding="utf-8") as fh:

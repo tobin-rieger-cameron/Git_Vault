@@ -1,5 +1,5 @@
 ---
-
+---
 # Human Knowledge Categories
 ## Table of Contents
 

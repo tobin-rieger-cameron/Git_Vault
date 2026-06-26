@@ -1,9 +1,6 @@
 ---
-
-# Retrieval-Augmented Generation (RAG)
-## Overview
-Retrieval-Augmented Generation (RAG) is a type of artificial intelligence model that combines the strengths of two popular AI paradigms: Retrieval-based Models and Generative Models. This approach has shown promising results in various natural language processing tasks.
-
+title: "Retrieval Augmentation Models"
+tags: [general]
 ---
 
 ## # Main Components

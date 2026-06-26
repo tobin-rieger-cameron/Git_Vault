@@ -1,3 +1,8 @@
+---
+title: "Taxonomy"
+tags: [taxonomy]
+---
+
 # Taxonomy
 # Ontology
 # Classification System

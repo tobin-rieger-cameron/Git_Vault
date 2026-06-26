@@ -1,4 +1,8 @@
 ---
+title: "Taxonomy and Knowledge Organization"
+tags: [taxonomy]
+---
+
 # Taxonomy and Knowledge Organization
 ## A Brief Overview
 

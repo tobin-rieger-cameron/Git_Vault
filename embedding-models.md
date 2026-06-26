@@ -1,3 +1,8 @@
+---
+title: "Embedding Models"
+tags: [machinelearning]
+---
+
 Title: Embedding Models in Natural Language Processing
 Tags: #MachineLearning, #NLP, #LanguageModeling, #Mathematics
 

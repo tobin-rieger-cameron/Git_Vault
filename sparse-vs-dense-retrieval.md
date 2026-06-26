@@ -1,3 +1,8 @@
+---
+title: "Retrieval-Augmented Generation Systems: Sparse vs Dense Retrieval"
+tags: [ai]
+---
+
 # Retrieval-Augmented Generation Systems: Sparse vs Dense Retrieval
 
 ## Introduction
