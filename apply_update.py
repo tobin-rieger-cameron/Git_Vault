@@ -173,31 +173,74 @@ def _apply_fix(source, instruction):
 
     # Find any function name mentioned in the instruction
     relevant_block = ""
+    fn_found = ""
     for fn_name in re.findall(r'\b(_\w+)\b', instruction):
         block = _extract_method_block(source, fn_name)
         if block:
             relevant_block = block
+            fn_found = fn_name
             print(f"       context: {fn_name} ({len(block.splitlines())} lines)")
             break
+
+    # Detect indentation and decorators from the original block
+    orig_lines = relevant_block.splitlines(keepends=True) if relevant_block else []
+    # Find leading decorator/def lines to know the base indent
+    base_indent = ""
+    decorators = []
+    if orig_lines:
+        for ln in orig_lines:
+            stripped = ln.lstrip()
+            if stripped.startswith("@"):
+                decorators.append(ln.rstrip())
+            elif stripped.startswith(("def ", "async def ")):
+                base_indent = ln[: len(ln) - len(ln.lstrip())]
+                break
 
     prompt = "\n".join([
         "Make the following targeted change to chatui.py:",
         instruction,
         "",
-        *(["CURRENT CODE OF RELEVANT FUNCTION:", relevant_block, ""] if relevant_block else []),
+        *(["CURRENT CODE OF RELEVANT FUNCTION (preserve indentation and ALL decorators):",
+           relevant_block, ""] if relevant_block else []),
         "Rules:",
-        "  - Return ONLY the updated function definition with the same indentation.",
-        "  - No explanation, no fences, no surrounding code.",
-        "  - Preserve the function signature and decorators exactly.",
+        f"  - Use exactly {len(base_indent)}-space indent (same as the original).",
+        f"  - Keep ALL decorators: {decorators if decorators else 'none'}",
+        "  - Return ONLY the updated function definition. No explanation, no fences, no surrounding code.",
     ])
     updated = _llm().invoke(prompt).content.strip()
     updated = re.sub(r'^```\w*\s*\n?', '', updated)
     updated = re.sub(r'\n?```\s*$', '', updated).strip()
 
-    if relevant_block and updated and updated.strip() != relevant_block.strip():
+    if not updated or updated.strip() == relevant_block.strip():
+        print("  ⚠  No replacement made (model returned same or empty).")
+        return source
+
+    # Re-add decorators if model dropped them
+    first_def = next((i for i, l in enumerate(updated.splitlines()) if re.match(r'\s*(async )?def ', l)), None)
+    if first_def is not None:
+        existing_decorators = [l for l in updated.splitlines()[:first_def] if l.strip().startswith("@")]
+        missing = [d for d in decorators if not any(d.strip() in e for e in existing_decorators)]
+        if missing:
+            print(f"  ↩  Re-adding dropped decorators: {missing}")
+            lines_u = updated.splitlines(keepends=True)
+            updated = "".join(
+                [base_indent + d.strip() + "\n" for d in missing] + lines_u[first_def:]
+            )
+
+    # Normalise indentation if model shifted it
+    upd_lines = updated.splitlines()
+    upd_first = next((l for l in upd_lines if l.strip()), "")
+    upd_indent = upd_first[: len(upd_first) - len(upd_first.lstrip())]
+    if upd_indent != base_indent and base_indent:
+        updated = "\n".join(
+            base_indent + l[len(upd_indent):] if l.startswith(upd_indent) else l
+            for l in upd_lines
+        )
+
+    if relevant_block:
         return source.replace(relevant_block, updated + "\n", 1)
 
-    print("  ⚠  No replacement made (model returned same or empty).")
+    print("  ⚠  No original block to replace.")
     return source
 
 
