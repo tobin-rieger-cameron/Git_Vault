@@ -41,6 +41,7 @@ CHANGE: add action ability, so chatui can start making guided changes to files
 CHANGE: find a way to refine/improve/train my model 
 CHANGE: ui overhaul with loading bars to know when chatui is processing something. text should wrap and there should be margins on the left and right to keep text centered
 CHANGE: /organize should also clean up conversation logs — condense single-command and testing sessions to 1-2 line summaries
+CHANGE: all output from /commands should be appended to chat logs
 
 ---
 

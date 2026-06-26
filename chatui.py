@@ -476,7 +476,7 @@ def ingest_vault() -> Chroma:
     loader = DirectoryLoader(
         VAULT_PATH,
         glob=FILE_GLOB,
-        exclude=["conversations/**", "config/**"],
+        exclude=["conversations/**", "config/**", "local_db/**"],
     )
     docs = loader.load()
     if not docs:
@@ -555,6 +555,114 @@ def _reingest_file(path: str, db: Chroma) -> int:
     return len(chunks)
 
 
+# ── Session utilities ─────────────────────────────────────────────────────────
+
+def _finalize_session(path: str | None) -> None:
+    """Rewrite session frontmatter with final turn count, commands, and topics."""
+    if not path or not os.path.exists(path):
+        return
+    try:
+        with open(path, encoding="utf-8") as fh:
+            text = fh.read()
+    except OSError:
+        return
+
+    fname = os.path.basename(path)
+    ts_m = re.match(r'(\d{4}-\d{2}-\d{2})_(\d{2}-\d{2}-\d{2})\.md', fname)
+    if ts_m:
+        date_str = f"{ts_m.group(1)} {ts_m.group(2).replace('-', ':')}"
+    else:
+        date_m = re.search(r'# Chat Session — (.+)', text)
+        date_str = date_m.group(1).strip() if date_m else datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    user_blocks = re.findall(
+        r'^## \[\d+:\d+\] User\n\n(.*?)(?=\n^## |\Z)', text, re.MULTILINE | re.DOTALL
+    )
+    user_turns = len(user_blocks)
+    commands = sorted({m for b in user_blocks for m in re.findall(r'^/\w+', b, re.MULTILINE)})
+    questions = [b.strip() for b in user_blocks if not b.strip().startswith("/")]
+    topics = "; ".join(q[:80].replace("\n", " ") for q in questions[:3])
+
+    fm_lines = ["---", f"date: {date_str}", f"user_turns: {user_turns}"]
+    if commands:
+        fm_lines.append("commands: [" + ", ".join(commands) + "]")
+    if topics:
+        fm_lines.append(f'topics: "{topics}"')
+    fm_lines.append("---")
+    new_fm = "\n".join(fm_lines) + "\n"
+
+    if text.lstrip().startswith("---"):
+        end_idx = text.find("---", text.index("---") + 3)
+        if end_idx != -1:
+            text = new_fm + "\n" + text[end_idx + 3:].lstrip("\n")
+    else:
+        text = new_fm + "\n" + text
+
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(text)
+
+
+def _rebuild_conversation_index(conversations_dir: str) -> int:
+    """Regenerate INDEX.md from all session files. Returns entry count."""
+    files = sorted(glob.glob(os.path.join(conversations_dir, "*.md")))
+    index_path = os.path.join(conversations_dir, "INDEX.md")
+    entries: list[str] = []
+
+    for fpath in files:
+        fname = os.path.basename(fpath)
+        if fname == "INDEX.md":
+            continue
+        try:
+            with open(fpath, encoding="utf-8") as fh:
+                content = fh.read()
+        except OSError:
+            continue
+
+        turns, topics, cmds = "?", "", ""
+        is_daily = "_daily" in fname
+
+        if content.lstrip().startswith("---"):
+            end = content.find("---", content.index("---") + 3)
+            if end != -1:
+                for line in content[content.index("---") + 3:end].splitlines():
+                    if line.startswith("user_turns:"):
+                        turns = line.split(":", 1)[1].strip()
+                    elif line.startswith("topics:"):
+                        topics = line.split(":", 1)[1].strip().strip('"')
+                    elif line.startswith("commands:"):
+                        cmds = line.split(":", 1)[1].strip().strip("[]")
+
+        if turns == "?" and not is_daily:
+            turns = str(len(re.findall(r'^## \[\d+:\d+\] User', content, re.MULTILINE)))
+
+        ts_m = re.match(r'(\d{4}-\d{2}-\d{2})_(\d{2}-\d{2}-\d{2})\.md', fname)
+        day_m = re.match(r'(\d{4}-\d{2}-\d{2})_daily\.md', fname)
+        if ts_m:
+            label = f"{ts_m.group(1)} {ts_m.group(2).replace('-', ':')}"
+        elif day_m:
+            label = f"{day_m.group(1)} (daily summary)"
+        else:
+            label = fname
+
+        parts = [f"[{label}]({fname})"]
+        if not is_daily:
+            parts.append(f"{turns} turns")
+        if cmds:
+            parts.append(cmds)
+        entry = "- " + " · ".join(parts)
+        if topics:
+            entry += f" — {topics}"
+        entries.append(entry)
+
+    index_content = (
+        f"# Conversation Index\n_Updated: {datetime.now().strftime('%Y-%m-%d')}_\n\n"
+        + "\n".join(entries) + "\n"
+    )
+    with open(index_path, "w", encoding="utf-8") as fh:
+        fh.write(index_content)
+    return len(entries)
+
+
 # ── Web Search ────────────────────────────────────────────────────────────────
 
 def web_search(query: str) -> str:
@@ -625,6 +733,9 @@ def save_to_vault(concept: str, question: str, answer: str, source: str, db: Chr
         else:
             with open(write_path, "a", encoding="utf-8") as f:
                 f.write(entry)
+
+    if db is None:
+        return
 
     try:
         with open(write_path, encoding="utf-8") as fh:
@@ -1001,6 +1112,7 @@ class ChatApp(App[None]):
         self._apply_queue:    asyncio.Queue[str] | None = None
         self._pending_source: str | None = None
         self._session_file:   str | None = None
+        self._session_events: list[str]  = []
         self._open_file:      OpenFile | None = None
 
     # ── Layout ────────────────────────────────────────────────────────────────
@@ -1015,10 +1127,14 @@ class ChatApp(App[None]):
 
     def on_mount(self) -> None:
         os.makedirs(CONVERSATIONS_DIR, exist_ok=True)
-        ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        now = datetime.now()
+        ts = now.strftime("%Y-%m-%d_%H-%M-%S")
         self._session_file = os.path.join(CONVERSATIONS_DIR, f"{ts}.md")
         with open(self._session_file, "w", encoding="utf-8") as f:
-            f.write(f"# Chat Session — {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+            f.write(
+                f"---\ndate: {now.strftime('%Y-%m-%d %H:%M:%S')}\nstatus: active\n---\n\n"
+                f"# Chat Session — {now.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+            )
 
         self._update_subtitle()
 
@@ -1031,13 +1147,14 @@ class ChatApp(App[None]):
             self._observer = Observer()
             self._observer.schedule(_VaultEventHandler(self), VAULT_PATH, recursive=True)
             self._observer.start()
-            self._log("[dim]👁  Vault watcher active — edits auto-reingest.[/dim]")
+            self._log("[dim]👁  Vault watcher active — edits auto-reingest.[/dim]", save=False)
 
         self.query_one(Input).focus()
 
     def on_unmount(self) -> None:
         if _WATCHDOG_AVAILABLE and hasattr(self, "_observer") and self._observer:
             self._observer.stop()
+        _finalize_session(self._session_file)
 
     @work
     async def _on_vault_file_changed(self, path: str) -> None:
@@ -1047,9 +1164,10 @@ class ChatApp(App[None]):
         rel = os.path.relpath(path, VAULT_PATH)
         try:
             n = await asyncio.to_thread(_reingest_file, path, self.db)
-            self._log(f"[dim]🔄  Auto-reingested {rel} ({n} chunk(s))[/dim]")
+            self._log(f"[dim]🔄  Auto-reingested {rel} ({n} chunk(s))[/dim]", save=False)
+            self._note_event(f"reingest:{rel}")
         except Exception as e:
-            self._log(f"[dim][yellow]Auto-reingest failed for {rel}: {e}[/yellow][/dim]")
+            self._log(f"[dim][yellow]Auto-reingest failed for {rel}: {e}[/yellow][/dim]", save=False)
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -1090,6 +1208,9 @@ class ChatApp(App[None]):
         except Exception:
             pass
 
+    def _note_event(self, event: str) -> None:
+        self._session_events.append(event)
+
     def _queue_note(self, question: str, answer: str, source: str, suggestion: str) -> None:
         self._pending.append(PendingNote(question, answer, source, suggestion))
         self._update_subtitle()
@@ -1101,6 +1222,9 @@ class ChatApp(App[None]):
         label = "User" if role == "user" else "Assistant"
         with open(self._session_file, "a", encoding="utf-8") as f:
             f.write(f"## [{ts}] {label}\n\n{content}\n\n")
+            if role == "assistant" and self._session_events:
+                f.write("<!-- " + " · ".join(self._session_events) + " -->\n\n")
+                self._session_events.clear()
 
     # ── Input routing ─────────────────────────────────────────────────────────
 
@@ -1733,12 +1857,13 @@ class ChatApp(App[None]):
     @work
     async def _cmd_ingest(self, _args: str = "") -> None:
         self._set_busy(True, "Ingesting vault…")
-        self._log("[dim]📚 Ingesting vault…[/dim]")
+        self._log("[dim]📚 Ingesting vault…[/dim]", save=False)
         try:
             new_db   = await asyncio.to_thread(ingest_vault)
             self.db  = new_db
             n        = new_db._collection.count()
             self._log(f"[dim]✅ Ingested {n} chunks. Vault database updated.[/dim]")
+            self._note_event(f"ingested:{n} chunks")
         except Exception as e:
             self._log(f"[red]Ingest failed: {e}[/red]")
         finally:
@@ -1766,6 +1891,11 @@ class ChatApp(App[None]):
         return await self._organize_queue.get()  # type: ignore[union-attr]
 
     async def _run_organize(self) -> None:
+        # ── Pass 0: Rebuild conversation index ────────────────────────────────
+        self._log("[dim]Finalising open sessions and rebuilding conversation index…[/dim]")
+        n_idx = await asyncio.to_thread(_rebuild_conversation_index, CONVERSATIONS_DIR)
+        self._log(f"[dim]📋  Index rebuilt — {n_idx} session(s).[/dim]")
+
         md_files = sorted(glob.glob(os.path.join(VAULT_PATH, "*.md")))
         if not md_files:
             self._log("[red]No .md files found in vault root.[/red]")
@@ -2013,16 +2143,19 @@ class ChatApp(App[None]):
                     if filtered_top >= top_score * 0.9:
                         chunks    = [doc for doc, _ in filtered]
                         top_score = filtered_top
-                        self._log(f"[dim]🏷  Scoped to: {', '.join(active_tags)}[/dim]")
+                        self._log(f"[dim]🏷  Scoped to: {', '.join(active_tags)}[/dim]", save=False)
+                        self._note_event(f"tags:{','.join(active_tags)}")
 
-            self._log(f"[dim]🔍  Best vault match: {top_score:.2f}[/dim]")
+            self._log(f"[dim]🔍  Best vault match: {top_score:.2f}[/dim]", save=False)
+            self._note_event(f"score:{top_score:.2f}")
 
             if top_score >= SIMILARITY_THRESHOLD:
                 sources = sorted({
                     os.path.relpath(d.metadata["source"], VAULT_PATH)
                     for d in chunks if d.metadata.get("source")
                 })
-                self._log(f"[dim]📓  Source: {', '.join(sources[:3]) if sources else 'vault notes'}[/dim]")
+                self._log(f"[dim]📓  Source: {', '.join(sources[:3]) if sources else 'vault notes'}[/dim]", save=False)
+                self._note_event(f"src:{sources[0] if sources else 'vault'}")
                 self._set_status("✍ Generating from vault…")
                 answer = await self._stream_llm(build_vault_prompt(question, chunks, self._history[:-1], file_ctx))
                 self._history.append({"role": "assistant", "content": answer})
@@ -2030,11 +2163,14 @@ class ChatApp(App[None]):
                 return
 
             # ── Model knowledge (always shown) ─────────────────────────────────
-            self._log("[dim]🧠  Vault score too low — asking model[/dim]")
+            self._log("[dim]🧠  Vault score too low — asking model[/dim]", save=False)
+            self._note_event("src:model")
             self._set_status("✍ Generating…")
             model_answer = await self._stream_llm(build_knowledge_prompt(question, self._history[:-1], file_ctx))
             uncertain = model_answer.strip().lower().startswith(_UNCERTAIN_PREFIX)
-            self._log(f"[dim]🧠  Model knowledge{'  (uncertain)' if uncertain else ''}[/dim]")
+            self._log(f"[dim]🧠  Model knowledge{'  (uncertain)' if uncertain else ''}[/dim]", save=False)
+            if uncertain:
+                self._note_event("uncertain")
             self._history.append({"role": "assistant", "content": model_answer})
             self._append_to_session("assistant", model_answer)
 
@@ -2044,17 +2180,19 @@ class ChatApp(App[None]):
             # ── Web search supplement when uncertain ───────────────────────────
             if uncertain and self._web_on:
                 self._set_status("🌐 Searching web…")
-                self._log("[dim]🌐  Supplementing with web search…[/dim]")
+                self._log("[dim]🌐  Supplementing with web search…[/dim]", save=False)
                 web_ctx = await asyncio.to_thread(lambda: web_search(question))
 
                 if not web_ctx.startswith(("No results", "Web search failed", "duckduckgo")):
-                    self._log("[dim]🌐  Web result:[/dim]")
+                    self._log("[dim]🌐  Web result:[/dim]", save=False)
+                    self._note_event("web:yes")
                     self._set_status("✍ Generating from web…")
                     web_answer = await self._stream_llm(build_web_prompt(question, web_ctx, self._history))
                     web_suggestion = await asyncio.to_thread(lambda: get_concept_suggestion(question, web_answer))
                     self._queue_note(question, web_answer, "web search", web_suggestion)
                 else:
-                    self._log("[dim]🌐  No web results.[/dim]")
+                    self._log("[dim]🌐  No web results.[/dim]", save=False)
+                    self._note_event("web:none")
 
         finally:
             self._set_busy(False)
