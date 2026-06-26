@@ -476,7 +476,7 @@ def ingest_vault() -> Chroma:
     loader = DirectoryLoader(
         VAULT_PATH,
         glob=FILE_GLOB,
-        exclude=["conversations/**", "config/**", "local_db/**"],
+        exclude=["conversations/**", "config/**", "local_db/**", "conversations/INDEX.md"],
     )
     docs = loader.load()
     if not docs:
@@ -1360,7 +1360,7 @@ class ChatApp(App[None]):
             if not existing_path:
                 topic_words = [w for w in re.split(r"\W+", slug) if len(w) >= 5]
                 for stem, path in existing.items():
-                    if any(w in stem for w in topic_words):
+                    if any(w in stem for w in topic_words) or slug in stem:
                         existing_path = path
                         break
     
@@ -1844,14 +1844,14 @@ class ChatApp(App[None]):
     async def _directive_model_guided(self, source: str, instruction: str, guide: str) -> str:
         """Ask coding_llm to make a targeted change described by instruction."""
         self._log(f"[dim]  🤖  {CODING_MODEL}: {instruction[:70]}…[/dim]")
-
+    
         relevant_block = ""
-        for m in re.finditer(r'_cmd_\w+', instruction):
+        for m in re.finditer(r'\b(_\w+)\b', instruction):
             block = _extract_method_block(source, m.group(0))
             if block:
                 relevant_block = block
                 break
-
+    
         prompt = "\n".join([
             "Make the following targeted change to chatui.py:",
             instruction,
@@ -1863,7 +1863,7 @@ class ChatApp(App[None]):
             "Return the updated code for the changed section only. No explanation, no fences.",
         ])
         updated = await asyncio.to_thread(lambda: coding_llm.invoke(prompt).content.strip())
-
+    
         if relevant_block and updated and updated.strip() != relevant_block.strip():
             return source.replace(relevant_block, updated, 1)
         return source
@@ -1883,7 +1883,25 @@ class ChatApp(App[None]):
             "",
             "Return ONLY the method definition. No class wrapper, no explanation, no fences.",
         ])
-        return await asyncio.to_thread(lambda: coding_llm.invoke(prompt).content.strip())
+        result = await asyncio.to_thread(lambda: coding_llm.invoke(prompt).content.strip())
+        
+        review_prompt = "\n".join([
+            f"Review the following proposed method code:",
+            result,
+            "",
+            "Check for the following issues:",
+            "- Wrong variable names (VAULT_PATH/CONVERSATIONS_DIR/llm/coding_llm are module-level, not self.xxx)",
+            "- Missing @work decorator for async ops",
+            "- Logic errors",
+            "- Off-by-one errors",
+            "- Incorrect regex escapes",
+            "",
+            "Return the reviewed method code if it differs from the original. Otherwise, return an empty string.",
+        ])
+        
+        reviewed = await asyncio.to_thread(lambda: coding_llm.invoke(review_prompt).content.strip())
+        
+        return reviewed or result
 
     async def _validate_and_heal(self, source: str) -> tuple[bool, str]:
         """Validate source; self-heal on syntax error (max 2 retries). Returns (ok, source)."""

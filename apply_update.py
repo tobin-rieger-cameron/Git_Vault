@@ -174,7 +174,7 @@ def _apply_fix(source, instruction):
     # Find any function name mentioned in the instruction
     relevant_block = ""
     fn_found = ""
-    for fn_name in re.findall(r'\b(_\w+)\b', instruction):
+    for fn_name in re.findall(r'\b([a-z_][a-z0-9]*(?:_[a-z0-9]+)+|_\w+)\b', instruction):
         block = _extract_method_block(source, fn_name)
         if block:
             relevant_block = block
