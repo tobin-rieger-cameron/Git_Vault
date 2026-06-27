@@ -100,5 +100,40 @@ Tags are semantic — they describe topic, not location. A file in 000-informati
 a file in 600-applied-sciences/ can carry `[taxonomy]`. The folder answers "where does this live?"; the tag
 answers "what is this about?".
 
-Existing tag vocabulary: `taxonomy`, `philosophy`, `ai`, `machinelearning`, `mathematics`, `physics`,
-`meta`, `general`, `language`, `index`
+## Tag → Folder Mapping
+
+This table is the canonical source of truth used by `/organize` to classify files.
+When a file has multiple tags, the first matching tag determines the folder.
+Tags listed as `(skip)` carry type/quality meaning only and are ignored for placement.
+
+| Tag | Folder |
+|---|---|
+| taxonomy | 000-information |
+| information-science | 000-information |
+| index | 000-information |
+| philosophy | 100-philosophy |
+| ethics | 100-philosophy |
+| religion | 200-religion |
+| social-sciences | 300-social-sciences |
+| language | 400-language |
+| linguistics | 400-language |
+| mathematics | 500-natural-sciences |
+| physics | 500-natural-sciences |
+| biology | 500-natural-sciences |
+| chemistry | 500-natural-sciences |
+| ai | 600-applied-sciences |
+| machinelearning | 600-applied-sciences |
+| engineering | 600-applied-sciences |
+| medicine | 600-applied-sciences |
+| arts | 700-arts |
+| literature | 800-literature |
+| history | 900-history |
+| geography | 900-history |
+| general | (skip — no placement, falls back to LLM) |
+| meta | (skip — type tag, not a topic) |
+
+## Special Cases
+
+- Files prefixed `_ref-` are placed in `<folder>/_ref/` within their classified folder.
+- Files with only skip-tags or no tags fall back to LLM classification using this document as context.
+- Files with no clear classification land in `misc/` and are re-evaluated on the next `/organize` run once tagged.

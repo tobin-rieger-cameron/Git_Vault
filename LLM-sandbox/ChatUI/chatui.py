@@ -80,8 +80,44 @@ _cfg = _load_all_config()
 VAULT_PATH        = _cfg.get("vault_path", os.path.join(_REPO_ROOT, "Knowledge"))
 CONVERSATIONS_DIR = os.path.join(VAULT_PATH, "conversations")
 DB_PATH           = os.path.join(_SCRIPT_DIR, "local_db")
-_MANIFEST_PATH    = os.path.join(DB_PATH, "manifest.json")
+_MANIFEST_PATH       = os.path.join(DB_PATH, "manifest.json")
+_STRUCTURE_PLAN_PATH = os.path.join(_SCRIPT_DIR, "config", "vault-structure-plan.md")
 # ─────────────────────────────────────────────────────────────────────────────
+
+# Vault folder hierarchy (mirrors config/vault-structure-plan.md)
+_DEWEY_FOLDERS = [
+    "000-information", "100-philosophy", "200-religion",
+    "300-social-sciences", "400-language", "500-natural-sciences",
+    "600-applied-sciences", "700-arts", "800-literature", "900-history",
+    "misc",
+]
+
+_TAG_TO_FOLDER: dict[str, str] = {
+    "taxonomy":            "000-information",
+    "information-science": "000-information",
+    "index":               "000-information",
+    "philosophy":          "100-philosophy",
+    "ethics":              "100-philosophy",
+    "religion":            "200-religion",
+    "social-sciences":     "300-social-sciences",
+    "mathematics":         "500-natural-sciences",
+    "physics":             "500-natural-sciences",
+    "biology":             "500-natural-sciences",
+    "chemistry":           "500-natural-sciences",
+    "ai":                  "600-applied-sciences",
+    "machinelearning":     "600-applied-sciences",
+    "engineering":         "600-applied-sciences",
+    "medicine":            "600-applied-sciences",
+    "arts":                "700-arts",
+    "language":            "400-language",
+    "linguistics":         "400-language",
+    "literature":          "800-literature",
+    "history":             "900-history",
+    "geography":           "900-history",
+}
+
+# Tags that carry type/quality meaning rather than topic placement
+_PLACEMENT_SKIP_TAGS = {"general", "meta"}
 
 EMBED_MODEL  = _cfg.get("embed_model",  "nomic-embed-text")
 CHAT_MODEL   = _cfg.get("chat_model",   "llama3.2:3b")
@@ -487,6 +523,41 @@ def _discover_vault_files() -> list[str]:
         p for p in glob.glob(os.path.join(VAULT_PATH, "**", "*.md"), recursive=True)
         if not p.startswith(conv_prefix)
     )
+
+
+def _needs_placement(path: str) -> bool:
+    """True if the file is in the vault root or misc/ — i.e. not yet filed."""
+    parts = os.path.relpath(path, VAULT_PATH).split(os.sep)
+    return len(parts) == 1 or parts[0] == "misc"
+
+
+def _classify_for_placement(tags: list[str], content: str, llm) -> str:
+    """Return the target Dewey folder for a file. Tag map first, LLM fallback."""
+    for tag in tags:
+        if tag in _PLACEMENT_SKIP_TAGS:
+            continue
+        folder = _TAG_TO_FOLDER.get(tag)
+        if folder:
+            return folder
+    # LLM fallback — read structure plan for context
+    try:
+        plan = open(_STRUCTURE_PLAN_PATH, encoding="utf-8").read()
+    except OSError:
+        plan = ""
+    folder_list = ", ".join(_DEWEY_FOLDERS)
+    prompt = (
+        "You are classifying a knowledge vault article into a folder.\n\n"
+        f"Available folders:\n{folder_list}\n\n"
+        f"Folder descriptions (from vault-structure-plan.md):\n{plan[:1200]}\n\n"
+        f"Article content (first 400 chars):\n{content[:400]}\n\n"
+        f"Reply with ONLY one folder name from this list: {folder_list}\n"
+        "If uncategorisable, reply: misc\n\nFolder:"
+    )
+    result = llm.invoke(prompt).content.strip().lower()
+    for folder in _DEWEY_FOLDERS:
+        if folder in result:
+            return folder
+    return "misc"
 
 
 def _load_manifest() -> dict[str, float]:
@@ -2368,9 +2439,9 @@ class ChatApp(App[None]):
         n_idx = await asyncio.to_thread(_rebuild_conversation_index, CONVERSATIONS_DIR)
         self._log(f"[dim]📋  Index rebuilt — {n_idx} session(s).[/dim]")
 
-        md_files = sorted(glob.glob(os.path.join(VAULT_PATH, "*.md")))
+        md_files = _discover_vault_files()
         if not md_files:
-            self._log("[red]No .md files found in vault root.[/red]")
+            self._log("[red]No .md files found in vault.[/red]")
             return
 
         notes: dict[str, dict] = {}
@@ -2532,6 +2603,49 @@ class ChatApp(App[None]):
                 with open(conv_path, "w", encoding="utf-8") as fh:
                     fh.write(f"# Chat Session — {ts}\n\n*[condensed by /organize]*\n\n{summary}\n")
                 self._log("  [green]✓ Condensed.[/green]")
+
+        # ── Pass 4: File placement ────────────────────────────────────────────
+        self._log("\n[bold]Analysing file placements…[/bold]")
+        to_place = [
+            (path, data["content"], _extract_frontmatter_tags(data["content"]))
+            for path, data in [(p, notes[os.path.splitext(os.path.basename(p))[0]])
+                               for p in md_files if _needs_placement(p)
+                               and os.path.splitext(os.path.basename(p))[0] in notes]
+        ]
+
+        if not to_place:
+            self._log("[dim]All files already placed.[/dim]")
+        else:
+            self._log(f"[dim]Classifying {len(to_place)} unplaced file(s)…[/dim]")
+            proposals: list[tuple[str, str, str]] = []  # (path, filename, target_folder)
+            for path, content, tags in to_place:
+                fname  = os.path.basename(path)
+                folder = await asyncio.to_thread(_classify_for_placement, tags, content, coding_llm)
+                proposals.append((path, fname, folder))
+
+            self._log("\nProposed moves:")
+            for path, fname, folder in proposals:
+                subdir = "_ref/" if fname.startswith("_ref-") else ""
+                self._log(f"  [dim]{fname}[/dim]  →  [bold]{folder}/{subdir}[/bold]")
+
+            raw = await self._org_prompt("\n  Enter=proceed  ·  skip=skip placement:")
+            if raw.lower() != "skip":
+                moved = 0
+                for path, fname, folder in proposals:
+                    subdir     = "_ref" if fname.startswith("_ref-") else ""
+                    target_dir = os.path.join(VAULT_PATH, folder, subdir) if subdir else os.path.join(VAULT_PATH, folder)
+                    os.makedirs(target_dir, exist_ok=True)
+                    target_path = os.path.join(target_dir, fname)
+                    if os.path.abspath(path) != os.path.abspath(target_path):
+                        shutil.move(path, target_path)
+                        moved += 1
+                self._log(f"  [green]✓ Moved {moved} file(s).[/green]")
+                if moved:
+                    self._log("[dim]Rebuilding vault index…[/dim]")
+                    new_db, stats = await asyncio.to_thread(ingest_vault, True)
+                    self.db = new_db
+                    n       = new_db._collection.count()
+                    self._log(f"[dim]✅ {n} chunks re-indexed.[/dim]")
 
         self._log("\n[bold green]✓ Vault organisation complete.[/bold green]")
 
