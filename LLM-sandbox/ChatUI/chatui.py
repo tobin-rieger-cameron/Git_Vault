@@ -716,12 +716,15 @@ def _finalize_session(path: str | None) -> None:
         return
 
     fname = os.path.basename(path)
-    ts_m = re.match(r'(\d{4}-\d{2}-\d{2})_(\d{2}-\d{2}-\d{2})\.md', fname)
+    ts_m     = re.match(r'(\d{4}-\d{2}-\d{2})_(\d{2}-\d{2}-\d{2})\.md', fname)
+    day_only = re.match(r'(\d{4}-\d{2}-\d{2})\.md', fname)
     if ts_m:
         date_str = f"{ts_m.group(1)} {ts_m.group(2).replace('-', ':')}"
+    elif day_only:
+        date_str = day_only.group(1)
     else:
-        date_m = re.search(r'# Chat Session — (.+)', text)
-        date_str = date_m.group(1).strip() if date_m else datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        date_m = re.search(r'# (?:Chat Session|Conversations) — (.+)', text)
+        date_str = date_m.group(1).strip() if date_m else datetime.now().strftime("%Y-%m-%d")
 
     user_blocks = re.findall(
         r'^## \[\d+:\d+\] User\n\n(.*?)(?=\n^## |\Z)', text, re.MULTILINE | re.DOTALL
@@ -790,12 +793,16 @@ def _rebuild_conversation_index(conversations_dir: str) -> int:
         if turns == "?" and not is_daily:
             turns = str(len(re.findall(r'^## \[\d+:\d+\] User', content, re.MULTILINE)))
 
-        ts_m = re.match(r'(\d{4}-\d{2}-\d{2})_(\d{2}-\d{2}-\d{2})\.md', fname)
-        day_m = re.match(r'(\d{4}-\d{2}-\d{2})_daily\.md', fname)
+        ts_m   = re.match(r'(\d{4}-\d{2}-\d{2})_(\d{2}-\d{2}-\d{2})\.md', fname)
+        day_m  = re.match(r'(\d{4}-\d{2}-\d{2})_daily\.md', fname)
+        date_m = re.match(r'(\d{4}-\d{2}-\d{2})\.md', fname)
         if ts_m:
             label = f"{ts_m.group(1)} {ts_m.group(2).replace('-', ':')}"
         elif day_m:
             label = f"{day_m.group(1)} (daily summary)"
+        elif date_m:
+            n_sess = len(re.findall(r'^## Session —', content, re.MULTILINE))
+            label = f"{date_m.group(1)} ({n_sess} session{'s' if n_sess != 1 else ''})"
         else:
             label = fname
 
@@ -1335,13 +1342,19 @@ class ChatApp(App[None]):
     def on_mount(self) -> None:
         os.makedirs(CONVERSATIONS_DIR, exist_ok=True)
         now = datetime.now()
-        ts = now.strftime("%Y-%m-%d_%H-%M-%S")
-        self._session_file = os.path.join(CONVERSATIONS_DIR, f"{ts}.md")
-        with open(self._session_file, "w", encoding="utf-8") as f:
-            f.write(
-                f"---\ndate: {now.strftime('%Y-%m-%d %H:%M:%S')}\nstatus: active\n---\n\n"
-                f"# Chat Session — {now.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
-            )
+        today = now.strftime("%Y-%m-%d")
+        ts    = now.strftime("%Y-%m-%d %H:%M:%S")
+        self._session_file = os.path.join(CONVERSATIONS_DIR, f"{today}.md")
+        if os.path.exists(self._session_file):
+            with open(self._session_file, "a", encoding="utf-8") as f:
+                f.write(f"\n---\n\n## Session — {ts}\n\n")
+        else:
+            with open(self._session_file, "w", encoding="utf-8") as f:
+                f.write(
+                    f"---\ndate: {today}\nstatus: active\n---\n\n"
+                    f"# Conversations — {today}\n\n"
+                    f"---\n\n## Session — {ts}\n\n"
+                )
 
         self._update_subtitle()
 
@@ -1914,24 +1927,22 @@ class ChatApp(App[None]):
 
     @work
     async def _cmd_daily(self, _args: str = "") -> None:
-        today       = datetime.now().strftime("%Y-%m-%d")
-        today_files = sorted(glob.glob(os.path.join(CONVERSATIONS_DIR, f"{today}_*.md")))
-        if not today_files:
-            self._log(f"[dim]No conversation sessions for today ({today}).[/dim]")
+        today      = datetime.now().strftime("%Y-%m-%d")
+        log_path   = os.path.join(CONVERSATIONS_DIR, f"{today}.md")
+        if not os.path.exists(log_path):
+            self._log(f"[dim]No conversation log for today ({today}).[/dim]")
+            return
+        try:
+            with open(log_path, encoding="utf-8") as f:
+                combined = f.read()
+        except OSError:
+            self._log("[red]Could not read today's conversation log.[/red]")
             return
 
-        self._log(f"[dim]📅  Summarising {len(today_files)} session(s) from {today}…[/dim]")
-        segments: list[str] = []
-        for path in today_files:
-            try:
-                with open(path, encoding="utf-8") as f:
-                    segments.append(f.read())
-            except OSError:
-                pass
-
-        combined = "\n\n---\n\n".join(segments)
+        n_sessions = len(re.findall(r'^## Session —', combined, re.MULTILINE))
+        self._log(f"[dim]📅  Summarising {n_sessions} session(s) from {today}…[/dim]")
         summary_prompt = (
-            f"Summarise what was discussed across these {len(segments)} chat sessions "
+            f"Summarise what was discussed across these {n_sessions} chat sessions "
             f"from {today}. Be concise. Cover: key topics, questions answered, notes saved.\n\n"
             f"{combined[:4000]}\n\nSummary:"
         )

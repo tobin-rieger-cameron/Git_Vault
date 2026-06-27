@@ -1,7 +1,7 @@
 ---
 title: Claude Code Session Transcript
-last_updated: 2026-06-26
-sessions: 7
+last_updated: 2026-06-27
+sessions: 8
 ---
 
 # Claude Code Session Transcript
@@ -20,7 +20,8 @@ Ongoing log of all Claude Code sessions for this project. Use the **Quick Index*
 | [4](#session-4----2026-06-25-ui-commands--watchdog) | 2026-06-25 | UI overhaul, /stats, /edit, /daily, status labels, smarter chunking, watchdog, /export | `7fe0492` → `a200842` |
 | [5](#session-5----2026-06-26-llm-efficient-sessions--readme--harvest) | 2026-06-26 (morning) | Session frontmatter/audit trail/INDEX; /readme and /harvest via self-update pipeline; harvest quality fixes | `2e663aa` → `940ae25` |
 | [6](#session-6----2026-06-26-8x-fix-improvements) | 2026-06-26 (afternoon) | 8x FIX improvements through pipeline; apply_update.py hardening; _finalize_session LLM extraction | `031a42e` → `1b6d28c` |
-| [7](#session-7----2026-06-26-distill-command--vault-pre-seeding) | 2026-06-26 (evening) | /distill command; vault pre-seeding with accurate reference files; article quality assessment + fixes | `ef3094c` → `95a7340` + this session |
+| [7](#session-7----2026-06-26-distill-command--vault-pre-seeding) | 2026-06-26 (evening) | /distill command; vault pre-seeding with accurate reference files; article quality assessment + fixes | `ef3094c` → `95a7340` |
+| [8](#session-8----2026-06-27-vault-structure--organize-pass-4) | 2026-06-27 | Dewey-based vault structure; /organize Pass 4 file placement; _cmd_ingest stats dict | `4a40d3f` `780530f` |
 
 ### Key decisions & constraints (read this first)
 - **Self-update pipeline**: FIX:/CHANGE: directives in `config/settings.md` → `apply_update.py` reads git diff → `coding_llm` generates fix → self-review pass → writes `chatui.py`
@@ -334,3 +335,69 @@ can you update claude transcript and commit
 
 ### Assistant
 Updating transcript and committing all session work.
+
+---
+
+## Session 8 — 2026-06-27: Vault Structure & /organize Pass 4
+
+**Commits:** `4a40d3f` `780530f`
+
+### Context
+Continued from compacted session. _cmd_ingest needed updating for the new `ingest_vault(force) -> tuple[Chroma, dict]` return signature. User then wanted to design a principled folder structure for Knowledge/ and wire it into `/organize`.
+
+### Key decisions & constraints
+- **Vault folder structure**: monohierarchical Dewey-based hybrid naming (`000-information/`, `600-applied-sciences/` etc.) with semantic tags for polyhierarchy — folder = where it lives, tags = what it's about
+- **CS/AI in 600 not 000**: deliberate deviation from Dewey (000 is a 19th-century decision made before computing)
+- **`vault-structure-plan.md`** (`ChatUI/config/vault-structure-plan.md`): canonical source of truth for tag→folder mapping; ingestible so the model can answer organisation questions
+- **Classification order**: tag map first (deterministic, no LLM), fallback to LLM with structure plan as context
+- **`_PLACEMENT_SKIP_TAGS = {"general", "meta"}`**: type/quality tags excluded from placement decisions
+- **`_ref-*` prefix rule**: routed to `<folder>/_ref/` subfolder regardless of classified folder
+- **Interactive prompt deadlock via tmux**: confirmed — `/organize` prompts unresponsive when driven via `tmux send-keys`; must run in a real terminal
+
+### What was built
+
+**`_cmd_ingest` updated** (`4a40d3f`): handles new `ingest_vault(force) -> tuple[Chroma, dict]` signature; displays granular stats (`new`, `updated`, `removed`, `unchanged` counts).
+
+**Vault structure exploration**: compared Dewey, LCC, and BC2. Chose Dewey top-level classes with hybrid folder naming. User confirmed CS belongs in applied sciences (600), not information science (000).
+
+**`vault-structure-plan.md` created** (`4a40d3f`): full Dewey hierarchy, current file placement, tag→folder mapping table, deviation rationale, `_ref-*` special case. Living document — ingestible, mirrors the `_TAG_TO_FOLDER` dict in code.
+
+**Constants added to chatui.py** (`780530f`):
+- `_STRUCTURE_PLAN_PATH`, `_DEWEY_FOLDERS`, `_TAG_TO_FOLDER`, `_PLACEMENT_SKIP_TAGS`
+
+**New helper functions** (`780530f`):
+- `_needs_placement(path)` — True if file is in vault root or `misc/`
+- `_classify_for_placement(tags, content, llm)` — tag map → LLM fallback → `misc/`
+
+**`_run_organize()` Pass 4 added** (`780530f`):
+- Scans for unplaced files via `_needs_placement()`
+- Classifies each via `_classify_for_placement()`
+- Shows proposed moves, prompts for confirm/skip
+- Executes `shutil.move()`, rebuilds vault index on completion
+
+**`_run_organize()` scan fixed** (`780530f`): changed from `glob.glob(VAULT_PATH/*.md)` to `_discover_vault_files()` so subdirectory files are included.
+
+### /organize assessment (run via tmux)
+
+| Pass | Result |
+|------|--------|
+| 0 — Conversation index | ✓ 17 sessions indexed |
+| 1 — Tag audit | ✓ All 40 files already have frontmatter; 0 writes |
+| 2 — Wikilinks | Blocked — `_ref-lora.md` prompted; tmux deadlock; ChatUI killed |
+| 3 — Conversations | Not reached |
+| 4 — Placement | Not reached |
+
+### Known bugs identified
+
+1. **Wikilinks display bug**: suggestions where target stem is not in vault notes render as `→ []` — shown to user but filtered at substitution time. Fix: filter at display time too.
+2. **Pass ordering issue**: wikilinks (Pass 2) runs before placement (Pass 4) — wikilinks may reference stale paths after files move. Fix: reorder passes so placement comes before wikilinks.
+3. **`save_to_vault()` not wired to classifier**: new files still save to vault root. Fix: call `_classify_for_placement()` on save.
+4. **Watchdog not starting after first-run `/ingest`**: regression from prior session, not yet fixed.
+5. **Non-atomic `_reingest_file`**: delete + re-add not transactional.
+6. **Lambda capture bug in wikilinks pass**: stale closure over loop variable.
+
+### User
+please update the claude transcript with everything from todays session
+
+### Assistant
+Updated `conversations/claude_transcript.md` with Session 8. Also created memory files under `.claude/projects/` (architecture, vault structure, organize passes, tmux bug, git path convention).
