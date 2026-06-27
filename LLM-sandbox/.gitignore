@@ -1,5 +1,6 @@
 local_db/
 .chatui_sync
+.chatui.pid
 __pycache__/
 *.pyc
 .obsidian/

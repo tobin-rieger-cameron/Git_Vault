@@ -1,9 +1,32 @@
-# ChatUI - Local-First Vault RAG Assistant
+# ChatUI - Local Vault
 
 ## Overview
-ChatUI is a local-first vault assistant that leverages Retrieval-Augmented Generation (RAG) to provide intelligent responses based on your personal knowledge vault. It uses Ollama LLMs for conversational capabilities, ChromaDB as the vector database, and Textual TUI for an interactive interface.
+
+ChatUI is a local-first vault assistant that leverages Retrieval-Augmented-
+Generation to provide intelligent responses based on your personal
+knowledge vault. It uses Ollama LLMs for conversational capabilities,
+ChromaDB as the vector database, and Textual TUI for an interactive interface.
+
+## Setup
+
+```bash
+# Install dependencies
+pip install langchain langchain-ollama langchain-community chromadb \
+            duckduckgo-search textual pyyaml
+
+# Models are pulled automatically on first launch from config/models.md.
+# To pull manually:
+ollama pull nomic-embed-text
+ollama pull llama3.2:3b
+ollama pull qwen2.5-coder:7b
+
+# Run
+python chatui.py
+# Then type /ingest to build the database on first launch
+```
 
 ## Commands
+
 | Command | Description |
 |---|---|
 | `/help` | Show this message |
@@ -22,27 +45,5 @@ ChatUI is a local-first vault assistant that leverages Retrieval-Augmented Gener
 | `/status` | Show current session state (web, file, history, vault) |
 | `/stats` | Show vault chunk count and DB size on disk |
 | `/readme` | Regenerate README.md from current source + config |
-| `/harvest` | Promote INDEX topics into vault notes with ] |
-
-## Configuration
-Configure ChatUI by editing the `config.yaml` file. Key settings include:
-- `vault_path`: Path to your personal knowledge vault.
-- `llama_model`: LLM model for conversational responses.
-- `chromadb_path`: Path to ChromaDB vector store.
-
-## Architecture
-ChatUI is built on a local architecture using:
-- Ollama LLMs for conversational capabilities.
-- ChromaDB as the vector database for efficient retrieval of context.
-- Textual TUI for an interactive and user-friendly interface.
-
-## Stack
-The technology stack includes:
-- `llama3.2:3b` (for chat)
-- `qwen2.5-coder:7b` (for organizing vault notes)
-- `nomic-embed-text`
-- ChromaDB
-- LangChain
-- Textual
-
-For more detailed information, refer to the [ChatUI GitHub repository](https://github.com/your-repo/chatui).
+| `/harvest` | Promote INDEX topics into vault stubs with wikilinks |
+| `/distill <session>` | Distil a session file into structured vault articles |
