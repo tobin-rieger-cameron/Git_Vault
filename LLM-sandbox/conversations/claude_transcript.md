@@ -1,7 +1,7 @@
 ---
 title: Claude Code Session Transcript
 last_updated: 2026-06-27
-sessions: 8
+sessions: 9
 ---
 
 # Claude Code Session Transcript
@@ -22,6 +22,7 @@ Ongoing log of all Claude Code sessions for this project. Use the **Quick Index*
 | [6](#session-6----2026-06-26-8x-fix-improvements) | 2026-06-26 (afternoon) | 8x FIX improvements through pipeline; apply_update.py hardening; _finalize_session LLM extraction | `031a42e` → `1b6d28c` |
 | [7](#session-7----2026-06-26-distill-command--vault-pre-seeding) | 2026-06-26 (evening) | /distill command; vault pre-seeding with accurate reference files; article quality assessment + fixes | `ef3094c` → `95a7340` |
 | [8](#session-8----2026-06-27-vault-structure--organize-pass-4) | 2026-06-27 | Dewey-based vault structure; /organize Pass 4 file placement; _cmd_ingest stats dict | `4a40d3f` `780530f` |
+| [9](#session-9----2026-06-27-daily-session-files) | 2026-06-27 | Merge per-minute sessions into daily files; ChatUI daily-append mode; claude_transcript updated | `bb13670` |
 
 ### Key decisions & constraints (read this first)
 - **Self-update pipeline**: FIX:/CHANGE: directives in `config/settings.md` → `apply_update.py` reads git diff → `coding_llm` generates fix → self-review pass → writes `chatui.py`
@@ -401,3 +402,38 @@ please update the claude transcript with everything from todays session
 
 ### Assistant
 Updated `conversations/claude_transcript.md` with Session 8. Also created memory files under `.claude/projects/` (architecture, vault structure, organize passes, tmux bug, git path convention).
+
+---
+
+## Session 9 — 2026-06-27: Daily Session Files
+
+**Commits:** `bb13670`
+
+### User
+conversations are currently split by the minute, please put the text from split files into one file marked by the date, and change chatui settings to save/append to one file per day
+
+### Assistant
+Merged 15 per-minute session files into 2 daily files and updated ChatUI to append-per-day.
+
+**Files merged:**
+- `2026-06-24.md` — 4 sessions (22:24, 22:46, 23:45, 23:52)
+- `2026-06-27.md` — 11 sessions (12:03 through 16:16)
+- Each session delimited with `---` and `## Session — TIMESTAMP` heading; frontmatter stripped from originals
+
+**Format:** daily file opens with YAML frontmatter (`date: YYYY-MM-DD`) and `# Conversations — DATE` heading; sessions separated by `---` horizontal rule.
+
+**ChatUI changes (`on_mount`):** writes to `YYYY-MM-DD.md`; if it exists, appends `---` + `## Session — TIMESTAMP`; if new day, creates file with frontmatter and heading.
+
+**`_finalize_session`:** recognises `YYYY-MM-DD.md` pattern; writes `date: YYYY-MM-DD` (no time) in frontmatter; counts all user turns across all sessions in the file.
+
+**`_rebuild_conversation_index`:** added `date_m` regex for `YYYY-MM-DD.md`; label shows `"YYYY-MM-DD (N sessions)"` with session count from `## Session —` header count.
+
+**`_cmd_daily`:** reads single `YYYY-MM-DD.md` instead of globbing `YYYY-MM-DD_*.md`; counts sessions via `## Session —` regex.
+
+**Files cleaned up:** deleted `conversations/claude_transcript 1.md` and `conversations/INDEX 1.md` (stale duplicates). Moved merged daily files and INDEX to `Knowledge/conversations/` (the active `CONVERSATIONS_DIR`).
+
+### User
+update the claude transcript, cleanup transcript 1 and index 1, then close the session
+
+### Assistant
+Appended Session 9 to transcript, deleted duplicate files, committed and closed.
