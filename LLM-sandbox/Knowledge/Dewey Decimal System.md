@@ -29,8 +29,10 @@ Each class subdivides further with decimal notation. For example:
   - **510** Mathematics
     - **516** Geometry
       - **516.3** Analytic geometries
+        - **516.37** Metric differential geometries
+          - **516.375** Finsler geometry
 
-This allows arbitrarily fine classification while preserving hierarchical relationships through the numeric prefix.
+Libraries not needing full detail can trim right-most digits to obtain more general classifications. The classification structure is hierarchical and the notation follows the same hierarchy.
 
 ## As a Knowledge Taxonomy
 
@@ -53,7 +55,8 @@ Compared to ontology-based systems, DDC is a **hierarchical classification** (on
 
 ## See Also
 
-- [[taxonomy]]
-- [[taxonomy-hierarchy-differences]]
-- [[folksonomy-differences]]
-- [[disciplines-hierarchies]]
+- [[Taxonomy]]
+- [[Taxonomy Hierarchy Differences]]
+- [[Folksonomy Differences]]
+- [[Disciplines and Hierarchies]]
+- [[Library of Congress Classification System]]

@@ -56,12 +56,35 @@ See `conversations/claude_transcript.md` for the full session context behind eac
 | claude | Fix _finalize_session [:4] slice bug in pipeline-generated code | Model wrote `"; ".join(...)[:4]` (string slice) instead of `items[:4]` (list slice) | `1b6d28c` |
 | claude | apply_update.py: race guard (skip if block already replaced); broaden fn-name regex to snake_case; flush=True on all prints | Two parallel runs could both apply same FIX; non-`_` functions had no context; output was invisible during long LLM calls | `7c9fd72` `1b6d28c` |
 | claude | Track conversations/ in git; add .chatui_sync to .gitignore | Session logs and transcript should be versioned; sync hash is machine-local state | `ab4eec3` |
-| claude | **Fix ChromaDB persistence** — swap to `chromadb.PersistentClient` + `collection_name="vault"` | ChromaDB v1.x dropped `persist_directory=` API; local_db/ was never written to disk, vault lost on every restart | _(this session)_ |
-| claude | Rename `Machine Learning.md` → `machine-learning.md` | Spaces in filenames break shell tools and wikilinks | _(this session)_ |
-| claude | Delete obsidian_brain.py, ChatUI.md, test.txt, "first file!.md" | Dead code and junk files cluttering vault root | _(this session)_ |
-| claude | Clean settings.md — move applied directives to changelog.md; fix stale Architecture section | settings.md had 16 applied directives buried in it; Architecture section described old patch-based pipeline | _(this session)_ |
-| claude | Add /distill command — extract Q&A pairs from a session file, bootstrap `_article-guide.md` if missing, generate structured articles with taxonomy-aware YAML tags and [[wikilinks]], append to existing vault files | Core workflow: conversation logs → rich vault articles that expand over time | _(this session)_ |
+| claude | **Fix ChromaDB persistence** — swap to `chromadb.PersistentClient` + `collection_name="vault"` | ChromaDB v1.x dropped `persist_directory=` API; local_db/ was never written to disk, vault lost on every restart | `bac2cce` |
+| claude | Rename `Machine Learning.md` → `machine-learning.md` | Spaces in filenames break shell tools and wikilinks | `bac2cce` |
+| claude | Delete obsidian_brain.py, ChatUI.md, test.txt, "first file!.md" | Dead code and junk files cluttering vault root | `bac2cce` |
+| claude | Clean settings.md — move applied directives to changelog.md; fix stale Architecture section | settings.md had 16 applied directives buried in it; Architecture section described old patch-based pipeline | `bac2cce` |
+| claude | Add /distill command — extract Q&A pairs from a session file, bootstrap `_article-guide.md` if missing, generate structured articles with taxonomy-aware YAML tags and [[wikilinks]], append to existing vault files | Core workflow: conversation logs → rich vault articles that expand over time | `ef3094c` |
 | claude | /distill first run — 24 vault articles generated from session `2026-06-24_23-52-49`; fix prompt bugs: strip raw Q&A artifact lines from source, tighten wikilink constraint to vault-only stems, add frontmatter fallback | First live run exposed prompt contamination and broken wikilinks | `42aca01` |
 | claude | Fix /distill frontmatter — strip model-generated `---` blocks, generate title + tags programmatically from slug + keyword map; add `_distill_tags()` helper; retag all 22 existing articles | llama3.2:3b consistently produced unclosed frontmatter; hyphen-vs-space mismatch in keyword map caused most articles to fall through to `[general]` | `95a7340` |
 | pipeline | Add FIX directives to settings.md — wikilink post-filter in /distill; RAG grounding for article generation | Articles linked to non-existent vault pages; content drifted from source material | `61f0b43` |
 | claude | Vault pre-seeding: 6 reference files (`_ref-lora.md`, `_ref-rlhf.md`, `_ref-fine-tuning.md`, `_ref-rag.md`, `language-models.md`, `machine-learning.md`); quality fixes to 7 articles (corrected LoRA mechanism, RLHF pipeline, frontmatter); /distill wikilink post-filter — strip `[[X]]` where X doesn't match any vault stem | Articles had factual errors (e.g. LoRA description was backwards); wikilinks pointed to non-existent pages | `ba0202d` |
+
+## 2026-06-27
+
+| Source | What | Why | Commit(s) |
+|--------|------|-----|-----------|
+| claude | `_cmd_ingest` updated for new `ingest_vault(force) -> tuple[Chroma, dict]` return signature; displays granular stats (new/updated/removed/unchanged counts) | Signature change from prior session caused a crash on /ingest | `4a40d3f` |
+| claude | `vault-structure-plan.md` created — full Dewey hierarchy, current file placement, tag→folder mapping table, deviation rationale, `_ref-*` special case | Living document for vault organisation; ingestible so the model can answer structure questions | `4a40d3f` |
+| claude | Pass 4 added to `_run_organize()` — file placement using Dewey-based folder structure; `_needs_placement()`, `_classify_for_placement()` helpers; `_TAG_TO_FOLDER`, `_DEWEY_FOLDERS`, `_PLACEMENT_SKIP_TAGS` constants | Vault files were accumulating at root with no folder structure | `780530f` |
+| claude | `_run_organize()` scan fixed — changed from `glob.glob(VAULT_PATH/*.md)` to `_discover_vault_files()` so subdirectory files are included | Pass 1 was skipping all files that had already been moved into subfolders | `780530f` |
+| claude | Merge 15 per-minute session files into 2 daily files (`2026-06-24.md`, `2026-06-27.md`); ChatUI `on_mount` updated to append to a single `YYYY-MM-DD.md` per day | Session files were split by the minute; hard to navigate and redundant | `bb13670` |
+| claude | `_finalize_session` recognises `YYYY-MM-DD.md` pattern; `_rebuild_conversation_index` counts sessions per daily file; `_cmd_daily` reads single daily file | Supporting changes for daily-file format | `bb13670` |
+| claude | Update claude_transcript through Session 9; delete stale duplicates (`claude_transcript 1.md`, `INDEX 1.md`) | Transcript was out of date; duplicate files from Obsidian sync | `fdf9fd4` |
+
+## 2026-06-28
+
+| Source | What | Why | Commit(s) |
+|--------|------|-----|-----------|
+| claude | Project assessment — identified structural duplication (two chatui.py copies, two vault locations), broken `vault_path`, two pending FIX directives | Full audit of project state with three-phase remediation plan | _(no commit)_ |
+| claude | Move canonical code to `ChatUI/`; delete stale root copies of `chatui.py`, `apply_update.py`, `_article-guide.md`, `docker-compose.yml` | Root copies were 262 lines behind ChatUI/ and diverging | _(this commit)_ |
+| claude | Rename all 37 `Knowledge/*.md` files from kebab-case to Title Case with Spaces; `_ref-*` → `_Ref Title Case` | Consistent naming convention matching Obsidian display style | _(this commit)_ |
+| claude | Update `chatui.py` line 1653: `"taxonomy.md"` → `"Taxonomy.md"` | Hardcoded filename reference broke after vault rename | _(this commit)_ |
+| claude | Delete `ChatUI/config/` duplicates: `Changelog 1.md`, `Commands 1.md`, `Models 1.md`, `Settings 1.md`, `Improvement Notes.md` | Obsidian sync created versioned duplicates; `ideas.md` was already the superset | _(this commit)_ |
+| claude | Merge all 17 divergent root `.md` files into `Knowledge/` counterparts (append unique content), then delete root copies | Root was the old flat vault; `Knowledge/` is now the single canonical vault location | _(this commit)_ |

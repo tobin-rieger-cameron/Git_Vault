@@ -15,4 +15,4 @@ In other words, kinematics deals with the study of how things move, but not why 
 Kinematics is a fundamental concept in physics, engineering, and many other fields, as it helps to understand and predict the motion of objects in various contexts, such as projectile motion, circular motion, and linear motion.
 
 
-See also: [[INDEX]]
+See also: [[Knowledge/INDEX]]

@@ -1,7 +1,7 @@
 ---
 title: Claude Code Session Transcript
-last_updated: 2026-06-27
-sessions: 9
+last_updated: 2026-06-28
+sessions: 11
 ---
 
 # Claude Code Session Transcript
@@ -23,6 +23,8 @@ Ongoing log of all Claude Code sessions for this project. Use the **Quick Index*
 | [7](#session-7----2026-06-26-distill-command--vault-pre-seeding) | 2026-06-26 (evening) | /distill command; vault pre-seeding with accurate reference files; article quality assessment + fixes | `ef3094c` → `95a7340` |
 | [8](#session-8----2026-06-27-vault-structure--organize-pass-4) | 2026-06-27 | Dewey-based vault structure; /organize Pass 4 file placement; _cmd_ingest stats dict | `4a40d3f` `780530f` |
 | [9](#session-9----2026-06-27-daily-session-files) | 2026-06-27 | Merge per-minute sessions into daily files; ChatUI daily-append mode; claude_transcript updated | `bb13670` |
+| [10](#session-10----2026-06-28-project-assessment) | 2026-06-28 | Token-efficient project assessment; structural duplication and path drift identified; three-phase remediation plan | _(none)_ |
+| [11](#session-11----2026-06-28-structural-cleanup--vault-rename) | 2026-06-28 | Delete all duplicate files; rename 37 Knowledge/ files to Title Case; merge divergent root copies; update chatui.py path reference | _(this commit)_ |
 
 ### Key decisions & constraints (read this first)
 - **Self-update pipeline**: FIX:/CHANGE: directives in `config/settings.md` → `apply_update.py` reads git diff → `coding_llm` generates fix → self-review pass → writes `chatui.py`
@@ -437,3 +439,82 @@ update the claude transcript, cleanup transcript 1 and index 1, then close the s
 
 ### Assistant
 Appended Session 9 to transcript, deleted duplicate files, committed and closed.
+
+---
+
+## Session 10 — 2026-06-28: Project Assessment
+
+**Commits:** _(none — read-only assessment session)_
+
+### User
+while trying to conserve as many tokens as possible: take an assessment of this whole project, especially focussing on the codebase and how it interacts with the rest of the folder. What is the goal of the project? what are the current pain points, what is the path to achieve this goal
+
+### Assistant
+Surveyed the full repo structure, both code files, all config, and the `Knowledge/` layout. Key findings:
+
+**Goal:** A self-expanding, self-improving knowledge system with two reinforcing loops — (1) conversations → `/distill`/`/harvest`/`/savefile` → structured vault articles → re-ingested → better retrieval; (2) usage friction → `config/ideas.md` directives → `/update`+`/apply` rewrites the app itself.
+
+**Pain points identified:**
+
+1. **Structural duplication/drift (most urgent):**
+   - Two copies of code: `ChatUI/chatui.py` (2,846 lines, modified 18:38, canonical) vs root `chatui.py` (2,584 lines, 14:19, stale). They differ by ~424 lines. Both git-tracked.
+   - Two copies of vault notes: 32 flat `.md` files at root vs 42 in `Knowledge/` (newer, Dewey-structured).
+   - `Knowledge/` contains files with spaces in names (`Library of Congress Classification System.md`) that break shell tools and wikilinks.
+
+2. **`vault_path` broken:** `config/settings.md` hardcodes `/home/tizz/dev/LLM-sandbox/` but actual path is `/home/tizz/dev/Git_Vault/LLM-sandbox/`. Same stale path in both `docker-compose.yml` files.
+
+3. **Known functional gaps:** Web fallback rarely fires (gated on exact phrase `"i'm not certain"` that `llama3.2:3b` almost never emits); conversation logs pollute retrieval (broad-vocabulary transcripts score as vault matches); no `/savefile` auto-reminder; ChromaDB persistence flagged 🔴 in `ideas.md` but changelog says it's fixed — needs verification.
+
+4. **Two queued `FIX: _cmd_distill` directives** in `settings.md` Pending Directives section — unapplied.
+
+**Three-phase remediation path:**
+- **Phase 1 (structure):** Pick `ChatUI/` as canonical, delete root duplicate; pick `Knowledge/` as vault, make sure root `.md` have no diffs from their files then delete them; fix `vault_path` in settings + compose; rename space-containing files to kebab-case.
+- **Phase 2 (retrieval):** Verify ChromaDB persistence; expand uncertainty detection or use low vault-score as web-fallback proxy; separate conversation logs from knowledge in ChromaDB.
+- **Phase 3 (loops):** Apply queued `_cmd_distill` FIX directives; add `/savefile` reminder at N pending notes; add `/rename`.
+
+### User
+update the claude transcript file please
+
+### Assistant
+Appended Session 10 to transcript with full assessment summary.
+
+---
+
+## Session 11 — 2026-06-28: Structural Cleanup & Vault Rename
+
+**Commits:** _(this commit)_
+
+### Key decisions & constraints
+- `ChatUI/` is canonical for all code and config; root copies were stale or identical
+- `Knowledge/` is the single vault location; all root `.md` copies removed
+- `_ref-*` prefix kept (signals exclusion from `/distill` article generation via `startswith("_")` filter) but renamed to `_Ref Title Case` for consistency
+- `taxonomy.md` hardcoded in `chatui.py` line 1653 — updated to `"Taxonomy.md"` alongside the rename
+- `Improvement Notes.md` was an older version of `ideas.md` (ideas.md was the superset) — deleted without merging
+
+### What was done
+
+**Deleted exact duplicates:**
+- 18 root knowledge `.md` files identical to `Knowledge/` counterparts
+- Root `chatui.py` (2,584 lines, stale vs ChatUI/ 2,846), `apply_update.py`, `_article-guide.md`, `docker-compose.yml`
+- `ChatUI/config/`: `Commands 1.md`, `Models 1.md` (identical), `Changelog 1.md`, `Settings 1.md` (older versions), `Improvement Notes.md` (older than `ideas.md`)
+
+**Renamed 37 `Knowledge/` files** from kebab-case → Title Case with Spaces:
+- All standard articles: `agential-patterns.md` → `Agential Patterns.md`, etc.
+- Acronyms preserved: `lo-ra-adaptations.md` → `LoRA Adaptations.md`, `rlhf-alignment.md` → `RLHF Alignment.md`
+- Compound kept: `fine-tuning-methods.md` → `Fine-Tuning Methods.md`
+- Prepositions lowercase: `vector-databases-for-search.md` → `Vector Databases for Search.md`, `sparse-vs-dense-retrieval.md` → `Sparse vs Dense Retrieval.md`
+- Reference files: `_ref-lora.md` → `_Ref LoRA.md` (etc.)
+
+**Merged 17 divergent root files into `Knowledge/`:**
+- Most diffs were wikilink capitalisation only (`[[taxonomy]]` → `[[Taxonomy]]`) — cosmetic, Knowledge/ kept as-is
+- `Dewey Decimal System.md`: root had clean intro and table, Knowledge/ had garbled intro + noise paragraph. Wrote clean merge preserving Knowledge/'s extra subdivision detail (Finsler geometry) and extra See Also link (`[[Library of Congress Classification System]]`)
+
+**Code change:** `ChatUI/chatui.py` line 1653 — `"taxonomy.md"` → `"Taxonomy.md"`
+
+**Changelog:** filled in `_(this session)_` placeholders for 2026-06-26 (→ `bac2cce`); added full 2026-06-27 and 2026-06-28 sections.
+
+### User
+commit this, update claude transcript and make sure changelog file is completely up to date
+
+### Assistant
+Updated changelog (filled stale commit hashes, added Sessions 8–11), updated transcript, committed all changes.

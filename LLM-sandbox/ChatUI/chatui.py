@@ -1650,7 +1650,7 @@ class ChatApp(App[None]):
 
         # ── 3. Load taxonomy for hierarchy + tag awareness ────────────────────
         taxonomy_ctx = ""
-        taxonomy_path = os.path.join(VAULT_PATH, "taxonomy.md")
+        taxonomy_path = os.path.join(VAULT_PATH, "Taxonomy.md")
         if os.path.exists(taxonomy_path):
             with open(taxonomy_path, encoding="utf-8") as fh:
                 taxonomy_ctx = fh.read()[:1500]

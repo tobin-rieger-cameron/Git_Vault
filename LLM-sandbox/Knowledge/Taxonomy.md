@@ -1,3 +1,8 @@
+---
+title: "Taxonomy"
+tags: [taxonomy]
+---
+
 # Taxonomy
 
 ## Q: how would you organize all human knowledge into categories
@@ -65,4 +70,4 @@ However, I can provide a general overview of the taxonomy tree in biology. The m
 This hierarchy is often remembered using the mnemonic "DEOPS".
 
 
-See also: [[INDEX]]
+See also: [[Knowledge/INDEX]]
