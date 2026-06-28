@@ -1,6 +1,7 @@
 ---
-status: planned
+status: implemented
 date: 2026-06-27
+implemented: 2026-06-28
 ---
 
 # Vault Structure Plan

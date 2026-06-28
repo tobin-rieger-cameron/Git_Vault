@@ -1,7 +1,7 @@
 ---
 title: Claude Code Session Transcript
 last_updated: 2026-06-28
-sessions: 15
+sessions: 16
 ---
 
 # Claude Code Session Transcript
@@ -29,6 +29,7 @@ Ongoing log of all Claude Code sessions for this project. Use the **Quick Index*
 | [13](#session-13----2026-06-28-retrieval-tuning--claude-code-settings) | 2026-06-28 | Raise similarity threshold; fix history contamination; fix grounded prompt blending; CLAUDE.md; README update; Stop hook | `a877541` `4344119` `3aafc44` |
 | [14](#session-14----2026-06-28-command-audit--fixes) | 2026-06-28 | Full command audit: 9 bugs fixed across help text, _apply_queue, /readme, /model, /status, /export, /distill, /harvest, /daily | `21c9e4a` |
 | [15](#session-15----2026-06-28-distill-directives) | 2026-06-28 | Apply pending /distill directives: RAG grounding per article; directive 1 already done; clear Pending Directives | `4ee93fd` |
+| [16](#session-16----2026-06-28-vault-folder-structure) | 2026-06-28 | Implement Dewey vault structure: assess readiness, fix 2 bugs, run /organize, move 42 files into subfolders | `00cf05d` `46f87ad` |
 
 ### Key decisions & constraints (read this first)
 - **Self-update pipeline**: FIX:/CHANGE: directives in `config/settings.md` → `apply_update.py` reads git diff → `coding_llm` generates fix → self-review pass → writes `chatui.py`
@@ -658,3 +659,32 @@ Directive 2 (RAG grounding): implemented. Before building `art_prompt` for each 
 The `git diff` pipeline couldn't surface these directives because the commit that added them (`61f0b43` via subtree) predated any usable `.chatui_sync` hash in the current repo. Applied directly instead.
 
 Both entries cleared from `settings.md` Pending Directives section. `CLAUDE.md` updated to remove the stale reference.
+
+---
+
+## Session 16 — 2026-06-28: Vault Folder Structure
+
+**Commits:** `00cf05d` `46f87ad`
+
+### User
+check the vault structure plan, do you think chatui is now in a place to implement this format by itself accurately?
+
+### Assistant
+Assessed vault-structure-plan.md against current chatui.py. Pass 4 tag→folder logic was correct, but two bugs would have broken things after the move:
+
+1. `_cmd_distill` used `os.listdir(VAULT_PATH)` for vault_stems — only sees root, missing subfoldered files post-move
+2. Pass 4 `_ref` detection used `fname.startswith("_ref-")` — wouldn't match `_Ref Fine Tuning.md` (Title Case, spaces)
+
+### User
+yes [fix both]
+
+### Assistant
+Fixed both: `_cmd_distill` now uses `_discover_vault_files()`, `_is_ref()` helper checks `fname.lower().startswith("_ref")`.
+
+### User
+run /organize
+
+### Assistant
+Ran /organize via tmux. Pass 1 (tags): only `Polythematic Structured Subject Heading System.md` lacked frontmatter — skipped (empty file, no suggestion generated). Pass 2 (wikilinks): auto-accepted via queued Enters; links added to `Natural Sciences.md`, `Social Science Subfields.md`, and others. Pass 3 (condense sessions): `conversations/INDEX.md` incorrectly matched as a "short session" and auto-condensed before manual skip could fire — fixed bug to exclude INDEX.md; rebuilt index from sessions. Pass 4 (placement): all 42 files classified and moved; Cupcakes.md mis-placed to `000-information` by LLM (no tags, empty file) — manually corrected to `misc/`. Post-move re-ingest crashed with DB lock (watchdog fired simultaneously); DB cleared itself, restarted and `/ingest` rebuilt at 309 chunks.
+
+Final structure: 000-information (15), 300-social-sciences (1), 500-natural-sciences (6), 600-applied-sciences (15), 600-applied-sciences/_ref (4), misc (2).
