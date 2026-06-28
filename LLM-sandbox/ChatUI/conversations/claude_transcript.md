@@ -1,7 +1,7 @@
 ---
 title: Claude Code Session Transcript
 last_updated: 2026-06-28
-sessions: 11
+sessions: 12
 ---
 
 # Claude Code Session Transcript
@@ -24,7 +24,8 @@ Ongoing log of all Claude Code sessions for this project. Use the **Quick Index*
 | [8](#session-8----2026-06-27-vault-structure--organize-pass-4) | 2026-06-27 | Dewey-based vault structure; /organize Pass 4 file placement; _cmd_ingest stats dict | `4a40d3f` `780530f` |
 | [9](#session-9----2026-06-27-daily-session-files) | 2026-06-27 | Merge per-minute sessions into daily files; ChatUI daily-append mode; claude_transcript updated | `bb13670` |
 | [10](#session-10----2026-06-28-project-assessment) | 2026-06-28 | Token-efficient project assessment; structural duplication and path drift identified; three-phase remediation plan | _(none)_ |
-| [11](#session-11----2026-06-28-structural-cleanup--vault-rename) | 2026-06-28 | Delete all duplicate files; rename 37 Knowledge/ files to Title Case; merge divergent root copies; update chatui.py path reference | _(this commit)_ |
+| [11](#session-11----2026-06-28-structural-cleanup--vault-rename) | 2026-06-28 | Delete all duplicate files; rename 37 Knowledge/ files to Title Case; merge divergent root copies; update chatui.py path reference | `d04811c` |
+| [12](#session-12----2026-06-28-llama318b-sidegrade--retrieval-optimisation) | 2026-06-28 | Add llama3.1:8b as default; /model runtime switcher; top_k/chunk_size/web-fallback fixes; ChatUI performance test | `39a1c21` |
 
 ### Key decisions & constraints (read this first)
 - **Self-update pipeline**: FIX:/CHANGE: directives in `config/settings.md` → `apply_update.py` reads git diff → `coding_llm` generates fix → self-review pass → writes `chatui.py`
@@ -518,3 +519,43 @@ commit this, update claude transcript and make sure changelog file is completely
 
 ### Assistant
 Updated changelog (filled stale commit hashes, added Sessions 8–11), updated transcript, committed all changes.
+
+---
+
+## Session 12 — 2026-06-28: llama3.1:8b Sidegrade & Retrieval Optimisation
+
+**Commits:** `39a1c21`
+
+### User
+I looked up a way to improve llama's quality: Download the Q8_0 version of Llama 3.2 3B, set your thread count to match physical cores, and rewrite your prompts to include personas and step-by-step reasoning instructions. This yields the highest possible quality your hardware can support. — what are your thoughts on this approach
+
+### Assistant
+Assessed all three suggestions:
+- **Q8_0**: modest gain for a 3B model — quantisation precision matters less than model capacity; would cost ~3.5 GB vs 2.0 GB for Q4.
+- **Thread count**: correct advice for CPU inference; less relevant if GPU offload is active.
+- **Personas + CoT**: most impactful of the three, but 3B models follow CoT inconsistently; higher-value target is `qwen2.5-coder:7b` in the `/update` pipeline where structured reasoning reduces the ~20% error rate.
+- Better recommendation: `llama3.1:8b` — nearly 3× the parameters for 4.7 GB, a much larger quality jump than quantisation precision on a small model.
+- Real bottleneck for this use case is retrieval quality, not generation. Chunk crowding, web fallback not firing, and too-small chunks are higher-value fixes.
+
+### User
+alright, lets add 3.1:8b to chatui as a sidegrade, I'd like to easily switch back to 3b in case I find its not optimal. lets also take a look at how we can optimize the retrieval process
+
+### Assistant
+Implemented model sidegrade and retrieval improvements (`39a1c21`):
+
+**`/model` command** — runtime model switcher. `/model` shows active model + config default. `/model llama3.2:3b` switches instantly. Header subtitle tracks active model via `self._chat_model` instance var (previously `CHAT_MODEL` module constant, which couldn't reflect runtime changes). `global llm` reassigned on switch.
+
+**`llama3.1:8b`** — set as `chat_model` default in `models.md`; both `llama3.1:8b` and `llama3.2:3b` in `models:` registry for auto-pull. Switch is instant since Ollama keeps pulled models resident.
+
+**Retrieval config** (settings.md):
+- `top_k: 3 → 5` — biggest quick win; 3 chunks meant one off-topic result could crowd out relevant ones
+- `chunk_size: 500 → 800` — Knowledge/ articles are now fuller; 500 chars split mid-section
+- `chunk_overlap: 50 → 100` — reduces boundary gaps
+
+**Web fallback fix** — was gated on `uncertain and self._web_on` where `uncertain = model_answer.startswith("i'm not certain")`. llama3.2:3b almost never produces this phrase. Changed to `if self._web_on:` — web now fires whenever we're in the model-knowledge path and web is on (vault didn't cover the topic = good time to search). Uncertainty label on pending notes preserved separately.
+
+### User
+update changelogs and claude_transcript, test out chatui and assess performance and response quality compared to past conversations
+
+### Assistant
+Updated changelog and transcript; launched ChatUI for performance testing. See testing notes below.
