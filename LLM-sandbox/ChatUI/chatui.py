@@ -1719,8 +1719,9 @@ class ChatApp(App[None]):
 
         # ── 5. Existing vault stems for wikilink candidates ───────────────────
         vault_stems = [
-            os.path.splitext(f)[0] for f in os.listdir(VAULT_PATH)
-            if f.endswith(".md") and not f.startswith("_") and f != "README.md"
+            os.path.splitext(os.path.basename(p))[0]
+            for p in _discover_vault_files()
+            if not os.path.basename(p).startswith("_") and os.path.basename(p) != "README.md"
         ]
         stems_str = ", ".join(vault_stems)
 
@@ -2709,16 +2710,19 @@ class ChatApp(App[None]):
                 folder = await asyncio.to_thread(_classify_for_placement, tags, content, coding_llm)
                 proposals.append((path, fname, folder))
 
+            def _is_ref(fname: str) -> bool:
+                return fname.lower().startswith("_ref")
+
             self._log("\nProposed moves:")
             for path, fname, folder in proposals:
-                subdir = "_ref/" if fname.startswith("_ref-") else ""
+                subdir = "_ref/" if _is_ref(fname) else ""
                 self._log(f"  [dim]{fname}[/dim]  →  [bold]{folder}/{subdir}[/bold]")
 
             raw = await self._org_prompt("\n  Enter=proceed  ·  skip=skip placement:")
             if raw.lower() != "skip":
                 moved = 0
                 for path, fname, folder in proposals:
-                    subdir     = "_ref" if fname.startswith("_ref-") else ""
+                    subdir     = "_ref" if _is_ref(fname) else ""
                     target_dir = os.path.join(VAULT_PATH, folder, subdir) if subdir else os.path.join(VAULT_PATH, folder)
                     os.makedirs(target_dir, exist_ok=True)
                     target_path = os.path.join(target_dir, fname)
