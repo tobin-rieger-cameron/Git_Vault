@@ -5,11 +5,12 @@ summary: >
   reads this at startup — any model in the models: list that is not installed
   will be pulled automatically before the app launches. Edit role keys to swap
   models; add to models: before assigning a new model to a role.
-chat_model: llama3.2:3b
+chat_model: llama3.1:8b
 coding_model: qwen2.5-coder:7b
 embed_model: nomic-embed-text
 models:
   - llama3.2:3b
+  - llama3.1:8b
   - qwen2.5-coder:7b
   - nomic-embed-text
 ---
@@ -20,7 +21,7 @@ models:
 
 | Role | Model | Purpose |
 |---|---|---|
-| `chat_model` | `llama3.2:3b` | Live streaming responses — speed over depth |
+| `chat_model` | `llama3.1:8b` | Live streaming responses — quality default; switch to `llama3.2:3b` for speed via `/model` |
 | `coding_model` | `qwen2.5-coder:7b` | `/organize`, `/update` code generation, concept suggestions |
 | `embed_model` | `nomic-embed-text` | Vault ingestion and similarity search |
 
@@ -30,7 +31,8 @@ Models listed under `models:` in the frontmatter are pulled automatically on lau
 
 | Model | Size | Notes |
 |---|---|---|
-| `llama3.2:3b` | 2.0 GB | Fast chat model |
+| `llama3.1:8b` | 4.7 GB | Quality chat model — default |
+| `llama3.2:3b` | 2.0 GB | Fast chat model — use `/model llama3.2:3b` to switch at runtime |
 | `qwen2.5-coder:7b` | 4.7 GB | Coding-specific model (kept as fallback) |
 | `deepseek-r1:8b` | 5.0 GB | Reasoning model — strong at following multi-step instructions; good `coding_model` alternative |
 | `nomic-embed-text` | 274 MB | Embedding — do not change without re-ingesting |

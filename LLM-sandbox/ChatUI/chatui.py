@@ -1296,6 +1296,7 @@ _HELP_TEXT = """\
   [bold #5f87af]/readme[/bold #5f87af]        regenerate README.md from current source + config
   [bold #5f87af]/harvest[/bold #5f87af]       promote INDEX topics into vault notes with [[links]]
   [bold #5f87af]/distill[/bold #5f87af]       distil a session file into structured vault articles
+  [bold #5f87af]/model[/bold #5f87af] [name]  show or switch the chat model at runtime
 [dim]Ctrl+S  /savefile  ·  Ctrl+B  /browse  ·  Ctrl+Q  quit[/dim]\
 """
 
@@ -1322,6 +1323,7 @@ class ChatApp(App[None]):
         self._history:  list[dict]        = []
         self._pending:  list[PendingNote] = []
         self._web_on         = True
+        self._chat_model     = CHAT_MODEL
         self._organize_queue: asyncio.Queue[str] | None = None
         self._apply_queue:    asyncio.Queue[str] | None = None
         self._pending_source: str | None = None
@@ -1404,7 +1406,7 @@ class ChatApp(App[None]):
             self._append_to_session("assistant", text)
 
     def _update_subtitle(self) -> None:
-        parts = [CHAT_MODEL]
+        parts = [self._chat_model]
         parts.append("web: on" if self._web_on else "web: off")
         if self._pending:
             n = len(self._pending)
@@ -1502,6 +1504,7 @@ class ChatApp(App[None]):
             "readme":   lambda _: self._cmd_readme(),
             "harvest":   lambda _: self._cmd_harvest(),
             "distill":   lambda a: self._cmd_distill(a),
+            "model":     self._cmd_model,
         }
 
         if cmd in handlers:
@@ -1528,6 +1531,17 @@ class ChatApp(App[None]):
         self._update_subtitle()
         state = "[green]on[/green]" if self._web_on else "[red]off[/red]"
         self._log(f"[dim]Web search fallback: {state}[/dim]")
+
+    def _cmd_model(self, args: str) -> None:
+        global llm
+        name = args.strip()
+        if not name:
+            self._log(f"[bold]Chat model:[/bold] {self._chat_model}  [dim](default: {CHAT_MODEL})[/dim]")
+            return
+        llm = ChatOllama(model=name)
+        self._chat_model = name
+        self._update_subtitle()
+        self._log(f"[green]✓ Switched to {name}[/green]  [dim](restoring default: /model {CHAT_MODEL})[/dim]")
 
     @work
     async def _cmd_harvest(self, _args: str = "") -> None:
@@ -2788,8 +2802,8 @@ class ChatApp(App[None]):
             suggestion = await asyncio.to_thread(lambda: get_concept_suggestion(question, model_answer))
             self._queue_note(question, model_answer, "model knowledge" + (" (uncertain)" if uncertain else ""), suggestion)
 
-            # ── Web search supplement when uncertain ───────────────────────────
-            if uncertain and self._web_on:
+            # ── Web search supplement (model-knowledge path = vault didn't cover it) ──
+            if self._web_on:
                 self._set_status("🌐 Searching web…")
                 self._log("[dim]🌐  Supplementing with web search…[/dim]", save=False)
                 web_ctx = await asyncio.to_thread(lambda: web_search(question))

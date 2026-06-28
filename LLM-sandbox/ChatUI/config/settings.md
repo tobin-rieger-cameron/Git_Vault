@@ -7,9 +7,9 @@ summary: >
   Architecture, Stack) so an LLM reading this file has complete context before
   proposing changes.
 similarity_threshold: 0.5
-top_k: 3
-chunk_size: 500
-chunk_overlap: 50
+top_k: 5
+chunk_size: 800
+chunk_overlap: 100
 history_window: 4
 web_search_results: 3
 ---
