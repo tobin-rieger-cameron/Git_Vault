@@ -6,11 +6,11 @@ summary: >
   restart to apply. Also contains full technical documentation (How It Works,
   Architecture, Stack) so an LLM reading this file has complete context before
   proposing changes.
-similarity_threshold: 0.5
+similarity_threshold: 0.65
 top_k: 5
 chunk_size: 800
 chunk_overlap: 100
-history_window: 4
+history_window: 2
 web_search_results: 3
 ---
 

@@ -957,8 +957,8 @@ def _file_ctx_section(file_ctx: str) -> list[str]:
 def build_vault_prompt(question: str, chunks: list, history: list[dict], file_ctx: str = "") -> str:
     parts = [
         "You are a helpful assistant with access to the user's personal notes.",
-        "Use the context and conversation history to answer the question.",
-        "If the answer isn't covered in the context, say so clearly.",
+        "Use the context to answer the question as specifically as possible.",
+        "If the context does not contain enough information, supplement it with your own knowledge and say which parts came from your training rather than the notes.",
         "",
     ]
     parts += _file_ctx_section(file_ctx)
