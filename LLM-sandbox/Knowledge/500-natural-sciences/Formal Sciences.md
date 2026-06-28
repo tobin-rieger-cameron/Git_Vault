@@ -1,6 +1,7 @@
 ---
-title: "What are the Formal Sciences?"
-tags: [mathematics, philosophy]
+title: Formal Sciences
+tags:
+  - mathematics
 ---
 
 **Title:** Formal Sciences: Mathematics, Logic, Statistics, and Computer Science
