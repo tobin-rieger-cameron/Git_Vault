@@ -1,7 +1,7 @@
 ---
 title: Claude Code Session Transcript
 last_updated: 2026-06-28
-sessions: 13
+sessions: 14
 ---
 
 # Claude Code Session Transcript
@@ -27,6 +27,7 @@ Ongoing log of all Claude Code sessions for this project. Use the **Quick Index*
 | [11](#session-11----2026-06-28-structural-cleanup--vault-rename) | 2026-06-28 | Delete all duplicate files; rename 37 Knowledge/ files to Title Case; merge divergent root copies; update chatui.py path reference | `d04811c` |
 | [12](#session-12----2026-06-28-llama318b-sidegrade--retrieval-optimisation) | 2026-06-28 | Add llama3.1:8b as default; /model runtime switcher; top_k/chunk_size/web-fallback fixes; ChatUI performance test | `39a1c21` |
 | [13](#session-13----2026-06-28-retrieval-tuning--claude-code-settings) | 2026-06-28 | Raise similarity threshold; fix history contamination; fix grounded prompt blending; CLAUDE.md; README update; Stop hook | `a877541` `4344119` `3aafc44` |
+| [14](#session-14----2026-06-28-command-audit--fixes) | 2026-06-28 | Full command audit: 9 bugs fixed across help text, _apply_queue, /readme, /model, /status, /export, /distill, /harvest, /daily | `21c9e4a` |
 
 ### Key decisions & constraints (read this first)
 - **Self-update pipeline**: FIX:/CHANGE: directives in `config/settings.md` → `apply_update.py` reads git diff → `coding_llm` generates fix → self-review pass → writes `chatui.py`
@@ -604,3 +605,37 @@ can you tweak clauds settings to automatically append to the transcript, ensure 
 
 ### Assistant
 Added explicit end-of-session checklist to `CLAUDE.md` (5 steps: transcript, changelog, README, git status, commit). Updated `Stop` hook already in place. Updated stale `README.md` — was referencing `llama3.2:3b` as default, missing `--vault` flag, missing `/model` and `/distill` commands, no retrieval pipeline section. Rewrote it fully.
+
+---
+
+## Session 14 — 2026-06-28: Command Audit and Fixes
+
+**Commits:** `21c9e4a`
+
+### User
+can you test the current list of ChatUI's commands, look for redundency and errors. Assess the outputs and look for possible improvements to be made
+
+### Assistant
+Tested all 19 commands systematically. Found and fixed 9 issues:
+
+**Bugs fixed:**
+- `/help` markup: `[name]` and `[[links]]` were being stripped by Rich's markup parser; alignment of `/readme`, `/harvest`, `/distill` was 1 space off
+- `_apply_queue` swallowed `/commands`: when `/daily` or `/apply` waited for yes/no, typing `/ingest` etc. silently sent it as the answer. Now shows a "please respond yes or no first" error
+- `/readme` overwrote without diffing: clobbered a hand-written README with a shorter stale LLM version (wrong model name, invented docs URL). Now shows diff + yes/no confirm
+- `/readme` hardcoded `llama3.2:3b` in its generation prompt; now uses `CHAT_MODEL`/`CODING_MODEL`/`EMBED_MODEL` constants
+- `/model` silently accepted nonexistent models; now checks `ollama list` and warns if not found
+
+**Redundancies resolved:**
+- `/status` and `/stats` merged: `/status` now shows both session state and vault stats in two sections; `/stats` redirects to `/status`
+- `/export` printed format name on two lines; condensed to one
+
+**UX improvements:**
+- `/distill` with no args now lists up to 5 recent session files from `conversations/`
+- `/harvest` error now explains INDEX.md is a `/organize` Pass 1 side-effect, not a reason to run all 4 passes
+- `/daily` run twice in a day now says "Daily note already saved for today" instead of silently generating a throwaway summary
+
+### User
+go ahead
+
+### Assistant
+Applied all 9 fixes to `chatui.py`. Validated AST. Smoke-tested `/help` alignment, `/status` merged output, `/distill` session list, `/model` warning — all working correctly.
