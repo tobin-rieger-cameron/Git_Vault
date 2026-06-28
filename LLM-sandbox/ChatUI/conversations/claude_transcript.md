@@ -1,7 +1,7 @@
 ---
 title: Claude Code Session Transcript
 last_updated: 2026-06-28
-sessions: 12
+sessions: 13
 ---
 
 # Claude Code Session Transcript
@@ -26,6 +26,7 @@ Ongoing log of all Claude Code sessions for this project. Use the **Quick Index*
 | [10](#session-10----2026-06-28-project-assessment) | 2026-06-28 | Token-efficient project assessment; structural duplication and path drift identified; three-phase remediation plan | _(none)_ |
 | [11](#session-11----2026-06-28-structural-cleanup--vault-rename) | 2026-06-28 | Delete all duplicate files; rename 37 Knowledge/ files to Title Case; merge divergent root copies; update chatui.py path reference | `d04811c` |
 | [12](#session-12----2026-06-28-llama318b-sidegrade--retrieval-optimisation) | 2026-06-28 | Add llama3.1:8b as default; /model runtime switcher; top_k/chunk_size/web-fallback fixes; ChatUI performance test | `39a1c21` |
+| [13](#session-13----2026-06-28-retrieval-tuning--claude-code-settings) | 2026-06-28 | Raise similarity threshold; fix history contamination; fix grounded prompt blending; CLAUDE.md; README update; Stop hook | `a877541` `4344119` `3aafc44` |
 
 ### Key decisions & constraints (read this first)
 - **Self-update pipeline**: FIX:/CHANGE: directives in `config/settings.md` → `apply_update.py` reads git diff → `coding_llm` generates fix → self-review pass → writes `chatui.py`
@@ -559,3 +560,47 @@ update changelogs and claude_transcript, test out chatui and assess performance 
 
 ### Assistant
 Updated changelog and transcript; launched ChatUI for performance testing. See testing notes below.
+
+---
+
+## Session 13 — 2026-06-28: Retrieval Tuning + Claude Code Settings
+
+**Commits:** `a877541` `4344119` `075dd97` `3aafc44`
+
+### Context
+Continued from Session 12 performance test. Three bugs identified from testing: (1) false-positive vault matches at 0.55–0.63 routing queries to vault path and bypassing web; (2) history_window=4 causing RLHF answer to contaminate subsequent EU regulation query; (3) `build_vault_prompt` said "if not covered, say so clearly" — 8b followed this too literally and refused to use its own knowledge. Fourth bug found during fix: `build_grounded_prompt` said "synthesise with own knowledge" which caused off-topic vault chunks to bleed into answers.
+
+### User
+yes, apply those three fixes, then run more tests
+
+### Assistant
+Applied three fixes: `similarity_threshold 0.5→0.65`, `history_window 4→2`, updated `build_vault_prompt` instruction to allow training-knowledge supplement. Re-ran all test questions:
+
+- **Q1 LoRA** (0.76, vault): now attributes "4M from training data" explicitly — correct transparency behaviour
+- **Q2 RLHF** (0.63, grounded): full correct 3-stage breakdown vs. previous "no info in context" for stages 1 & 2
+- **Q3 Mixtral** (0.56, grounded): gave answer + noted source, vs. previous total refusal
+- **Q4 Dewey+taxonomy** (0.70, vault): clean cross-domain synthesis across 3 source files
+- **Q5 EU regulation** (0.60, grounded): correct AI Act content, no history contamination (history_window fix working)
+- **/model switch**: instant, header updates, restore hint shown
+
+Residual issue: grounded path still blended off-topic Agential Patterns.md content into EU regulation tail.
+
+### User
+yes that's important to me
+
+### Assistant
+Fixed `build_grounded_prompt`: changed "synthesise the notes with your own knowledge" to "Answer the question fully using your own training knowledge. Include vault notes only if they directly address the question. Do not let off-topic notes distort your answer." After two iterations (first version overcorrected and caused model to claim it had no knowledge), correct behaviour achieved: model answers EU regulation correctly from training and explicitly notes vault context was off-topic, without blending it in.
+
+### User
+can we tweak claud-codes settings to optimize it for this project, take a look at the changelog and claude_transcript files
+
+### Assistant
+Created `CLAUDE.md` at `LLM-sandbox/CLAUDE.md` — loaded automatically each session, contains repo layout, run instructions, ChromaDB/globals constraints, self-update pipeline docs, end-of-session checklist, retrieval behaviour table, and common pitfalls. No CLAUDE.md had existed before.
+
+Settings: `~/.claude/settings.json` had only theme and notification settings. Added a `Stop` hook that checks `git diff --name-only HEAD` at session end and prints a warning listing any of transcript/changelog/README that weren't updated.
+
+### User
+can you tweak clauds settings to automatically append to the transcript, ensure the readme is up to date, update the changelog, and ensure ChatUI's folder is up to date after making changes
+
+### Assistant
+Added explicit end-of-session checklist to `CLAUDE.md` (5 steps: transcript, changelog, README, git status, commit). Updated `Stop` hook already in place. Updated stale `README.md` — was referencing `llama3.2:3b` as default, missing `--vault` flag, missing `/model` and `/distill` commands, no retrieval pipeline section. Rewrote it fully.
