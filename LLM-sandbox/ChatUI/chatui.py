@@ -1289,13 +1289,12 @@ _HELP_TEXT = """\
   [bold #5f87af]/edit[/bold #5f87af]         LLM-guided edit of a vault file (or the open file)
   [bold #5f87af]/daily[/bold #5f87af]        summarise today's chat sessions; optionally save
   [bold #5f87af]/export[/bold #5f87af]       export Q&A pairs as fine-tuning data (jsonl/alpaca/csv)
-  [bold #5f87af]/status[/bold #5f87af]       show current session state (web, file, history, vault)
-  [bold #5f87af]/stats[/bold #5f87af]        show vault chunk count and DB size on disk
+  [bold #5f87af]/status[/bold #5f87af]       show session state, model, vault stats
   [bold #5f87af]/version[/bold #5f87af]      print the chatui.py version string
-  [bold #5f87af]/readme[/bold #5f87af]        regenerate README.md from current source + config
-  [bold #5f87af]/harvest[/bold #5f87af]       promote INDEX topics into vault notes with [[links]]
-  [bold #5f87af]/distill[/bold #5f87af]       distil a session file into structured vault articles
-  [bold #5f87af]/model[/bold #5f87af] [name]  show or switch the chat model at runtime
+  [bold #5f87af]/readme[/bold #5f87af]       regenerate README.md (shows diff, asks to confirm)
+  [bold #5f87af]/harvest[/bold #5f87af]      promote INDEX topics into vault notes with \\[\\[links]]
+  [bold #5f87af]/distill[/bold #5f87af]      distil a session file into structured vault articles
+  [bold #5f87af]/model[/bold #5f87af] \\[name]  show or switch the chat model at runtime
 [dim]Ctrl+S  /savefile  ·  Ctrl+B  /browse  ·  Ctrl+Q  quit[/dim]\
 """
 
@@ -1460,6 +1459,9 @@ class ChatApp(App[None]):
             return
 
         if self._apply_queue is not None:
+            if text.startswith("/"):
+                self._log("[yellow]Please respond yes or no before running another command.[/yellow]")
+                return
             if text:
                 self._append_to_session("user", text)
             self._apply_queue.put_nowait(text)
@@ -1537,6 +1539,14 @@ class ChatApp(App[None]):
         if not name:
             self._log(f"[bold]Chat model:[/bold] {self._chat_model}  [dim](default: {CHAT_MODEL})[/dim]")
             return
+        try:
+            result = subprocess.run(["ollama", "list"], capture_output=True, text=True, timeout=5)
+            installed = {line.split()[0].split(":")[0] for line in result.stdout.splitlines()[1:] if line.strip()}
+            short = name.split(":")[0]
+            if short not in installed:
+                self._log(f"[yellow]⚠ '{name}' not found locally (ollama list). Pull it first or the next query will fail.[/yellow]")
+        except Exception:
+            pass  # ollama not on PATH or timed out — proceed anyway
         llm = ChatOllama(model=name)
         self._chat_model = name
         self._update_subtitle()
@@ -1550,7 +1560,7 @@ class ChatApp(App[None]):
     
         index_path = os.path.join(CONVERSATIONS_DIR, "INDEX.md")
         if not os.path.exists(index_path):
-            self._log("[red]conversations/INDEX.md not found — run /organize first.[/red]")
+            self._log("[yellow]conversations/INDEX.md not found.\nRun /organize → Pass 1 (tags) generates INDEX.md as a side-effect.[/yellow]")
             self._set_busy(False)
             return
     
@@ -1627,7 +1637,13 @@ class ChatApp(App[None]):
         # ── 1. Resolve session file ───────────────────────────────────────────
         target = args.strip()
         if not target:
-            self._log("[yellow]Usage: /distill <session_file>[/yellow]", save=False)
+            session_files = sorted(glob.glob(os.path.join(CONVERSATIONS_DIR, "*.md")))
+            session_files = [f for f in session_files if not f.endswith("INDEX.md")]
+            if session_files:
+                recent = "\n".join(f"  {os.path.basename(f)}" for f in session_files[-5:])
+                self._log(f"[yellow]Usage: /distill <session_file>[/yellow]\nRecent sessions:\n{recent}", save=False)
+            else:
+                self._log("[yellow]Usage: /distill <session_file>  (no sessions found yet)[/yellow]", save=False)
             self._set_busy(False)
             return
         for candidate in [target,
@@ -1823,7 +1839,7 @@ class ChatApp(App[None]):
                 cfg_section,
                 "",
                 "ARCHITECTURE: local Ollama LLMs + ChromaDB vector store + Textual TUI.",
-                "STACK: llama3.2:3b (chat), qwen2.5-coder:7b (code/organize), nomic-embed-text (embeddings),"
+                f"STACK: {CHAT_MODEL} (chat), {CODING_MODEL} (code/organize), {EMBED_MODEL} (embeddings),"
                 " ChromaDB, LangChain, Textual.",
                 "",
                 "Tone: terse technical docs. No fluff. Markdown tables where appropriate.",
@@ -1833,9 +1849,41 @@ class ChatApp(App[None]):
             readme_text = await asyncio.to_thread(lambda: coding_llm.invoke(prompt).content.strip())
 
             readme_path = os.path.join(_REPO_ROOT, "README.md")
+            existing = ""
+            if os.path.exists(readme_path):
+                with open(readme_path, encoding="utf-8") as fh:
+                    existing = fh.read()
+
+            diff_lines = list(difflib.unified_diff(
+                existing.splitlines(keepends=True),
+                readme_text.splitlines(keepends=True),
+                fromfile="README.md (current)",
+                tofile="README.md (proposed)",
+                n=3,
+            ))
+            if not diff_lines:
+                self._log("[dim]README is already up to date.[/dim]")
+                return
+
+            diff_str = "".join(diff_lines)
+            coloured = re.sub(r'^(\+[^+].*)', r'[green]\1[/green]', diff_str, flags=re.MULTILINE)
+            coloured = re.sub(r'^(-[^-].*)', r'[red]\1[/red]', coloured, flags=re.MULTILINE)
+            self._log(f"[bold]README diff:[/bold]\n{coloured}")
+            self._log("[dim]Write this README? Type [bold]yes[/bold] or anything else to cancel.[/dim]")
+            inp = self.query_one(Input)
+            inp.placeholder = "yes / no…"
+            self._apply_queue = asyncio.Queue()
+            try:
+                resp = (await self._apply_queue.get()).strip().lower()
+            finally:
+                self._apply_queue = None
+                inp.placeholder = "Ask anything, or type /help for commands..."
+            if resp != "yes":
+                self._log("[dim]README update cancelled.[/dim]")
+                return
+
             with open(readme_path, "w", encoding="utf-8") as fh:
                 fh.write(readme_text)
-
             self._log(f"[green]✓ README written → {os.path.relpath(readme_path, _REPO_ROOT)}[/green]")
         except Exception as e:
             self._log(f"[red]README generation failed: {e}[/red]")
@@ -1847,14 +1895,33 @@ class ChatApp(App[None]):
 
     def _cmd_status(self) -> None:
         web = "[green]on[/green]" if self._web_on else "[red]off[/red]"
+        n_chunks = self.db._collection.count() if self.db else 0
+        db_size = 0
+        if os.path.exists(DB_PATH):
+            for dirpath, _, filenames in os.walk(DB_PATH):
+                for fname in filenames:
+                    try:
+                        db_size += os.path.getsize(os.path.join(dirpath, fname))
+                    except OSError:
+                        pass
+        db_mb   = db_size / (1024 * 1024)
+        n_notes = len(glob.glob(os.path.join(VAULT_PATH, "*.md")))
+        n_convs = len(glob.glob(os.path.join(CONVERSATIONS_DIR, "*.md")))
         lines = [
-            "[bold]Session status[/bold]",
+            "[bold]Status[/bold]",
+            f"  model:         {self._chat_model}",
             f"  web search:    {web}",
             f"  open file:     {self._open_file.rel if self._open_file else '[dim]none[/dim]'}",
             f"  history:       {len(self._history) // 2} exchange{'s' if len(self._history) // 2 != 1 else ''}",
             f"  pending notes: {len(self._pending)}",
-            f"  vault:         {'loaded' if self.db else '[yellow]not loaded — run /ingest[/yellow]'}",
             f"  patch pending: {'yes' if self._pending_source else 'no'}",
+            "",
+            "[bold]Vault[/bold]",
+            f"  path:          {VAULT_PATH}",
+            f"  notes:         {n_notes}",
+            f"  chunks:        {n_chunks}",
+            f"  DB size:       {db_mb:.1f} MB",
+            f"  sessions:      {n_convs}",
         ]
         self._log("\n".join(lines))
 
@@ -1964,6 +2031,9 @@ class ChatApp(App[None]):
         summary = await self._stream_llm(summary_prompt, model=coding_llm)
 
         daily_path = os.path.join(CONVERSATIONS_DIR, f"{today}_daily.md")
+        if os.path.exists(daily_path):
+            self._log(f"[dim]Daily note already saved for {today}. Run again tomorrow or delete {os.path.basename(daily_path)} to regenerate.[/dim]")
+            return
         if not os.path.exists(daily_path):
             self._log("[dim]Save as daily note? Type [bold]yes[/bold] or anything else to skip.[/dim]")
             inp = self.query_one(Input)
@@ -2045,31 +2115,10 @@ class ChatApp(App[None]):
                     f.write(f'"{q}","{a}"\n')
 
         rel = os.path.relpath(out_path, VAULT_PATH)
-        self._log(f"[green]✓  Exported {len(pairs)} Q&A pairs → {rel}[/green]")
-        self._log(f"[dim]Format: {fmt.upper()} — ready for fine-tuning tools (unsloth, axolotl, llama.cpp)[/dim]")
+        self._log(f"[green]✓  Exported {len(pairs)} Q&A pairs → {rel}[/green]  [dim]({fmt.upper()} — unsloth / axolotl / llama.cpp)[/dim]")
 
     def _cmd_stats(self) -> None:
-        db_size = 0
-        if os.path.exists(DB_PATH):
-            for dirpath, _, filenames in os.walk(DB_PATH):
-                for fname in filenames:
-                    try:
-                        db_size += os.path.getsize(os.path.join(dirpath, fname))
-                    except OSError:
-                        pass
-        n_chunks = self.db._collection.count() if self.db else 0
-        n_convs  = len(glob.glob(os.path.join(CONVERSATIONS_DIR, "*.md")))
-        db_mb    = db_size / (1024 * 1024)
-        md_files = glob.glob(os.path.join(VAULT_PATH, "*.md"))
-        lines = [
-            "[bold]Vault statistics[/bold]",
-            f"  chunks indexed:    {n_chunks}",
-            f"  DB size on disk:   {db_mb:.1f} MB",
-            f"  vault notes:       {len(md_files)}",
-            f"  saved sessions:    {n_convs}",
-            f"  vault path:        {VAULT_PATH}",
-        ]
-        self._log("\n".join(lines))
+        self._cmd_status()
 
     # ── /update command ─────────────────────────────────────────────────────────────
 
