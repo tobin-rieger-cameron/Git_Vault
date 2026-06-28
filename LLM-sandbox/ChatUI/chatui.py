@@ -134,6 +134,36 @@ HISTORY_WINDOW       = int(_cfg.get("history_window",       4))
 _SKIP_DIRS        = {"__pycache__", "local_db", ".git", "config"}
 _UNCERTAIN_PREFIX = "i'm not certain"
 
+_CLASS_Q_RE = re.compile(
+    r'^\s*(what\s+(?:is|are|was|were)|explain|describe|'
+    r'overview\s+of|introduction\s+to|tell\s+me\s+about|'
+    r'how\s+does|how\s+do)\b',
+    re.IGNORECASE,
+)
+_CLASS_Q_TOPIC_RE = re.compile(
+    r'^\s*(?:what\s+(?:is|are|was|were)|explain(?:\s+to\s+me)?|describe|'
+    r'overview\s+of|introduction\s+to|tell\s+me\s+about|'
+    r'how\s+does|how\s+do)\s+(?:the\s+|a\s+|an\s+)?(.+?)[\?\.!]?\s*$',
+    re.IGNORECASE,
+)
+
+def _detect_class_question(question: str) -> tuple[bool, str]:
+    """Return (is_class_q, topic). Topic is the subject noun extracted from the question."""
+    m = _CLASS_Q_TOPIC_RE.match(question.strip())
+    if m:
+        return True, m.group(1).strip()
+    return False, ""
+
+def _source_covers_topic(sources: list[str], topic: str) -> bool:
+    """True if at least one source file stem shares a keyword with the topic."""
+    stop = {"the", "a", "an", "of", "in", "is", "are", "and", "to", "for"}
+    topic_words = {w for w in re.findall(r'\w+', topic.lower()) if w not in stop and len(w) > 2}
+    for src in sources:
+        stem_words = set(re.findall(r'\w+', os.path.splitext(os.path.basename(src))[0].lower()))
+        if topic_words & stem_words:
+            return True
+    return False
+
 
 def _ensure_models() -> None:
     required = _cfg.get("models", [])
@@ -954,13 +984,28 @@ def _file_ctx_section(file_ctx: str) -> list[str]:
     return ["--- OPEN FILE ---", file_ctx, "--- END FILE ---", ""] if file_ctx else []
 
 
-def build_vault_prompt(question: str, chunks: list, history: list[dict], file_ctx: str = "") -> str:
+def _depth_hint(topic: str) -> str:
+    return (
+        f'This is a broad question about "{topic}". '
+        "Answer conversationally but comprehensively — cover the definition, "
+        "historical context, key subfields or variants, applications, and "
+        "relationship to adjacent concepts. "
+        "Draw on your training knowledge to fill any gaps the notes don't cover. "
+        "Write in fluent prose. Do not use markdown headers, bullet lists, or "
+        "article formatting — this is a conversation, not a document."
+    )
+
+
+def build_vault_prompt(question: str, chunks: list, history: list[dict],
+                       file_ctx: str = "", depth: str = "") -> str:
     parts = [
         "You are a helpful assistant with access to the user's personal notes.",
         "Use the context to answer the question as specifically as possible.",
         "If the context does not contain enough information, supplement it with your own knowledge and say which parts came from your training rather than the notes.",
-        "",
     ]
+    if depth:
+        parts += ["", depth]
+    parts += [""]
     parts += _file_ctx_section(file_ctx)
     if history:
         parts += ["--- CONVERSATION HISTORY ---", _format_history(history), "--- END HISTORY ---", ""]
@@ -975,12 +1020,15 @@ def build_vault_prompt(question: str, chunks: list, history: list[dict], file_ct
     return "\n".join(parts)
 
 
-def build_grounded_prompt(question: str, chunks: list, history: list[dict], file_ctx: str = "") -> str:
+def build_grounded_prompt(question: str, chunks: list, history: list[dict],
+                          file_ctx: str = "", depth: str = "") -> str:
     parts = [
         "You are a helpful assistant. Answer the question fully using your own training knowledge.",
         "The following notes from the user's vault may add useful context — incorporate them only if they directly address the question. Do not let off-topic notes distort your answer.",
-        "",
     ]
+    if depth:
+        parts += ["", depth]
+    parts += [""]
     parts += _file_ctx_section(file_ctx)
     if history:
         parts += ["--- CONVERSATION HISTORY ---", _format_history(history), "--- END HISTORY ---", ""]
@@ -995,12 +1043,15 @@ def build_grounded_prompt(question: str, chunks: list, history: list[dict], file
     return "\n".join(parts)
 
 
-def build_knowledge_prompt(question: str, history: list[dict], file_ctx: str = "") -> str:
+def build_knowledge_prompt(question: str, history: list[dict],
+                           file_ctx: str = "", depth: str = "") -> str:
     parts = [
         "Answer the following question using your own knowledge.",
         f'If you are not confident, start with: "{_UNCERTAIN_PREFIX.capitalize()}, but"',
-        "",
     ]
+    if depth:
+        parts += ["", depth]
+    parts += [""]
     parts += _file_ctx_section(file_ctx)
     if history:
         parts += ["--- CONVERSATION HISTORY ---", _format_history(history), "--- END HISTORY ---", ""]
@@ -2791,6 +2842,9 @@ class ChatApp(App[None]):
     async def _process(self, question: str) -> None:
         self._history.append({"role": "user", "content": question})
 
+        is_class_q, topic = _detect_class_question(question)
+        depth = _depth_hint(topic) if is_class_q else ""
+
         file_ctx = ""
         if self._open_file:
             file_ctx = f"File: {self._open_file.rel}\n\n{self._open_file.content}"
@@ -2834,10 +2888,21 @@ class ChatApp(App[None]):
                 })
                 self._log(f"[dim]📓  Source: {', '.join(sources[:3]) if sources else 'vault notes'}[/dim]", save=False)
                 self._note_event(f"src:{sources[0] if sources else 'vault'}")
+                if is_class_q:
+                    self._log("[dim]📖  Class question — deep mode[/dim]", save=False)
                 self._set_status("✍ Generating from vault…")
-                answer = await self._stream_llm(build_vault_prompt(question, chunks, self._history[:-1], file_ctx))
+                answer = await self._stream_llm(build_vault_prompt(question, chunks, self._history[:-1], file_ctx, depth))
                 self._history.append({"role": "assistant", "content": answer})
                 self._append_to_session("assistant", answer)
+                # Auto-supplement with web if vault source doesn't directly cover the topic
+                if is_class_q and self._web_on and not _source_covers_topic(sources, topic):
+                    self._log("[dim]🌐  Vault coverage indirect — supplementing with web…[/dim]", save=False)
+                    web_ctx = await asyncio.to_thread(lambda: web_search(question))
+                    if not web_ctx.startswith(("No results", "Web search failed", "duckduckgo")):
+                        self._note_event("web:supplement")
+                        self._set_status("✍ Generating from web…")
+                        web_answer = await self._stream_llm(build_web_prompt(question, web_ctx, self._history))
+                        self._queue_note(question, web_answer, "web supplement", topic)
                 return
 
             # ── Vault-grounded response (below threshold but chunks exist) ────────
@@ -2848,8 +2913,10 @@ class ChatApp(App[None]):
                 })
                 self._log(f"[dim]🧠  Low vault match ({top_score:.2f}) — using as context: {', '.join(sources[:3])}[/dim]", save=False)
                 self._note_event("src:grounded")
+                if is_class_q:
+                    self._log("[dim]📖  Class question — deep mode[/dim]", save=False)
                 self._set_status("✍ Generating…")
-                model_answer = await self._stream_llm(build_grounded_prompt(question, chunks, self._history[:-1], file_ctx))
+                model_answer = await self._stream_llm(build_grounded_prompt(question, chunks, self._history[:-1], file_ctx, depth))
                 self._history.append({"role": "assistant", "content": model_answer})
                 self._append_to_session("assistant", model_answer)
                 return
@@ -2857,8 +2924,10 @@ class ChatApp(App[None]):
             # ── Pure model knowledge (no vault chunks at all) ──────────────────
             self._log("[dim]🧠  No vault context — asking model[/dim]", save=False)
             self._note_event("src:model")
+            if is_class_q:
+                self._log("[dim]📖  Class question — deep mode[/dim]", save=False)
             self._set_status("✍ Generating…")
-            model_answer = await self._stream_llm(build_knowledge_prompt(question, self._history[:-1], file_ctx))
+            model_answer = await self._stream_llm(build_knowledge_prompt(question, self._history[:-1], file_ctx, depth))
             uncertain = model_answer.strip().lower().startswith(_UNCERTAIN_PREFIX)
             self._log(f"[dim]🧠  Model knowledge{'  (uncertain)' if uncertain else ''}[/dim]", save=False)
             if uncertain:
