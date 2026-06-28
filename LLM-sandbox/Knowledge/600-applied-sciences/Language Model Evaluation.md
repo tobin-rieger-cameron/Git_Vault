@@ -67,6 +67,6 @@ When selecting an evaluation metric for your language model project, consider th
 
 ## See also
 
-*   [[taxonomy]]: Organizing all human knowledge into categories
-*   [[kinematics]]: The study of motion and its relationship to forces
+*   [[[[Taxonomy]]]]: Organizing all human knowledge into categories
+*   [[[[Kinematic Frameworks|kinematics]]]]: The study of motion and its relationship to forces
 *   [[language-models]]: Large language models for natural language processing

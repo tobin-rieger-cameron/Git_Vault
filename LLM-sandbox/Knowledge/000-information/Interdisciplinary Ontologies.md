@@ -11,7 +11,7 @@ tags: [taxonomy]
 Interdisciplinary fields refer to areas of study that combine concepts, methods, or principles from two or more distinct disciplines to address complex problems or phenomena. These fields often blend boundaries between traditional subjects, creating new areas of inquiry.
 
 ### Understanding Interdisciplinary Fields
-In the context of a knowledge taxonomy, interdisciplinary fields can be categorized into three main groups: Hybrid categories, Subfields of existing categories, and New top-level branches.
+In the context of a knowledge [[Taxonomy]], interdisciplinary fields can be categorized into three main groups: Hybrid categories, Subfields of existing categories, and New top-level branches.
 
 ### Hybrid Categories
 
@@ -36,6 +36,6 @@ Organizing all human knowledge into categories is a daunting task due to its com
 ## See also
 
 * [[taxonomy]]: A widely used method for categorizing objects or concepts based on their relationships and characteristics.
-* [[Knowledge Taxonomy]]: An exploration of how to organize human knowledge into categories.
+* [[[[Taxonomy|Knowledge Taxonomy]]]]: An exploration of how to organize human knowledge into categories.
 * [[Interdisciplinary Research]]: A study that combines multiple disciplines to tackle complex problems.
 * [[Hybrid Categories]]: A concept in taxonomy that reflects the combining disciplines that define a field.

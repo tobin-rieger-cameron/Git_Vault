@@ -5,6 +5,6 @@ tags: [taxonomy]
 
 **Wikilinks**
 
-*   [[taxonomy]]
-*   [[Formal Sciences]]
+*   [[[[Taxonomy]]]]
+*   [[[[Formal Sciences and Philosophy|Formal Sciences]]]]
 *   [[Applied Sciences]]

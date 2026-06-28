@@ -2655,6 +2655,8 @@ class ChatApp(App[None]):
         conv_files = sorted(glob.glob(os.path.join(CONVERSATIONS_DIR, "*.md")))
         to_condense: list[tuple[str, str]] = []
         for conv_path in conv_files:
+            if os.path.basename(conv_path) == "INDEX.md":
+                continue
             try:
                 with open(conv_path, encoding="utf-8") as fh:
                     conv_content = fh.read()

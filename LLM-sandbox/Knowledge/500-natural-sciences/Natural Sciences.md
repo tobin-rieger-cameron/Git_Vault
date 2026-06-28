@@ -18,7 +18,7 @@ The natural sciences is a major top-level branch of human knowledge that encompa
 [[Chemistry]] examines the composition, properties, and reactions of matter at the atomic and molecular level.
 
 #### Biology
-[[Biology]] investigates the living world, including the structure, function, growth, evolution, distribution, and taxonomy of all living organisms.
+[[Biology]] investigates the living world, including the structure, function, growth, evolution, distribution, and [[Taxonomy]] of all living organisms.
 
 #### Earth Sciences (Geology)
 [[Earth Sciences]] focuses on the study of the Earth's physical structure, composition, and processes that shape our planet.

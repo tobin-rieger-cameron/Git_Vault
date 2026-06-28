@@ -42,8 +42,8 @@ Some popular embedding models include:
 
 ## See Also
 
-* [[taxonomy]] for categorizing human knowledge
-* [[kinematics]] for understanding the dynamics of motion
+* [[[[Taxonomy]]]] for categorizing human knowledge
+* [[[[Kinematics]]]] for understanding the dynamics of motion
 * [[language-models]] for learning to represent language
 * [[Mathematics]] for solving problems in various domains
 * [[photosynthesis]] for understanding plant biology

@@ -4,7 +4,7 @@ tags: [general]
 ---
 
 # Social Sciences Knowledge Base
-## Tags: social sciences, taxonomy, categorization of human knowledge
+## Tags: social sciences, [[Taxonomy]], categorization of human knowledge
 
 ### What are the Social Sciences?
 
@@ -50,4 +50,4 @@ While there is no single, universally accepted method for organizing all human k
 
 ## See also
 * [[taxonomy]]: A widely used method for categorizing objects or concepts based on their relationships and characteristics.
-* [[Machine Learning]]: An interdisciplinary field that combines computer science, statistics, and domain-specific knowledge to enable machines to learn from data.
+* [[[[Machine Learning]]]]: An interdisciplinary field that combines computer science, statistics, and domain-specific knowledge to enable machines to learn from data.
