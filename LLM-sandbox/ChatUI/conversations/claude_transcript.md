@@ -1,7 +1,7 @@
 ---
 title: Claude Code Session Transcript
 last_updated: 2026-06-28
-sessions: 14
+sessions: 15
 ---
 
 # Claude Code Session Transcript
@@ -28,6 +28,7 @@ Ongoing log of all Claude Code sessions for this project. Use the **Quick Index*
 | [12](#session-12----2026-06-28-llama318b-sidegrade--retrieval-optimisation) | 2026-06-28 | Add llama3.1:8b as default; /model runtime switcher; top_k/chunk_size/web-fallback fixes; ChatUI performance test | `39a1c21` |
 | [13](#session-13----2026-06-28-retrieval-tuning--claude-code-settings) | 2026-06-28 | Raise similarity threshold; fix history contamination; fix grounded prompt blending; CLAUDE.md; README update; Stop hook | `a877541` `4344119` `3aafc44` |
 | [14](#session-14----2026-06-28-command-audit--fixes) | 2026-06-28 | Full command audit: 9 bugs fixed across help text, _apply_queue, /readme, /model, /status, /export, /distill, /harvest, /daily | `21c9e4a` |
+| [15](#session-15----2026-06-28-distill-directives) | 2026-06-28 | Apply pending /distill directives: RAG grounding per article; directive 1 already done; clear Pending Directives | `4ee93fd` |
 
 ### Key decisions & constraints (read this first)
 - **Self-update pipeline**: FIX:/CHANGE: directives in `config/settings.md` → `apply_update.py` reads git diff → `coding_llm` generates fix → self-review pass → writes `chatui.py`
@@ -639,3 +640,21 @@ go ahead
 
 ### Assistant
 Applied all 9 fixes to `chatui.py`. Validated AST. Smoke-tested `/help` alignment, `/status` merged output, `/distill` session list, `/model` warning — all working correctly.
+
+---
+
+## Session 15 — 2026-06-28: /distill Pending Directives
+
+**Commits:** `4ee93fd`
+
+### User
+run the two pending /distill directives in settings.md
+
+### Assistant
+Directive 1 (wikilink filter): already implemented at lines 1775–1786 from Session 7. The `re.sub` lambda with vault_stems normalisation is present and working.
+
+Directive 2 (RAG grounding): implemented. Before building `art_prompt` for each Q&A pair, queries vault via `similarity_search_with_score(question, k=3)` in `asyncio.to_thread`, filters to score ≥ 0.45, takes top 2 `page_content` values joined with `\n---\n`. Injected into `art_prompt` as "REFERENCE MATERIAL FROM VAULT (prioritise this for accuracy):" block between SOURCE and FORMAT. Omitted entirely if `self.db` is None or no results pass threshold.
+
+The `git diff` pipeline couldn't surface these directives because the commit that added them (`61f0b43` via subtree) predated any usable `.chatui_sync` hash in the current repo. Applied directly instead.
+
+Both entries cleared from `settings.md` Pending Directives section. `CLAUDE.md` updated to remove the stale reference.
