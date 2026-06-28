@@ -54,7 +54,7 @@ Testing pattern: launch in tmux, wait for "Ask anything", send `/ingest`, then t
 
 Write `CHANGE:` or `FIX:` directives anywhere in a `config/*.md` body. `/update` in ChatUI (or `apply_update.py` headlessly) picks them up via `git diff HEAD -- config/` against `.chatui_sync`, applies each as a surgical AST edit, self-reviews, then shows a diff before writing.
 
-Two pending FIX directives are in `settings.md` under "Pending Directives" — wikilink post-filter and RAG grounding for `_cmd_distill`.
+No pending directives in `settings.md` as of Session 15.
 
 ## End-of-session checklist (do this before stopping, unprompted)
 

@@ -1751,10 +1751,23 @@ class ChatApp(App[None]):
             title = question.strip()[:80].replace('\n', ' ').replace('"', "'")
             frontmatter = f'---\ntitle: "{title}"\ntags: [{", ".join(tags)}]\n---\n\n'
 
+            vault_ref_ctx = ""
+            if self.db is not None:
+                try:
+                    ref_results = await asyncio.to_thread(
+                        lambda q=question: self.db.similarity_search_with_score(q, k=3)
+                    )
+                    good = [doc.page_content for doc, score in ref_results if score >= 0.45][:2]
+                    if good:
+                        vault_ref_ctx = "\n---\n".join(good)
+                except Exception:
+                    pass
+
             art_prompt = (
                 f"Write a markdown knowledge-base article about this topic.\n\n"
                 f"TOPIC: {question}\n\n"
                 f"SOURCE (distil into prose, do not quote verbatim):\n{clean_answer}\n\n"
+                f"{f'REFERENCE MATERIAL FROM VAULT (prioritise this for accuracy):{chr(10)}{vault_ref_ctx}{chr(10)}{chr(10)}' if vault_ref_ctx else ''}"
                 f"VAULT NOTES (ONLY use [[note-name]] wikilinks from this exact list — no others): {stems_str}"
                 f"{f'{chr(10)}TAXONOMY CONTEXT:{chr(10)}{taxonomy_ctx[:400]}' if taxonomy_ctx else ''}\n\n"
                 f"FORMAT: # H1 title. Then 1-2 sentence summary. "
