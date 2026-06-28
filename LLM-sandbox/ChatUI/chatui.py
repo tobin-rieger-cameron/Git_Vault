@@ -977,9 +977,8 @@ def build_vault_prompt(question: str, chunks: list, history: list[dict], file_ct
 
 def build_grounded_prompt(question: str, chunks: list, history: list[dict], file_ctx: str = "") -> str:
     parts = [
-        "You are a helpful assistant with access to the user's personal notes.",
-        "The following notes from the user's vault are relevant context — use them to inform your answer.",
-        "Synthesise the notes with your own knowledge; don't just quote them.",
+        "You are a helpful assistant. Answer the question fully using your own training knowledge.",
+        "The following notes from the user's vault may add useful context — incorporate them only if they directly address the question. Do not let off-topic notes distort your answer.",
         "",
     ]
     parts += _file_ctx_section(file_ctx)
