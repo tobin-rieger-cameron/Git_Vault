@@ -1678,6 +1678,29 @@ class ChatApp(App[None]):
         except Exception:
             pass
 
+    async def _await_with_progress(self, label: str, awaitable):
+        """Await `awaitable` while ticking the busy-bar with an elapsed-time
+        counter, so a single long LLM call (no intermediate output of its own)
+        doesn't look like the app has frozen."""
+        loop = asyncio.get_event_loop()
+        start = loop.time()
+        done  = asyncio.Event()
+
+        async def _tick() -> None:
+            while not done.is_set():
+                self._set_status(f"{label} ({int(loop.time() - start)}s)")
+                try:
+                    await asyncio.wait_for(done.wait(), timeout=1.0)
+                except asyncio.TimeoutError:
+                    pass
+
+        ticker = asyncio.create_task(_tick())
+        try:
+            return await awaitable
+        finally:
+            done.set()
+            await ticker
+
     def _note_event(self, event: str) -> None:
         self._session_events.append(event)
 
@@ -2060,7 +2083,10 @@ class ChatApp(App[None]):
                 f"Write the article body now (no YAML frontmatter — it will be added automatically):"
             )
 
-            body = await asyncio.to_thread(lambda p=art_prompt: llm.invoke(p).content.strip())
+            body = await self._await_with_progress(
+                f"Writing article {created + updated + 1}/{len(qa_pairs)}…",
+                asyncio.to_thread(lambda p=art_prompt: llm.invoke(p).content.strip()),
+            )
             # Strip stray markdown fences
             body = re.sub(r'^```\w*\n?', '', body, flags=re.MULTILINE).strip()
             body = re.sub(r'\n?```\s*$', '', body, flags=re.MULTILINE).strip()
@@ -2812,6 +2838,10 @@ class ChatApp(App[None]):
         self._organize_queue = asyncio.Queue()
         inp = self.query_one(Input)
         inp.placeholder = "Enter=accept · skip · edit · all · none"
+        # _run_organize never toggled this on, so the busy-bar (already wired up
+        # and used everywhere else in the app) stayed invisible through the
+        # entire run — the single biggest reason /organize looked frozen.
+        self._set_busy(True, "Organising vault…")
 
         try:
             await self._run_organize()
@@ -2819,6 +2849,7 @@ class ChatApp(App[None]):
             self._organize_queue = None
             inp.placeholder = "Ask anything, or type /help for commands..."
             self.query_one(Input).focus()
+            self._set_busy(False)
 
     async def _org_prompt(self, hint: str = "") -> str:
         if hint:
@@ -3015,7 +3046,9 @@ class ChatApp(App[None]):
             f"{note_list_str}\n\nTags:"
         )
         self._log("[dim]Generating tag suggestions…[/dim]")
-        raw_tags = await asyncio.to_thread(lambda: coding_llm.invoke(tag_prompt).content.strip())
+        raw_tags = await self._await_with_progress(
+            "Generating tag suggestions…", asyncio.to_thread(lambda: coding_llm.invoke(tag_prompt).content.strip())
+        )
 
         tag_map: dict[str, list[str]] = {}
         for line in raw_tags.splitlines():
@@ -3094,7 +3127,8 @@ class ChatApp(App[None]):
 
         link_feedback  = _load_organize_feedback("wikilink")
         link_proposals: list[Proposal] = []
-        for stem, data in notes.items():
+        total_notes = len(notes)
+        for i, (stem, data) in enumerate(notes.items(), 1):
             content     = data["content"]
             other_notes = {s: d["title"] for s, d in notes.items() if s != stem}
             if not other_notes:
@@ -3109,7 +3143,10 @@ class ChatApp(App[None]):
                 'Reply one per line as: "exact phrase" -> target_stem  — or reply "none".\n\n'
                 f"Note:\n{content}\n\nSuggestions:"
             )
-            raw = await asyncio.to_thread(lambda: coding_llm.invoke(link_prompt).content.strip())
+            raw = await self._await_with_progress(
+                f"Checking {stem}.md for wikilinks… ({i}/{total_notes})",
+                asyncio.to_thread(lambda: coding_llm.invoke(link_prompt).content.strip()),
+            )
             if not raw or raw.lower() == "none":
                 continue
 
@@ -3160,8 +3197,9 @@ class ChatApp(App[None]):
                     "Focus on what was accomplished.\n\n"
                     f"{conv_content[:1500]}\n\nSummary:"
                 )
-                summary = await asyncio.to_thread(
-                    lambda p=summary_prompt: coding_llm.invoke(p).content.strip()
+                summary = await self._await_with_progress(
+                    f"Summarising {basename}…",
+                    asyncio.to_thread(lambda p=summary_prompt: coding_llm.invoke(p).content.strip()),
                 )
                 ts_m = re.search(r'# Chat Session — (.+)', conv_content)
                 ts   = ts_m.group(1).strip() if ts_m else basename
@@ -3200,9 +3238,12 @@ class ChatApp(App[None]):
         else:
             self._log(f"[dim]Classifying {len(to_place)} unplaced file(s)…[/dim]")
             placement_proposals: list[Proposal] = []
-            for path, content, tags in to_place:
+            for i, (path, content, tags) in enumerate(to_place, 1):
                 fname  = os.path.basename(path)
-                folder = await asyncio.to_thread(_classify_for_placement, tags, content, coding_llm)
+                folder = await self._await_with_progress(
+                    f"Classifying {fname}… ({i}/{len(to_place)})",
+                    asyncio.to_thread(_classify_for_placement, tags, content, coding_llm),
+                )
                 subdir = "_ref/" if _is_ref(fname) else ""
                 placement_proposals.append(Proposal(
                     kind="placement", path=path, label=fname,

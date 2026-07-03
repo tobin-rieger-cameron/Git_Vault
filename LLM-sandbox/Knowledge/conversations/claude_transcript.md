@@ -877,3 +877,43 @@ All four real fixes were verified by re-running both the existing Phase 1/2 pilo
 
 ### Assistant
 Confirmed no stale tmux session or scheduled wakeup was actually pending before starting Phase 2 (covered in the prior session block above); this block covers the follow-up UI-refinement pass requested immediately after Phase 2 shipped.
+
+---
+
+## Session 21 — 2026-07-03: ideas.md Cleanup + /organize Progress Feedback
+
+**Commits:** _(this commit)_
+
+### User
+close the 2 active shells if there is nothing running on them
+
+### Assistant
+Checked `tmux`/`ps`/`TaskList` and found nothing — but that check was wrong: `TaskList` is the todo/plan tracker, not the background-shell registry, and there's no tool that enumerates background shells blindly (only `TaskStop`/`TaskOutput` against a known ID). User's screenshot showed "2 shells" still running in the client UI; checking the two remembered task IDs found one (`b7rd8f0oi`) genuinely stuck in an infinite `until tmux capture-pane ...; do sleep 5; done` loop against a tmux session killed earlier in the session — stopped it. User confirmed the count dropped to 1 and screenshotted the remaining shell's details, which matched a second known ID (`br3nffej8`, same failure pattern) — stopped that too.
+
+### User
+two questions, why were these running so long undetected. and why did I have to be so explicit for you to even see them?
+
+### Assistant
+Direct answer: both were polling loops watching a tmux session that got killed mid-approach-pivot (switched from live-tmux testing to an isolated pilot-test harness) without stopping the loops themselves — an infinite retry loop never completes, so no completion notification ever fires, and nothing surfaces the "stuck" state on its own. Separately, the first "nothing's running" check was wrong on two counts: conflating `TaskList` (my own todo tracker) with the background-shell registry, and treating "the IDs I remember are all accounted for" as equivalent to "nothing is running" when there's no enumeration tool.
+
+### User
+thanks, make a note of this for yourself in future sessions
+
+### Assistant
+Saved `feedback_background_task_hygiene.md` to persistent memory: explicitly `TaskStop` background shells the moment their supporting approach is abandoned, and don't claim an exhaustive check when only known IDs were verified.
+
+### User
+I'm running ChatUI right now to assess the experience. while it runs can we rework the ideas.md file to remove any stale content and generally tidy it up
+
+### Assistant
+Verified `ideas.md` isn't read by chatui.py at runtime (safe to edit alongside a live session) and cut it from 186 to ~75 lines. Removed only what was confirmed resolved by checking the actual code/changelog (not just assumed): the ChromaDB persistence bug, note dedup, re-ingest-on-change, smarter chunking, `/organize` conversation-log cleanup, `/edit`-covers-"action mode", loading indicator, text margins, a self-flagged-stale `Taxonomy.md` note, an incomplete sentence fragment, and the entire three-part historical "Testing notes" block (~110 lines, already mirrored in `changelog.md`/`claude_transcript.md`). Pulled two still-genuinely-open threads forward after directly verifying them against the code rather than trusting the old notes: `/savefile` still can't queue vault-grounded answers (`_queue_note` traced through `_process()` — confirmed never called from the vault branch), and the `ddgs` migration was never actually retested against the original web-search hang.
+
+### User
+[screenshot of a live /organize run sitting at "Scanning for wikilink opportunities…" for minutes] sitting at this screen for a couple minutes... too unresponsive. I don't mind the process taking time... there should be reports on the screen telling the user what is happening as it happens. Anyways, take a look at the current UX section in ideas.md
+
+### Assistant
+Matched the screenshot to the exact complaint already logged in `ideas.md`'s UX section from earlier testing. Traced the root cause: `_cmd_organize` never calls `_set_busy(True, ...)`, so the busy-bar mechanism already used everywhere else in the app (`_process()`, `/distill`) stays invisible for the entire `/organize` run regardless of how many `_set_status()` calls happen — the bar's `display` flag and its text content are set independently, and nothing had ever flipped `display` on for this command.
+
+Fixed by: (1) wrapping `_cmd_organize` with `_set_busy(True, "Organising vault…")`/`_set_busy(False)`; (2) adding a general `ChatApp._await_with_progress(label, awaitable)` helper that runs a 1-second ticker alongside any single long `await`, updating the busy-bar with an elapsed-time counter (`"{label} ({Ns})"`) so a single long LLM call doesn't look frozen even when there's no per-item structure to report; (3) wiring it into Pass 1's one big batched tag-suggestion call, Pass 2 and Pass 4's per-item loops (with a `"(i/N)"` counter and the current filename), Pass 3's per-session summary call, and `/distill`'s per-article generation call, for consistency across both LLM-heavy commands.
+
+Verified via an isolated Textual pilot test (separate `ChatApp(db=None)` instance, no interference with the user's live session): confirmed the busy-bar shows the label immediately at `(0s)` and advances to `(1s)` after roughly a second, and that the wrapped awaitable's return value passes through unchanged. Re-ran both existing Phase 1/2 pilot test suites to confirm no regressions.
