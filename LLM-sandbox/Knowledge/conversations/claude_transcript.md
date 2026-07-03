@@ -1,7 +1,7 @@
 ---
 title: Claude Code Session Transcript
-last_updated: 2026-06-28
-sessions: 16
+last_updated: 2026-07-03
+sessions: 17
 ---
 
 # Claude Code Session Transcript
@@ -30,6 +30,7 @@ Ongoing log of all Claude Code sessions for this project. Use the **Quick Index*
 | [14](#session-14----2026-06-28-command-audit--fixes) | 2026-06-28 | Full command audit: 9 bugs fixed across help text, _apply_queue, /readme, /model, /status, /export, /distill, /harvest, /daily | `21c9e4a` |
 | [15](#session-15----2026-06-28-distill-directives) | 2026-06-28 | Apply pending /distill directives: RAG grounding per article; directive 1 already done; clear Pending Directives | `4ee93fd` |
 | [16](#session-16----2026-06-28-vault-folder-structure) | 2026-06-28 | Implement Dewey vault structure: assess readiness, fix 2 bugs, run /organize, move 42 files into subfolders | `00cf05d` `46f87ad` |
+| [17](#session-17----2026-07-03-distill-quality-fix) | 2026-07-03 | Diagnose /distill article quality gap; fix guide_ctx injection bug; rewrite article guide; tighten art_prompt | _(this commit)_ |
 
 ### Key decisions & constraints (read this first)
 - **Self-update pipeline**: FIX:/CHANGE: directives in `config/settings.md` → `apply_update.py` reads git diff → `coding_llm` generates fix → self-review pass → writes `chatui.py`
@@ -758,3 +759,42 @@ Validated the dedup+idempotency fixes with a live `/distill` re-run on the alrea
 Along the way, user flagged a related idea: fold `Knowledge/conversations/` into the KB proper (tagged as unrefined/lower-tier content) rather than keeping it fully excluded — logged to `ideas.md`, tied to the existing "two-collection design" recommendation from the 2026-06-25 testing notes.
 
 Noted two things not yet re-verified: the dedup threshold retune (0.7) hasn't been re-tested live since the code changed, and the `ddgs` migration hasn't been retested against the original hang bug.
+
+---
+
+## Session 17 — 2026-07-03: /distill Quality Fix
+
+**Commits:** _(this commit)_
+
+### Context
+User noticed widespread inconsistency in KB article quality — some articles (Language Models, LoRA Adaptations) are clean reference material while others (Taxonomy.md, many `/distill` outputs) are raw Q&A dumps or "Unfortunately I couldn't find..." responses. Goal: make ChatUI produce gold-standard articles consistently.
+
+### User
+based on session logs and recent changes, what was the last thing we were working on
+
+### Assistant
+Summarised the last two sessions: `832c65c` applied four testing recommendations (/distill dedup+idempotency, ddgs migration, wikilink validation pass). `c8d89e6` was a research session on browsable databases that distilled 8 Q&A pairs into vault articles. Several untracked root-level files noted.
+
+### User
+there is a pdf I found that is a handbook on information science, I'd like you to take a look at the index and have ChatUI import any relevant information into the KB. goal is consistent quality — it might even be a good practice to put the current KB in a folder and re-refine them one by one. I also added some things to ideas.md
+
+### Assistant
+Read the handbook (Stock & Stock, *Handbook of Information Science*, De Gruyter, 2013). It's a 900-page academic reference covering exactly the KB's topics — IR (parts B–H) and knowledge representation (parts I–P). Spot-checked KB quality: `Language Models.md` is gold-standard; `Taxonomy.md` is broken (raw Q&A dumps, stacked frontmatter in body, "I couldn't find" responses). Root-level untracked files (`Information Retrieval.md`, `Knowledge Representation.md`, etc.) are handbook excerpt stubs. Recommended extracting from the handbook directly here rather than routing through ChatUI, since the best KB articles were all written by Claude Code, not /distill.
+
+### User
+can you see what process produced the language models article? was it claude? or chatui?
+
+### Assistant
+Checked git log: `language-models.md` was first committed in `4a40d3f` (Session 8, 2026-06-27) by Claude Code directly, not by ChatUI's /distill pipeline. The commit was a vault pre-seeding pass where I wrote several reference articles directly. This confirms that the quality gap is architectural: /distill (llama3.1:8b generating articles from Q&A pairs) produces shallower results than Claude Code writing reference articles directly.
+
+### User
+the problem here is that my goal is to have ChatUI reach that gold standard — how would you train chatui to achieve consistent gold results?
+
+### Assistant
+Diagnosed three root causes in the /distill pipeline: (1) `_article-guide.md` is self-bootstrapped — if it doesn't exist, ChatUI asks llama3.1:8b to write its own style guide, producing a mediocre recursive bootstrap; (2) `guide_ctx` is loaded at line 1772 but never injected into `art_prompt` — the guide is dead context; (3) the article prompt is too vague for a small model ("Write a markdown knowledge-base article" with a loose FORMAT hint). The fix is prompt engineering, not model training.
+
+### User
+yes go ahead, then update claude's transcript and do all your closing steps
+
+### Assistant
+Made three changes: (1) increased `guide_ctx` read limit from `[:700]` to `[:2000]` — the existing guide file is ~1800 chars, so the old cap was silently truncating most of it; (2) injected `guide_ctx` at the top of `art_prompt` as "ARTICLE WRITING GUIDE — follow every rule exactly:", replacing the vague FORMAT instruction — this is the critical missing wire; (3) added four anti-patterns to `_article-guide.md` covering the most common /distill failure modes (Q&A format output, "I couldn't find" responses, verbatim source reproduction, invented facts). The article guide itself from a prior session was already well-structured; these additions close the specific gaps visible in broken articles like `Taxonomy.md`.

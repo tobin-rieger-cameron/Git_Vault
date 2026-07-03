@@ -1769,7 +1769,7 @@ class ChatApp(App[None]):
             if self.db:
                 await asyncio.to_thread(lambda: _reingest_file(guide_path, self.db))
         with open(guide_path, encoding="utf-8") as fh:
-            guide_ctx = fh.read()[:700]
+            guide_ctx = fh.read()[:2000]
 
         # ── 3. Load taxonomy for hierarchy + tag awareness ────────────────────
         taxonomy_ctx = ""
@@ -1892,18 +1892,16 @@ class ChatApp(App[None]):
                     pass
 
             art_prompt = (
-                f"Write a markdown knowledge-base article about this topic.\n\n"
+                f"ARTICLE WRITING GUIDE — follow every rule exactly:\n{guide_ctx}\n\n"
+                f"---\n\n"
                 f"TOPIC: {question}\n\n"
                 f"SOURCE (distil into prose, do not quote verbatim):\n{clean_answer}\n\n"
-                f"{f'REFERENCE MATERIAL FROM VAULT (prioritise this for accuracy):{chr(10)}{vault_ref_ctx}{chr(10)}{chr(10)}' if vault_ref_ctx else ''}"
-                f"VAULT NOTES (ONLY use [[note-name]] wikilinks from this exact list — no others): {stems_str}\n"
+                f"{f'REFERENCE MATERIAL FROM VAULT (treat as ground truth):{chr(10)}{vault_ref_ctx}{chr(10)}{chr(10)}' if vault_ref_ctx else ''}"
+                f"EXISTING VAULT NOTES (ONLY use [[note-name]] wikilinks from this exact list — no others): {stems_str}\n"
                 f"For See Also, prefer notes on the same specific subtopic (e.g. the exact classification "
                 f"system or mechanism discussed) over notes that only share a broad field."
                 f"{f'{chr(10)}TAXONOMY CONTEXT:{chr(10)}{taxonomy_ctx[:400]}' if taxonomy_ctx else ''}\n\n"
-                f"FORMAT: # H1 title. Then 1-2 sentence summary. "
-                f"Then ## sections for key concepts. "
-                f"Use [[wikilinks]] inline only for vault notes listed above. End with ## See also.\n\n"
-                f"Write the article body (no YAML frontmatter — it will be added automatically):"
+                f"Write the article body now (no YAML frontmatter — it will be added automatically):"
             )
 
             body = await asyncio.to_thread(lambda p=art_prompt: llm.invoke(p).content.strip())

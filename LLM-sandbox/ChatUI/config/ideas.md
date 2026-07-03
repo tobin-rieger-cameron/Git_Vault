@@ -4,10 +4,11 @@ summary: Backlog of improvement ideas for chatui.py — not yet directives, just
 
 # Ideas
 
-## other
+## General
 
 - article writing should appear as its being written
 - /distill command is confusing - consider a simplification of /commands
+- instead of automated writing and formatting, consider a guided approach, where the user and ChatUI co-edit the pending article
 
 
 ## UX

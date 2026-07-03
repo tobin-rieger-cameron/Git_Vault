@@ -15,10 +15,10 @@ Standard fine-tuning learns a full weight update ΔW ∈ ℝ^(d×k) for each mat
 ΔW = B · A    where B ∈ ℝ^(d×r),  A ∈ ℝ^(r×k),  r << min(d, k)
 ```
 
-- **W** — original pretrained weight, kept frozen throughout training
-- **A** — initialised randomly; trained
-- **B** — initialised to zero (so the adapter starts as a no-op); trained
-- **r** — the rank, a hyperparameter (typically 8–64)
+- **W** — original pre-trained weight, kept frozen throughout training
+- **A** — initialized randomly; trained
+- **B** — initialized to zero (so the adapter starts as a no-op); trained
+- **r** — the rank, a hyper-parameter (typically 8–64)
 - **α** — a scaling constant; the effective update is (α/r) · B·A
 
 After training, the adapter merges into the base: `W' = W + (α/r)·B·A`. The merged model is identical in size and speed to the original — zero inference overhead.

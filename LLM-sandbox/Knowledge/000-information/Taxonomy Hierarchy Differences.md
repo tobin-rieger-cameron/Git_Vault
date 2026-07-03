@@ -2,6 +2,7 @@
 title: "Taxonomy"
 tags: [taxonomy]
 ---
+#todo - content in this file should be consumed by [[Taxonomy]]
 
 # Taxonomy
 # Ontology

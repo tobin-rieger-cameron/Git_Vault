@@ -61,3 +61,7 @@ What breaks, what the tradeoffs are, when NOT to use this.
 - Saying things are "complex" without explaining them
 - Ending with "I hope this was helpful"
 - Including a Table of Contents for articles under 600 words
+- Writing in Q&A format ("Q: what is X? A: X is...")
+- Saying "I couldn't find", "Unfortunately", or "I don't have information" — omit the topic instead
+- Reproducing the source text verbatim; always rewrite into reference prose
+- Inventing facts not present in SOURCE or REFERENCE MATERIAL

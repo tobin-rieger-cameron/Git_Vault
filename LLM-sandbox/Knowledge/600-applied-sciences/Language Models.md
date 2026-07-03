@@ -61,7 +61,7 @@ Given the probability distribution over next tokens:
 ## See Also
 
 - [[Machine Learning]]
-- [[lo-ra-adaptations]]
+- [[Low-Rank Adaptation]]
 - [[Fine-Tuning Methods]]
 - [[RLHF Alignment]]
 - [[Retrieval Augmentation Models]]
