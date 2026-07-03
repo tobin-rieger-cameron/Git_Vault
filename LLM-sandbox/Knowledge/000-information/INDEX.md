@@ -27,6 +27,11 @@ This file maps the contents of the Knowledge vault. Use it to understand what to
 | `Semantic Web And Ontologies.md` | RDF/OWL and the Semantic Web vision — how ontologies run on the web |
 | `Zettelkasten Method.md` | Luhmann's note-linking method as a hybrid of taxonomy and folksonomy |
 | `Metadata Standards.md` | Dublin Core and how metadata standards relate to controlled vocabularies |
+| `Category Link Hierarchy.md` | Wikipedia's category + hyperlink system for browsing without search |
+| `Faceted Browsing Techniques.md` | How large retailers and libraries apply faceted search to huge catalogs |
+| `Web Index Architecture.md` | Crawling/indexing/ranking, B-trees, and inverted indexes at web scale |
+| `Wiki Change Tracking.md` | Wikipedia's revision history / diff system |
+| `Database Normalization.md` | 1NF/2NF/3NF and why normalization keeps large datasets consistent |
 
 ## 300-social-sciences/ — Sociology, economics, politics, law
 
@@ -64,6 +69,9 @@ This file maps the contents of the Knowledge vault. Use it to understand what to
 | `Retrieval Augmentation Models.md` | RAG systems and retrieval-augmented generation |
 | `Vector Databases for Search.md` | Vector databases and semantic search |
 | `Vector Search Engines.md` | Vector search engine implementations |
+| `Database Search Index.md` | Relational databases vs search-engine indexes for browsing large datasets |
+| `Search Inference Optimization.md` | Autocomplete/type-ahead search at Google's scale |
+| `Search Results Panels.md` | Knowledge panels in search engines |
 
 ### 600-applied-sciences/_ref/ — Dense reference summaries for RAG context
 
