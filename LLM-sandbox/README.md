@@ -43,9 +43,9 @@ python chatui.py --vault ../Knowledge
 | `/help`              | Show all commands                                                      |
 | `/ingest`            | Rebuild the vector database from vault files                           |
 | `/browse`            | Open file browser to load a vault file as context                      |
-| `/organize`          | Add YAML tags and wikilinks to vault notes (4-pass LLM worker)         |
+| `/organize`          | Tag, link, condense, place, and fix wikilinks across the vault (5-pass LLM worker, guided review) |
 | `/savefile`          | Review and save pending notes to the vault                             |
-| `/distill <session>` | Distil a session file into structured vault articles                   |
+| `/distill <session>` | Distil a session file into structured vault articles (guided review before each is written) |
 | `/harvest`           | Promote conversation topics into vault stubs                           |
 | `/edit`              | LLM-guided edit of a vault file                                        |
 | `/daily`             | Summarize today's chat sessions                                        |

@@ -16,6 +16,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Callable
 
 import yaml
 
@@ -24,7 +25,7 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical
 from textual.screen import ModalScreen
-from textual.widgets import Footer, Header, Input, Label, ListItem, ListView, RichLog, Static
+from textual.widgets import Footer, Header, Input, Label, ListItem, ListView, RichLog, Static, TextArea
 from rich.markdown import Markdown
 from rich.text import Text
 
@@ -82,6 +83,7 @@ CONVERSATIONS_DIR = os.path.join(VAULT_PATH, "conversations")
 DB_PATH           = os.path.join(_SCRIPT_DIR, "local_db")
 _MANIFEST_PATH       = os.path.join(DB_PATH, "manifest.json")
 _STRUCTURE_PLAN_PATH = os.path.join(_SCRIPT_DIR, "config", "vault-structure-plan.md")
+_ORGANIZE_FEEDBACK_PATH = os.path.join(_SCRIPT_DIR, "config", "organize_feedback.md")
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Vault folder hierarchy (mirrors config/vault-structure-plan.md)
@@ -575,7 +577,10 @@ def _classify_for_placement(tags: list[str], content: str, llm) -> str:
     except OSError:
         plan = ""
     folder_list = ", ".join(_DEWEY_FOLDERS)
+    feedback = _load_organize_feedback("placement")
     prompt = (
+        f"{feedback}\n\n" if feedback else ""
+    ) + (
         "You are classifying a knowledge vault article into a folder.\n\n"
         f"Available folders:\n{folder_list}\n\n"
         f"Folder descriptions (from vault-structure-plan.md):\n{plan[:1200]}\n\n"
@@ -590,12 +595,54 @@ def _classify_for_placement(tags: list[str], content: str, llm) -> str:
     return "misc"
 
 
-def _validate_wikilinks(dry_run: bool = False) -> dict[str, list[tuple[str, str]]]:
+def _log_organize_feedback(kind: str, path: str, proposed: str, chosen: str, reason: str) -> None:
+    """Append a record of a manual override to config/organize_feedback.md, so future
+    /organize and /distill suggestion prompts can learn from past corrections."""
+    ts = datetime.now().strftime("%Y-%m-%d")
+    name = os.path.basename(path)
+    entry = (
+        f"\n## {ts} — {name} ({kind})\n"
+        f"Proposed: {proposed.strip()[:300]}\n"
+        f"Chosen: {chosen.strip()[:300]}\n"
+        f"Reason: {reason.strip() if reason.strip() else '(none given)'}\n"
+    )
+    if not os.path.exists(_ORGANIZE_FEEDBACK_PATH):
+        with open(_ORGANIZE_FEEDBACK_PATH, "w", encoding="utf-8") as f:
+            f.write(
+                "---\nsummary: Log of manual overrides during /organize and /distill review "
+                "— fed back into future tag/wikilink/placement suggestion prompts.\n---\n\n"
+                "# Organize Feedback\n"
+            )
+    with open(_ORGANIZE_FEEDBACK_PATH, "a", encoding="utf-8") as f:
+        f.write(entry)
+
+
+def _load_organize_feedback(kind: str, limit: int = 8) -> str:
+    """Return the last `limit` override entries for `kind`, formatted for prompt
+    injection. Empty string if the log doesn't exist or has no matching entries."""
+    if not os.path.exists(_ORGANIZE_FEEDBACK_PATH):
+        return ""
+    try:
+        content = open(_ORGANIZE_FEEDBACK_PATH, encoding="utf-8").read()
+    except OSError:
+        return ""
+    entries = re.findall(
+        rf'^## .+? — .+? \({re.escape(kind)}\)\n(.+?)(?=\n## |\Z)', content, re.MULTILINE | re.DOTALL
+    )
+    if not entries:
+        return ""
+    recent = [e.strip() for e in entries[-limit:]]
+    return "Past corrections to consider:\n" + "\n---\n".join(recent)
+
+
+def _validate_wikilinks(dry_run: bool = False, only_path: str | None = None) -> dict[str, list[tuple[str, str]]]:
     """Scan all vault files for [[wikilinks]] pointing at stale filenames (e.g. the
     pre-rename kebab-case stems left over from the Session 16 Title Case migration)
     and rewrite them to match the real current filename. Only touches links that
     resolve to a real vault file once hyphens/spaces/case are normalised — never
-    invents or removes a link target. Returns {file: [(old_target, new_target), ...]}."""
+    invents or removes a link target. Returns {file: [(old_target, new_target), ...]}.
+    `only_path`, if given, applies fixes to just that one file (stem map is still
+    built from the whole vault)."""
     files = _discover_vault_files()
     stems = [os.path.splitext(os.path.basename(p))[0] for p in files]
 
@@ -608,6 +655,8 @@ def _validate_wikilinks(dry_run: bool = False) -> dict[str, list[tuple[str, str]
 
     fixes: dict[str, list[tuple[str, str]]] = {}
     for path in files:
+        if only_path and os.path.abspath(path) != os.path.abspath(only_path):
+            continue
         with open(path, encoding="utf-8") as fh:
             content = fh.read()
 
@@ -930,6 +979,17 @@ class PendingNote:
     answer:     str
     source:     str
     suggestion: str
+
+
+@dataclass
+class Proposal:
+    """A single suggested change, reviewed via ChatApp._review() before being applied."""
+    kind:     str                    # "tags" | "wikilink" | "placement" | "wikilink_fix" | "distill_article"
+    path:     str                    # file this targets (may not exist yet, e.g. a new /distill article)
+    label:    str                    # short heading shown to the user, e.g. "Taxonomy.md"
+    detail:   str                    # human-readable preview text
+    proposed: str                    # the proposed final value (tag list / article body / target folder / ...)
+    apply:    Callable[[str], None]  # writes the accepted-or-edited value
 
 
 _DISTILL_TAG_MAP: list[tuple[str, list[str]]] = [
@@ -1269,6 +1329,57 @@ class NoteReviewScreen(ModalScreen[list[tuple[str, PendingNote]]]):
 
     def action_finish(self) -> None:
         self.dismiss(self._confirmed)
+
+
+# ── Proposal Edit Modal ──────────────────────────────────────────────────────
+
+class ProposalEditScreen(ModalScreen[str | None]):
+    """Full-text edit of a Proposal's suggested value before it's applied.
+    Returns the edited text, or None if cancelled."""
+
+    CSS = """
+    ProposalEditScreen { align: center middle; }
+
+    #edit-box {
+        width: 92; height: 40;
+        border: thick #5f87af;
+        background: #252526;
+        padding: 1 2;
+    }
+    #edit-header { color: #cccccc; margin-bottom: 1; }
+    #edit-area {
+        height: 34;
+        background: #1e1e1e;
+        border: solid #454545;
+    }
+    #edit-area:focus { border: tall #5f87af; }
+    #edit-help { color: #6c6c6c; margin-top: 1; }
+    """
+
+    BINDINGS = [
+        Binding("ctrl+s", "save",   "Save"),
+        Binding("escape", "cancel", "Cancel"),
+    ]
+
+    def __init__(self, label: str, proposed: str) -> None:
+        super().__init__()
+        self._label    = label
+        self._proposed = proposed
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="edit-box"):
+            yield Label(f"[bold]Edit — {self._label}[/bold]", id="edit-header")
+            yield TextArea(self._proposed, id="edit-area")
+            yield Label("[dim]Ctrl+S=save  ·  Esc=cancel[/dim]", id="edit-help")
+
+    def on_mount(self) -> None:
+        self.query_one("#edit-area", TextArea).focus()
+
+    def action_save(self) -> None:
+        self.dismiss(self.query_one("#edit-area", TextArea).text)
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
 
 
 # ── File Browser Modal ────────────────────────────────────────────────────────
@@ -1927,23 +2038,34 @@ class ChatApp(App[None]):
             )
 
             article = frontmatter + body
-
             rel_fpath = os.path.relpath(fpath, VAULT_PATH)
-            if already_exists:
-                with open(fpath, "a", encoding="utf-8") as fh:
-                    fh.write(f"\n\n---\n\n## Additional notes\n\n{article}\n")
-                self._log(f"[dim]✏️  Updated: {rel_fpath}[/dim]")
-                updated += 1
-            else:
-                with open(fpath, "w", encoding="utf-8") as fh:
-                    fh.write(article + "\n")
-                self._log(f"[dim]📝 Created: {rel_fpath}[/dim]")
-                created += 1
 
-            if self.db:
+            def _make_distill_apply(fpath: str, already_exists: bool, rel_fpath: str, mark_pos: int):
+                def _apply(final_article: str) -> None:
+                    nonlocal created, updated
+                    if already_exists:
+                        with open(fpath, "a", encoding="utf-8") as fh:
+                            fh.write(f"\n\n---\n\n## Additional notes\n\n{final_article}\n")
+                        self._log(f"[dim]✏️  Updated: {rel_fpath}[/dim]")
+                        updated += 1
+                    else:
+                        with open(fpath, "w", encoding="utf-8") as fh:
+                            fh.write(final_article + "\n")
+                        self._log(f"[dim]📝 Created: {rel_fpath}[/dim]")
+                        created += 1
+                    marked_positions.append(mark_pos)
+                return _apply
+
+            self._log(f"\n[bold]Review — {rel_fpath}[/bold]")
+            await self._review([Proposal(
+                kind="distill_article", path=fpath, label=rel_fpath,
+                detail=f"[dim]{question.strip()[:100]}[/dim]",
+                proposed=article,
+                apply=_make_distill_apply(fpath, already_exists, rel_fpath, mark_pos),
+            )])
+
+            if self.db and os.path.exists(fpath):
                 await asyncio.to_thread(lambda p=fpath: _reingest_file(p, self.db))
-
-            marked_positions.append(mark_pos)
 
         # Mark distilled Q&A pairs in the session file so a re-run only picks up
         # what's new. Insert from the highest offset down so earlier offsets stay valid.
@@ -2644,7 +2766,7 @@ class ChatApp(App[None]):
     async def _cmd_organize(self, _args: str = "") -> None:
         self._organize_queue = asyncio.Queue()
         inp = self.query_one(Input)
-        inp.placeholder = "Enter to accept  ·  skip to skip  ·  type to override…"
+        inp.placeholder = "Enter=accept · skip · edit · all · none"
 
         try:
             await self._run_organize()
@@ -2657,6 +2779,77 @@ class ChatApp(App[None]):
         if hint:
             self._log(f"[dim]{hint}[/dim]")
         return await self._organize_queue.get()  # type: ignore[union-attr]
+
+    async def _review(self, proposals: list[Proposal]) -> None:
+        """Walk the user through a batch of Proposals one at a time.
+
+        Enter=accept as proposed · skip=leave unchanged · edit=open an editor
+        pre-filled with the proposed value · all=accept this and every
+        remaining proposal · none=skip this and every remaining proposal.
+        An edit that changes the substance of the proposed value is logged
+        to organize_feedback.md (with an optional one-line reason) so future
+        suggestions can learn from it; edits that just restore the proposed
+        value are applied silently.
+        """
+        if not proposals:
+            return
+
+        created_queue = self._organize_queue is None
+        if created_queue:
+            self._organize_queue = asyncio.Queue()
+        inp = self.query_one(Input)
+        prior_placeholder = inp.placeholder
+        inp.placeholder = "Enter=accept · skip · edit · all · none"
+
+        try:
+            accept_rest = False
+            skip_rest   = False
+            for proposal in proposals:
+                self._log(f"\n[bold #5f87af]{proposal.label}[/bold #5f87af]  [dim]({proposal.kind})[/dim]")
+                if proposal.detail:
+                    self._log(f"  {proposal.detail}")
+
+                if skip_rest:
+                    continue
+                if accept_rest:
+                    proposal.apply(proposal.proposed)
+                    self._log("  [green]✓ Applied.[/green]")
+                    continue
+
+                raw = await self._org_prompt(
+                    "  Enter=accept  ·  skip  ·  edit  ·  all=accept rest  ·  none=skip rest:"
+                )
+                cmd = raw.strip().lower()
+
+                if cmd == "none":
+                    skip_rest = True
+                    continue
+                if cmd == "skip":
+                    continue
+                if cmd == "all":
+                    proposal.apply(proposal.proposed)
+                    accept_rest = True
+                    self._log("  [green]✓ Applied.[/green]")
+                    continue
+                if cmd == "edit":
+                    final = await self.push_screen_wait(ProposalEditScreen(proposal.label, proposal.proposed))
+                    self.query_one(Input).focus()
+                    if final is None:
+                        continue
+                    if final.strip() != proposal.proposed.strip():
+                        reason = await self._org_prompt("  Why the change? (optional, Enter to skip):")
+                        _log_organize_feedback(proposal.kind, proposal.path, proposal.proposed, final, reason)
+                    proposal.apply(final)
+                    self._log("  [green]✓ Applied (edited).[/green]")
+                    continue
+
+                # Enter (empty input) → accept as proposed
+                proposal.apply(proposal.proposed)
+                self._log("  [green]✓ Applied.[/green]")
+        finally:
+            if created_queue:
+                self._organize_queue = None
+            inp.placeholder = prior_placeholder
 
     async def _run_organize(self) -> None:
         # ── Pass 0: Rebuild conversation index ────────────────────────────────
@@ -2684,7 +2877,9 @@ class ChatApp(App[None]):
         note_list_str = "\n".join(
             f"- {s} ({d['title']}): {d['content'][:300].strip()}" for s, d in notes.items()
         )
+        tag_feedback = _load_organize_feedback("tags")
         tag_prompt = (
+            (f"{tag_feedback}\n\n" if tag_feedback else "") +
             "You are organising a personal knowledge vault.\n"
             "Suggest 1-3 lowercase tags for each note. Use the same tags across related notes.\n"
             "Reply in this exact format, one note per line:\nstem: tag1, tag2\n\nNotes:\n"
@@ -2705,6 +2900,17 @@ class ChatApp(App[None]):
                     tag_map[note_stem] = tags
                     break
 
+        def _make_tag_apply(stem: str, path: str):
+            def _apply(final_tags_str: str) -> None:
+                final       = [t.strip() for t in final_tags_str.split(",") if t.strip()]
+                frontmatter = "---\ntags:\n" + "".join(f"  - {t}\n" for t in final) + "---\n"
+                new_content = frontmatter + notes[stem]["content"]
+                with open(path, "w", encoding="utf-8") as f:
+                    f.write(new_content)
+                notes[stem]["content"] = new_content
+            return _apply
+
+        tag_proposals: list[Proposal] = []
         for stem, data in notes.items():
             if data["content"].lstrip().startswith("---"):
                 self._log(f"[dim]⏭  {stem}.md — already has frontmatter[/dim]")
@@ -2712,27 +2918,53 @@ class ChatApp(App[None]):
             suggested = tag_map.get(stem)
             if not suggested:
                 continue
+            tag_proposals.append(Proposal(
+                kind="tags", path=data["path"], label=f"{stem}.md",
+                detail=f"Suggested tags: [bold]{', '.join(suggested)}[/bold]",
+                proposed=", ".join(suggested),
+                apply=_make_tag_apply(stem, data["path"]),
+            ))
 
-            self._log(f"\n[bold #5f87af]{stem}.md[/bold #5f87af]")
-            self._log(f"  Suggested tags: [bold]{', '.join(suggested)}[/bold]")
-
-            raw = await self._org_prompt("  Enter=accept  ·  skip=skip  ·  comma list=override:")
-            if raw.lower() == "skip":
-                continue
-
-            final       = [t.strip() for t in raw.split(",")] if raw else suggested
-            frontmatter = "---\ntags:\n" + "".join(f"  - {t}\n" for t in final) + "---\n"
-            new_content = frontmatter + data["content"]
-
-            with open(data["path"], "w", encoding="utf-8") as f:
-                f.write(new_content)
-            notes[stem]["content"] = new_content
-            self._log("  [green]✓ Tags written.[/green]")
+        await self._review(tag_proposals)
 
         # ── Pass 2: Wikilinks ─────────────────────────────────────────────────
 
         self._log("\n[bold]Scanning for wikilink opportunities…[/bold]")
 
+        def _parse_link_subs(raw: str, content: str) -> list[tuple[str, str]]:
+            subs: list[tuple[str, str]] = []
+            for line in raw.splitlines():
+                if "->" not in line:
+                    continue
+                phrase_part, target_part = line.split("->", 1)
+                phrase = phrase_part.strip().strip('"').strip("'")
+                target = target_part.strip().strip('"').strip("'")
+                if target in notes and phrase and phrase in content:
+                    subs.append((phrase, target))
+            return subs
+
+        def _make_link_apply(stem: str, path: str, content_at_prompt: str):
+            def _apply(final_text: str) -> None:
+                subs = _parse_link_subs(final_text, content_at_prompt)
+                if not subs:
+                    return
+                content  = notes[stem]["content"]
+                fm_end   = (content.find("---", content.index("---") + 3) + 3) if content.lstrip().startswith("---") else 0
+                fm_block = content[:fm_end]
+                body     = content[fm_end:]
+                for phrase, target in subs:
+                    title_t = notes[target]["title"]
+                    link    = f"[[{target}]]" if phrase.lower() in (target.lower(), title_t.lower()) else f"[[{target}|{phrase}]]"
+                    body    = body.replace(phrase, link, 1)
+                new_content = fm_block + body
+                if new_content != content:
+                    with open(path, "w", encoding="utf-8") as f:
+                        f.write(new_content)
+                    notes[stem]["content"] = new_content
+            return _apply
+
+        link_feedback  = _load_organize_feedback("wikilink")
+        link_proposals: list[Proposal] = []
         for stem, data in notes.items():
             content     = data["content"]
             other_notes = {s: d["title"] for s, d in notes.items() if s != stem}
@@ -2740,6 +2972,7 @@ class ChatApp(App[None]):
                 continue
 
             link_prompt = (
+                (f"{link_feedback}\n\n" if link_feedback else "") +
                 "You are editing a markdown note to add Obsidian [[wikilinks]].\n"
                 f"Available notes:\n{chr(10).join(f'  {s}: {t}' for s, t in other_notes.items())}\n\n"
                 "Find phrases in the note BODY that clearly refer to one of the above notes.\n"
@@ -2751,42 +2984,18 @@ class ChatApp(App[None]):
             if not raw or raw.lower() == "none":
                 continue
 
-            subs: list[tuple[str, str]] = []
-            for line in raw.splitlines():
-                if "->" not in line:
-                    continue
-                phrase_part, target_part = line.split("->", 1)
-                phrase = phrase_part.strip().strip('"').strip("'")
-                target = target_part.strip().strip('"').strip("'")
-                if target in notes and phrase and phrase in content:
-                    subs.append((phrase, target))
-
+            subs = _parse_link_subs(raw, content)
             if not subs:
                 continue
 
-            self._log(f"\n[bold #5f87af]{stem}.md[/bold #5f87af] — suggested links:")
-            for phrase, target in subs:
-                self._log(f"  '[yellow]{phrase}[/yellow]'  →  [[{target}]]")
+            link_proposals.append(Proposal(
+                kind="wikilink", path=data["path"], label=f"{stem}.md",
+                detail="\n".join(f"  '[yellow]{phrase}[/yellow]'  →  [[{target}]]" for phrase, target in subs),
+                proposed="\n".join(f'"{phrase}" -> {target}' for phrase, target in subs),
+                apply=_make_link_apply(stem, data["path"], content),
+            ))
 
-            raw = await self._org_prompt("  Enter=accept  ·  skip=skip:")
-            if raw.lower() == "skip":
-                continue
-
-            fm_end   = (content.find("---", content.index("---") + 3) + 3) if content.lstrip().startswith("---") else 0
-            fm_block = content[:fm_end]
-            body     = content[fm_end:]
-
-            for phrase, target in subs:
-                title_t = notes[target]["title"]
-                link    = f"[[{target}]]" if phrase.lower() in (target.lower(), title_t.lower()) else f"[[{target}|{phrase}]]"
-                body    = body.replace(phrase, link, 1)
-
-            new_content = fm_block + body
-            if new_content != content:
-                with open(data["path"], "w", encoding="utf-8") as f:
-                    f.write(new_content)
-                notes[stem]["content"] = new_content
-                self._log("  [green]✓ Links added.[/green]")
+        await self._review(link_proposals)
 
         # ── Pass 3: Condense short conversation sessions ──────────────────────────
         self._log("\n[bold]Checking conversation logs for short/command-only sessions…[/bold]")
@@ -2840,60 +3049,71 @@ class ChatApp(App[None]):
                                and os.path.splitext(os.path.basename(p))[0] in notes]
         ]
 
+        def _is_ref(fname: str) -> bool:
+            return fname.lower().startswith("_ref")
+
+        moved = [0]  # mutable cell so the closure can report back after _review
+
+        def _make_placement_apply(path: str, fname: str):
+            def _apply(final_folder: str) -> None:
+                folder     = final_folder.strip() or "misc"
+                subdir     = "_ref" if _is_ref(fname) else ""
+                target_dir = os.path.join(VAULT_PATH, folder, subdir) if subdir else os.path.join(VAULT_PATH, folder)
+                os.makedirs(target_dir, exist_ok=True)
+                target_path = os.path.join(target_dir, fname)
+                if os.path.abspath(path) != os.path.abspath(target_path):
+                    shutil.move(path, target_path)
+                    moved[0] += 1
+            return _apply
+
         if not to_place:
             self._log("[dim]All files already placed.[/dim]")
         else:
             self._log(f"[dim]Classifying {len(to_place)} unplaced file(s)…[/dim]")
-            proposals: list[tuple[str, str, str]] = []  # (path, filename, target_folder)
+            placement_proposals: list[Proposal] = []
             for path, content, tags in to_place:
                 fname  = os.path.basename(path)
                 folder = await asyncio.to_thread(_classify_for_placement, tags, content, coding_llm)
-                proposals.append((path, fname, folder))
-
-            def _is_ref(fname: str) -> bool:
-                return fname.lower().startswith("_ref")
-
-            self._log("\nProposed moves:")
-            for path, fname, folder in proposals:
                 subdir = "_ref/" if _is_ref(fname) else ""
-                self._log(f"  [dim]{fname}[/dim]  →  [bold]{folder}/{subdir}[/bold]")
+                placement_proposals.append(Proposal(
+                    kind="placement", path=path, label=fname,
+                    detail=f"→  [bold]{folder}/{subdir}[/bold]",
+                    proposed=folder,
+                    apply=_make_placement_apply(path, fname),
+                ))
 
-            raw = await self._org_prompt("\n  Enter=proceed  ·  skip=skip placement:")
-            if raw.lower() != "skip":
-                moved = 0
-                for path, fname, folder in proposals:
-                    subdir     = "_ref" if _is_ref(fname) else ""
-                    target_dir = os.path.join(VAULT_PATH, folder, subdir) if subdir else os.path.join(VAULT_PATH, folder)
-                    os.makedirs(target_dir, exist_ok=True)
-                    target_path = os.path.join(target_dir, fname)
-                    if os.path.abspath(path) != os.path.abspath(target_path):
-                        shutil.move(path, target_path)
-                        moved += 1
-                self._log(f"  [green]✓ Moved {moved} file(s).[/green]")
-                if moved:
-                    self._log("[dim]Rebuilding vault index…[/dim]")
-                    new_db, stats = await asyncio.to_thread(ingest_vault, True)
-                    self.db = new_db
-                    n       = new_db._collection.count()
-                    self._log(f"[dim]✅ {n} chunks re-indexed.[/dim]")
+            await self._review(placement_proposals)
+            if moved[0]:
+                self._log(f"  [dim]{moved[0]} file(s) moved. Rebuilding vault index…[/dim]")
+                new_db, stats = await asyncio.to_thread(ingest_vault, True)
+                self.db = new_db
+                n       = new_db._collection.count()
+                self._log(f"[dim]✅ {n} chunks re-indexed.[/dim]")
 
         # ── Pass 5: Wikilink validation ────────────────────────────────────────
         self._log("\n[bold]Checking existing wikilinks for stale targets…[/bold]")
         proposed_fixes = await asyncio.to_thread(_validate_wikilinks, True)
+
+        def _make_wikilink_fix_apply(path: str):
+            def _apply(_final: str) -> None:
+                _validate_wikilinks(dry_run=False, only_path=path)
+            return _apply
+
         if not proposed_fixes:
             self._log("[dim]No stale wikilinks found.[/dim]")
         else:
             total = sum(len(v) for v in proposed_fixes.values())
-            self._log(f"[dim]Found {total} stale wikilink(s) across {len(proposed_fixes)} file(s):[/dim]")
-            for path, file_fixes in proposed_fixes.items():
-                rel = os.path.relpath(path, VAULT_PATH)
-                self._log(f"\n[bold #5f87af]{rel}[/bold #5f87af]")
-                for old, new in file_fixes:
-                    self._log(f"  [[{old}]]  →  [[{new}]]")
-            raw = await self._org_prompt("\n  Enter=fix all  ·  skip=leave as-is:")
-            if raw.lower() != "skip":
-                await asyncio.to_thread(_validate_wikilinks, False)
-                self._log(f"  [green]✓ Fixed {total} wikilink(s).[/green]")
+            self._log(f"[dim]Found {total} stale wikilink(s) across {len(proposed_fixes)} file(s).[/dim]")
+            wf_proposals = [
+                Proposal(
+                    kind="wikilink_fix", path=path, label=os.path.relpath(path, VAULT_PATH),
+                    detail="\n".join(f"  [[{old}]]  →  [[{new}]]" for old, new in file_fixes),
+                    proposed=", ".join(f"{old}->{new}" for old, new in file_fixes),
+                    apply=_make_wikilink_fix_apply(path),
+                )
+                for path, file_fixes in proposed_fixes.items()
+            ]
+            await self._review(wf_proposals)
 
         self._log("\n[bold green]✓ Vault organisation complete.[/bold green]")
 

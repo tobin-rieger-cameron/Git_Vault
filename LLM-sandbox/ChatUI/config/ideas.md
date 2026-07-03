@@ -6,9 +6,11 @@ summary: Backlog of improvement ideas for chatui.py — not yet directives, just
 
 ## General
 
-- article writing should appear as its being written
-- /distill command is confusing - consider a simplification of /commands
-- instead of automated writing and formatting, consider a guided approach, where the user and ChatUI co-edit the pending article
+- article text should appear as its being written
+- /distill command is confusing - consider an overhaul and simplification of /commands in general
+- [DONE, Phase 1 — see below] instead of automated writing and formatting, consider a guided approach, where the user and ChatUI co-edit the pending article
+
+**Guided review framework (implemented, Phase 1):** `/organize` (tag/wikilink/placement/wikilink-fix passes) and `/distill` (article generation) now route every suggested change through a shared `Proposal` + `ChatApp._review()` mechanism instead of the old single-shot "Enter/skip/override" text prompts. Per suggestion: Enter=accept, `skip`, `edit` (opens a full-text editor pre-filled with the suggestion), `all`=accept the rest of the batch, `none`=skip the rest. Manual edits that change the substance of a suggestion are logged to `config/organize_feedback.md` with an optional one-line reason, and that log is fed back into the tag/wikilink/placement prompts on future runs. Still deferred: the actual split-pane UI (file/recommendation panel on the left, chat on the right) sketched in the original idea — Phase 1 kept the existing single-pane RichLog+Input layout and only changed the interaction model. See `Proposal`/`_review`/`ProposalEditScreen` in `chatui.py` and the plan this was built from.
 
 
 ## UX

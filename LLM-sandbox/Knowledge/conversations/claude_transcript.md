@@ -798,3 +798,37 @@ yes go ahead, then update claude's transcript and do all your closing steps
 
 ### Assistant
 Made three changes: (1) increased `guide_ctx` read limit from `[:700]` to `[:2000]` — the existing guide file is ~1800 chars, so the old cap was silently truncating most of it; (2) injected `guide_ctx` at the top of `art_prompt` as "ARTICLE WRITING GUIDE — follow every rule exactly:", replacing the vague FORMAT instruction — this is the critical missing wire; (3) added four anti-patterns to `_article-guide.md` covering the most common /distill failure modes (Q&A format output, "I couldn't find" responses, verbatim source reproduction, invented facts). The article guide itself from a prior session was already well-structured; these additions close the specific gaps visible in broken articles like `Taxonomy.md`.
+
+---
+
+## Session 18 — 2026-07-03: Guided Review Framework for /organize and /distill
+
+**Commits:** _(this commit)_
+
+### Context
+User pointed at a paragraph added to `config/ideas.md` under `## General`: instead of ChatUI hard-coding fully-automated passes for vault maintenance, it should guide the user through organizing/building/maintaining the vault — showing recommendations (location, tags, metadata, links), accept one-by-one/section/bulk, allow manual edits mid-flow, and learn from those edits.
+
+### User
+can you take a look at the last few chat logs claude logs, and changelogs. Then look at the big paragraph added under ##General in ideas.md - I'd like to plan that implementation
+
+### Assistant
+Reviewed recent changelog/transcript history and the current `/organize` (`_run_organize`, 5 passes) and `/distill` (unconditional article write, no review step) implementations. Asked three scoping questions: shared framework vs. `/organize`-only, incremental vs. full split-pane rollout, always-ask vs. ask-only-on-override for edit rationale. User chose: shared framework from day one, incremental rollout (no split-pane yet), and rationale only logged when a manual edit changes the substance of a suggestion.
+
+Drafted and got approval on a plan: a `Proposal` dataclass + `ChatApp._review()` controller (accept/skip/edit/all/none) reused by both `/organize` and `/distill`, a `ProposalEditScreen` modal for in-app editing, and a `config/organize_feedback.md` log that captures overrides and feeds them back into the tag/wikilink/placement suggestion prompts on future runs. Split-pane UI (file/recommendation panel + chat) explicitly deferred to a later phase.
+
+### Implementation
+- Added `Proposal` dataclass (`chatui.py`, near `PendingNote`/`OpenFile`) and `ProposalEditScreen` (`ModalScreen[str | None]`, modeled on `NoteReviewScreen`, using a new `TextArea` import).
+- Added `ChatApp._review(proposals)` — walks a batch of `Proposal`s one at a time (Enter=accept, `skip`, `edit`, `all`, `none`), reusing the existing `_organize_queue`/`_org_prompt` plumbing; creates/tears down the queue itself when called from `/distill` (which had no queue before).
+- Added `_log_organize_feedback()` / `_load_organize_feedback()` and `config/organize_feedback.md`; wired feedback injection into Pass 1's `tag_prompt`, Pass 2's `link_prompt`, and `_classify_for_placement` (shared by Pass 4 and `/distill`).
+- Refactored `/organize` Passes 1, 2, 4, 5 (tags, wikilinks, placement, wikilink-fix) to build `Proposal` lists and route them through `self._review(...)` instead of ad hoc per-pass text parsing. Pass 3 (condense sessions) left as a plain accept/skip prompt — a content judgment call, not a suggestion with an overridable "proposed value."
+- Extended `_validate_wikilinks()` with an `only_path` parameter so Pass 5 can apply fixes per-file through the same review mechanism instead of one all-or-nothing batch confirm.
+- Wired `/distill`'s article-write step (previously unconditional) through `self._review([...])` before writing — this is the direct fix for the article-quality-consistency gap flagged in the prior session, since articles can now be reviewed/edited/skipped instead of always landing in the vault.
+
+### Verification
+Bypassed slow local-model inference for the interaction logic by writing an isolated Textual pilot test (`app.run_test()` + `app.run_worker(app._review(...))`, following the discovery that `push_screen_wait` requires running inside a Textual worker — the initial `asyncio.create_task` version of the test hung on the edit-modal dismissal for exactly this reason). The pilot test validated accept/skip/all/none, edit+override-with-reason (confirmed logged to a scratch feedback file), edit-with-no-change (confirmed NOT logged), and edit+Escape-cancel, plus `_load_organize_feedback()`'s prompt-injection formatting. Separately ran a live `/organize` session in tmux against the real 57-file vault to confirm Pass 1's integration with real data (the "already has frontmatter" skip path and the empty-proposals no-op path both behaved correctly); did not wait out the full multi-pass run given per-note LLM latency on this hardware, since the isolated test already covered the interaction mechanics. `python -m py_compile` / `ast.parse` clean throughout.
+
+### User
+[plan approved via ExitPlanMode]
+
+### Assistant
+Implemented all five phase-1 tasks, verified via the pilot test and a live Pass 1 spot check, updated `ideas.md` (marked the paragraph done, documented what shipped vs. what's deferred), `changelog.md`, this transcript, and `README.md`'s `/organize`/`/distill` command descriptions.
