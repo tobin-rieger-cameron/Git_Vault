@@ -27,6 +27,7 @@ from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Footer, Header, Input, Label, ListItem, ListView, RichLog, Static, TextArea
 from rich.markdown import Markdown
+from rich.markup import escape as rich_escape
 from rich.text import Text
 
 import chromadb
@@ -1220,6 +1221,7 @@ RichLog {
     padding: 1 4;
     scrollbar-color: #454545;
     scrollbar-background: #1e1e1e;
+    overflow-x: hidden;
 }
 
 Input {
@@ -1376,14 +1378,14 @@ class ProposalEditScreen(ModalScreen[str | None]):
         background: #252526;
         padding: 1 2;
     }
-    #edit-header { color: #cccccc; margin-bottom: 1; }
+    #edit-header { color: #cccccc; text-style: bold; margin-bottom: 1; height: auto; }
     #edit-area {
-        height: 34;
+        height: 1fr;
         background: #1e1e1e;
         border: solid #454545;
     }
     #edit-area:focus { border: tall #5f87af; }
-    #edit-help { color: #6c6c6c; margin-top: 1; }
+    #edit-help { color: #6c6c6c; margin-top: 1; height: auto; }
     """
 
     BINDINGS = [
@@ -1398,7 +1400,9 @@ class ProposalEditScreen(ModalScreen[str | None]):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="edit-box"):
-            yield Label(f"[bold]Edit — {self._label}[/bold]", id="edit-header")
+            # markup=False: self._label is an arbitrary proposal label (filename /
+            # rel path), not something safe to run through the Rich markup parser.
+            yield Label(f"Edit — {self._label}", id="edit-header", markup=False)
             yield TextArea(self._proposed, id="edit-area")
             yield Label("[dim]Ctrl+S=save  ·  Esc=cancel[/dim]", id="edit-help")
 
@@ -1574,9 +1578,12 @@ class ChatApp(App[None]):
             with Vertical(id="review-panel"):
                 yield Label("", id="review-panel-header")
                 yield ListView(id="review-list")
-                yield Static("", id="review-detail")
+                yield Static("", id="review-detail", markup=False)
             with Vertical(id="chat-pane"):
-                yield RichLog(id="log", markup=True, wrap=True, highlight=False)
+                # min_width=0: RichLog defaults to a 78-column floor, which forces a
+                # phantom horizontal scrollbar once the review panel narrows this pane
+                # below that on anything but a wide terminal.
+                yield RichLog(id="log", markup=True, wrap=True, highlight=False, min_width=0)
                 yield Static("", id="stream")
         yield Static("", id="busy-bar")
         yield Input(placeholder="Ask anything, or type /help for commands...", id="input")
@@ -2097,7 +2104,7 @@ class ChatApp(App[None]):
             self._log(f"\n[bold]Review — {rel_fpath}[/bold]")
             await self._review([Proposal(
                 kind="distill_article", path=fpath, label=rel_fpath,
-                detail=f"[dim]{question.strip()[:100]}[/dim]",
+                detail=question.strip()[:100],
                 proposed=article,
                 apply=_make_distill_apply(fpath, already_exists, rel_fpath, mark_pos),
             )])
@@ -2833,7 +2840,11 @@ class ChatApp(App[None]):
         header.update(f"[bold]Reviewing {len(proposals)} item(s)[/bold]")
         lv.clear()
         for i, proposal in enumerate(proposals):
-            lv.append(ListItem(Label(self._review_row_text(proposal, "pending"), id=f"ri-label-{i}"), id=f"ri-{i}"))
+            # markup=False: proposal.kind/label are arbitrary strings (e.g. a bare
+            # "[tags]" or "[[wikilink]]" substring reads as an invalid Rich style
+            # tag to the markup parser and crashes Static.update on paint).
+            row = Label(self._review_row_text(proposal, "pending"), id=f"ri-label-{i}", markup=False)
+            lv.append(ListItem(row, id=f"ri-{i}"))
         panel.display = True
 
     def _review_panel_set_status(self, index: int, proposal: Proposal, status: str) -> None:
@@ -2847,11 +2858,19 @@ class ChatApp(App[None]):
             self.query_one("#review-list", ListView).index = self._review_active_index
         except Exception:
             pass
-        text = f"[bold #5f87af]{proposal.label}[/bold #5f87af]  [dim]({proposal.kind})[/dim]\n\n"
+        # Built with Text.append(), never Text.from_markup(): proposal.label/detail/
+        # proposed are arbitrary file/LLM-generated content (wikilink targets, full
+        # article bodies for /distill, ...) and must never be parsed as Rich markup.
+        text = Text()
+        text.append(proposal.label, style="bold #5f87af")
+        text.append(f"  ({proposal.kind})", style="dim")
+        text.append("\n\n")
         if proposal.detail:
-            text += f"{proposal.detail}\n\n"
-        text += f"[dim]Proposed:[/dim]\n{proposal.proposed}"
-        self.query_one("#review-detail", Static).update(Text.from_markup(text))
+            text.append(proposal.detail)
+            text.append("\n\n")
+        text.append("Proposed:\n", style="dim")
+        text.append(proposal.proposed)
+        self.query_one("#review-detail", Static).update(text)
 
     def _review_panel_hide(self) -> None:
         self.query_one("#review-panel").display = False
@@ -2898,9 +2917,12 @@ class ChatApp(App[None]):
             accept_rest = False
             skip_rest   = False
             for index, proposal in enumerate(proposals):
-                self._log(f"\n[bold #5f87af]{proposal.label}[/bold #5f87af]  [dim]({proposal.kind})[/dim]")
+                self._log(f"\n[bold #5f87af]{rich_escape(proposal.label)}[/bold #5f87af]  [dim]({proposal.kind})[/dim]")
                 if proposal.detail:
-                    self._log(f"  {proposal.detail}")
+                    # escape: detail may embed arbitrary file/LLM content (wikilink
+                    # stems, article text); unescaped, a bare "[[word]]" reads as an
+                    # (invalid) Rich style tag and silently eats its own contents.
+                    self._log(f"  {rich_escape(proposal.detail)}")
 
                 self._review_active_index = index
                 self._review_panel_set_detail(proposal)
@@ -3027,7 +3049,7 @@ class ChatApp(App[None]):
                 continue
             tag_proposals.append(Proposal(
                 kind="tags", path=data["path"], label=f"{stem}.md",
-                detail=f"Suggested tags: [bold]{', '.join(suggested)}[/bold]",
+                detail=f"Suggested tags: {', '.join(suggested)}",
                 proposed=", ".join(suggested),
                 apply=_make_tag_apply(stem, data["path"]),
             ))
@@ -3097,7 +3119,7 @@ class ChatApp(App[None]):
 
             link_proposals.append(Proposal(
                 kind="wikilink", path=data["path"], label=f"{stem}.md",
-                detail="\n".join(f"  '[yellow]{phrase}[/yellow]'  →  [[{target}]]" for phrase, target in subs),
+                detail="\n".join(f"  '{phrase}'  →  [[{target}]]" for phrase, target in subs),
                 proposed="\n".join(f'"{phrase}" -> {target}' for phrase, target in subs),
                 apply=_make_link_apply(stem, data["path"], content),
             ))
@@ -3184,7 +3206,7 @@ class ChatApp(App[None]):
                 subdir = "_ref/" if _is_ref(fname) else ""
                 placement_proposals.append(Proposal(
                     kind="placement", path=path, label=fname,
-                    detail=f"→  [bold]{folder}/{subdir}[/bold]",
+                    detail=f"→  {folder}/{subdir}",
                     proposed=folder,
                     apply=_make_placement_apply(path, fname),
                 ))

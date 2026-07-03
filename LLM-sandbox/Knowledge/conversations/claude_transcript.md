@@ -851,3 +851,29 @@ This was framed and delivered as a pure rendering layer on top of the Phase 1 `P
 
 ### Verification
 Extended the isolated Textual pilot-test approach from Phase 1: verified the panel is hidden before any review, shows with correct pending-status rows once `_review()` starts, updates a row to ✓ on accept, opens `ProposalEditScreen` when the active row is clicked (`pilot.click("#ri-1")`), marks a row ⏭ on escape-cancel, and hides/clears once the batch completes — then ran a second independent batch through the same panel to confirm state resets cleanly between reviews. Also did a plain live boot of ChatUI in tmux to confirm the new split layout doesn't regress ordinary full-width chat (panel correctly stays hidden, no layout errors). Test-session noise this produced in `Knowledge/conversations/2026-07-03.md` was reverted before committing, same as the Phase 1 session.
+
+---
+
+## Session 20 — 2026-07-03: UI Refinement Pass
+
+**Commits:** _(this commit)_
+
+### User
+can you run a ui-refinement pass to make sure the front end is top-notch
+
+### Assistant
+Rather than rely on assertion-based pilot tests (which check widget state/attributes but never force a real paint), used Textual's `App.export_screenshot()` to render actual SVG screenshots of every new Phase 1/2 screen, converted to PNG with `rsvg-convert`, and visually inspected them.
+
+This caught a real crash on the very first render: any `Proposal.detail`/`label` containing a bracket sequence Rich's markup parser can't resolve as a style — which includes *every* `proposal.kind` (`[tags]`, `[wikilink_fix]`, ...) and any `[[wikilink]]` text — raised `MissingStyle` inside `Static.update()`'s stricter Content-resolution pipeline (unlike `Text.from_markup()` itself, which parses such input silently rather than raising, and unlike `RichLog.write()`, which tolerates it). Root cause: `Text.from_markup()` was being called on untrusted file/LLM-generated content mixed with intentional formatting tags. Fixed by rebuilding the affected `Text` objects with `Text.append(content, style=...)` (which never parses markup, so it can't misinterpret arbitrary content) instead of `Text.from_markup()`, and by setting `markup=False` on the `Label`s used for review-panel rows and the edit-modal header, which are built from raw f-strings containing the same untrusted content.
+
+Found three more issues from the same screenshot pass: (1) a phantom horizontal scrollbar appeared on the chat log once the review panel narrowed it — traced to `RichLog`'s default `min_width=78` floor forcing a wider render than the actual (now-narrower) box, fixed with `min_width=0` plus `overflow-x: hidden` as a second layer; (2) `ProposalEditScreen`'s "Ctrl+S=save · Esc=cancel" help line was being clipped entirely off the bottom of the modal — the `TextArea`'s fixed `height: 34` didn't leave room for the header's `margin-bottom` and the help label's `margin-top`, fixed by switching the `TextArea` to `height: 1fr` so it always yields whatever space the fixed-height labels don't need; (3) the *existing* (pre-Phase-1) chat-log display had the same markup-parsing bug for wikilink text, silently swallowing `[[stale-stem]]` into `[]` rather than crashing (since `RichLog.write()` is more lenient) — fixed by escaping `proposal.label`/`detail` with `rich.markup.escape()` before logging.
+
+Also chased down and ruled out one false lead: several screenshots showed multi-space runs (e.g. in `/help`'s output, the footer's "^p palette" hint) rendered with no visible gap. Verified directly against `Text.from_markup(_HELP_TEXT).plain` (correct spacing present) and a live tmux `capture-pane` of the same screen (correct spacing rendered) before concluding this was an artifact of the screenshot pipeline itself — SVG collapses consecutive whitespace by default, and Textual's exported SVGs don't set `xml:space="preserve"` — not a defect in the app.
+
+All four real fixes were verified by re-running both the existing Phase 1/2 pilot test suites (all still pass) and the screenshot tour (crash gone, `[[wikilink]]` text displays literally and correctly, help line visible, no phantom scrollbar).
+
+### User
+[requested via /remote-control: "when you're finished, go ahead with phaze 2, also get rid of the stale tmux wakeup"]
+
+### Assistant
+Confirmed no stale tmux session or scheduled wakeup was actually pending before starting Phase 2 (covered in the prior session block above); this block covers the follow-up UI-refinement pass requested immediately after Phase 2 shipped.
