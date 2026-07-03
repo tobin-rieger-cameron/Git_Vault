@@ -1797,7 +1797,7 @@ class ChatApp(App[None]):
             # Don't ask the 3b model to generate frontmatter — it produces malformed output.
             # Build it programmatically from the slug + keyword-based tag extraction.
             tags  = _distill_tags(question, slug)
-            title = slug.replace('-', ' ').title()
+            title = re.sub(r'-+', ' ', slug).strip().title()
             frontmatter = f'---\ntitle: "{title}"\ntags: [{", ".join(tags)}]\n---\n\n'
 
             # Route into the same Dewey-style folder /organize would file this under,
@@ -2908,7 +2908,14 @@ class ChatApp(App[None]):
                 # Auto-supplement with web if vault source doesn't directly cover the topic
                 if is_class_q and self._web_on and not _source_covers_topic(sources, topic):
                     self._log("[dim]🌐  Vault coverage indirect — supplementing with web…[/dim]", save=False)
-                    web_ctx = await asyncio.to_thread(lambda: web_search(question))
+                    try:
+                        web_ctx = await asyncio.wait_for(asyncio.to_thread(lambda: web_search(question)), timeout=20)
+                    except asyncio.CancelledError:
+                        self._log("[dim]🌐  Web search timed out[/dim]", save=False)
+                        raise
+                    except Exception as e:
+                        web_ctx = f"Web search failed: {e}"
+                        self._log(f"[dim]🌐  Web search failed: {e}[/dim]", save=False)
                     if not web_ctx.startswith(("No results", "Web search failed", "duckduckgo")):
                         self._note_event("web:supplement")
                         self._set_status("✍ Generating from web…")
@@ -2953,7 +2960,14 @@ class ChatApp(App[None]):
             if self._web_on:
                 self._set_status("🌐 Searching web…")
                 self._log("[dim]🌐  Supplementing with web search…[/dim]", save=False)
-                web_ctx = await asyncio.to_thread(lambda: web_search(question))
+                try:
+                    web_ctx = await asyncio.wait_for(asyncio.to_thread(lambda: web_search(question)), timeout=20)
+                except asyncio.CancelledError:
+                    self._log("[dim]🌐  Web search timed out[/dim]", save=False)
+                    raise
+                except Exception as e:
+                    web_ctx = f"Web search failed: {e}"
+                    self._log(f"[dim]🌐  Web search failed: {e}[/dim]", save=False)
 
                 if not web_ctx.startswith(("No results", "Web search failed", "duckduckgo")):
                     self._log("[dim]🌐  Web result:[/dim]", save=False)

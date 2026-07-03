@@ -27,7 +27,7 @@ The repo root is `Git_Vault/` — always commit from there or use absolute paths
 
 ```bash
 cd ChatUI
-source ../.venv/bin/activate
+source .chat_venv/bin/activate
 python chatui.py --vault ../Knowledge
 ```
 

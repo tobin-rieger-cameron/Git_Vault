@@ -23,6 +23,10 @@ This file maps the contents of the Knowledge vault. Use it to understand what to
 | `Disciplines and Hierarchies.md` | Hierarchies across academic disciplines |
 | `Interdisciplinary Ontologies.md` | Ontologies and fields that span multiple disciplines |
 | `Humanities Spectrum.md` | The humanities as a spectrum of knowledge categories |
+| `Knowledge Graph vs Taxonomy.md` | Directed-edge graph representation vs single-hierarchy taxonomy |
+| `Semantic Web And Ontologies.md` | RDF/OWL and the Semantic Web vision — how ontologies run on the web |
+| `Zettelkasten Method.md` | Luhmann's note-linking method as a hybrid of taxonomy and folksonomy |
+| `Metadata Standards.md` | Dublin Core and how metadata standards relate to controlled vocabularies |
 
 ## 300-social-sciences/ — Sociology, economics, politics, law
 

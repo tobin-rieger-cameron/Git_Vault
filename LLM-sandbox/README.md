@@ -19,7 +19,7 @@ ollama pull qwen2.5-coder:7b
 
 # Run (from LLM-sandbox/)
 cd ChatUI
-source ../.venv/bin/activate
+source .chat_venv/bin/activate
 python chatui.py --vault ../Knowledge
 # Then type /ingest to build the vector database on first launch
 ```
@@ -38,27 +38,27 @@ python chatui.py --vault ../Knowledge
 
 ## Commands
 
-| Command | Description |
-|---|---|
-| `/help` | Show all commands |
-| `/ingest` | Rebuild the vector database from vault files |
-| `/browse` | Open file browser to load a vault file as context |
-| `/organize` | Add YAML tags and wikilinks to vault notes (4-pass LLM worker) |
-| `/savefile` | Review and save pending notes to the vault |
-| `/distill <session>` | Distil a session file into structured vault articles |
-| `/harvest` | Promote conversation topics into vault stubs |
-| `/edit` | LLM-guided edit of a vault file |
-| `/daily` | Summarize today's chat sessions |
-| `/export` | Export Q&A pairs as fine-tuning data (jsonl/alpaca/csv) |
-| `/update` | Detect `CHANGE:`/`FIX:` directives in config/ and propose code changes |
-| `/apply` | Write the diff proposed by `/update` atomically |
-| `/model [name]` | Show or switch the active chat model at runtime |
-| `/web` | Toggle web search fallback (DuckDuckGo) on/off |
-| `/clear` | Reset conversation history and unload open file |
-| `/status` | Show current session state (model, web, file, history, vault) |
-| `/stats` | Show vault chunk count and ChromaDB size on disk |
-| `/readme` | Regenerate this README from current source + config |
-| `/version` | Print the chatui.py version string |
+| Command              | Description                                                            |
+| -------------------- | ---------------------------------------------------------------------- |
+| `/help`              | Show all commands                                                      |
+| `/ingest`            | Rebuild the vector database from vault files                           |
+| `/browse`            | Open file browser to load a vault file as context                      |
+| `/organize`          | Add YAML tags and wikilinks to vault notes (4-pass LLM worker)         |
+| `/savefile`          | Review and save pending notes to the vault                             |
+| `/distill <session>` | Distil a session file into structured vault articles                   |
+| `/harvest`           | Promote conversation topics into vault stubs                           |
+| `/edit`              | LLM-guided edit of a vault file                                        |
+| `/daily`             | Summarize today's chat sessions                                        |
+| `/export`            | Export Q&A pairs as fine-tuning data (jsonl/alpaca/csv)                |
+| `/update`            | Detect `CHANGE:`/`FIX:` directives in config/ and propose code changes |
+| `/apply`             | Write the diff proposed by `/update` atomically                        |
+| `/model [name]`      | Show or switch the active chat model at runtime                        |
+| `/web`               | Toggle web search fallback (DuckDuckGo) on/off                         |
+| `/clear`             | Reset conversation history and unload open file                        |
+| `/status`            | Show current session state (model, web, file, history, vault)          |
+| `/stats`             | Show vault chunk count and ChromaDB size on disk                       |
+| `/readme`            | Regenerate this README from current source + config                    |
+| `/version`           | Print the chatui.py version string                                     |
 
 ## Retrieval pipeline
 

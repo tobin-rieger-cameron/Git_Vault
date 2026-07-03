@@ -113,3 +113,42 @@ summary: Backlog of improvement ideas for chatui.py — not yet directives, just
 - Investigate whether a system-prompt file listing (option 2 from ideas.md) would let the model name actual vault files in organisation answers.
 - The "model knowledge anchoring" problem (over-deferring to "I don't know" in retrieved context) may warrant a retrieval filter: if the top chunk's content explicitly says it lacks the requested information, fall through to the grounded or pure-model path instead.
 
+---
+
+## Testing notes — 2026-07-02/03 (overnight edge-case + retrieval-fix validation session)
+
+**Setup:** Live TUI session driven via tmux, `llama3.1:8b` chat model, 322→381→323 chunks across the session (net +2 files after cleanup: `Knowledge Graph vs Taxonomy.md`, `Semantic Web And Ontologies.md`). Ran with the retrieval/placement fixes from earlier in this session (`TOP_K*2` tag-scoped retrieval, `/distill` Dewey-folder placement) already applied.
+
+### Retrieval fix validated live
+- Re-ran the exact "other topics related to taxonomy and DDS" query that originally scored 0.67 off a single INDEX.md chunk. After the `TOP_K*2` widening fix, the tag-scoped pass surfaced 3 distinct sources (`Evaluating Systems of Classification.md`, `Folksonomy Differences.md`, `Interdisciplinary Ontologies.md`) instead of 1, and the answer was materially richer (correctly cited LCC, folksonomy, evaluation metrics).
+- A direct DB query (bypassing the app) confirmed the mechanism: at `k=10` under the `taxonomy` tag filter, 7 distinct on-topic files appear in the top results vs. 1–2 at the old `k=5`.
+- After distilling and adding `Knowledge Graph vs Taxonomy.md`, a repeat of "how does a knowledge graph differ from a taxonomy" — which previously scored 0.60 and fell to the model-knowledge path — now scores **0.87** and answers directly from the vault, citing the new file. This is the clearest before/after evidence that filling real gaps in the vault measurably improves retrieval, not just adds content.
+
+### `/distill` placement fix validated, but surfaced two new gaps
+- Confirmed the `_classify_for_placement` + Title Case fix works: a 7-Q&A distill run placed all 6 new files into real Dewey folders (`000-information/`, `600-applied-sciences/`, one debatable `400-language/` placement) with proper filenames — zero landed in the vault root this time.
+- **New gap — no cross-file dedup in `/distill`:** two of the six generated files were pure duplicates of existing vault content (a `LoRA` Q&A got the hallucinated filename `Local Regularization Technique.md`, duplicating `LoRA Adaptations.md`; two "topics related to taxonomy" restatements produced `Classification Systems.md` and `Library Classification.md`, both near-verbatim duplicates of 5+ existing notes — the same failure mode as the original misfiled article from earlier in the session). Deleted all three; consolidated two more near-duplicate RDF/OWL articles (`Semantic Web Ontologies.md` + `Rdf Ontology Frameworks.md`) into one clean `Semantic Web And Ontologies.md`. `/savefile` already has a 0.85-similarity dedup check (`save_to_vault`) — `/distill` has no equivalent, and should.
+- **New gap — `/distill` is not idempotent:** re-running `/distill 2026-07-02` a second time later in the session reprocessed all 12 Q&A pairs in the daily file from scratch (not just the 2 new ones since the last run), re-appending "Additional notes" sections to already-good, already-placed files. No tracking of what's already been distilled from a given session file exists. Over repeated `/distill` calls on the same growing daily session file, this will compound duplicate "Additional notes" bloat indefinitely. Needs a per-session or per-Q&A distilled-marker (e.g. an HTML comment in the session file, or a manifest similar to the ingest manifest).
+
+### Bug found and partially fixed: web search can hang indefinitely
+- The class-question auto-web-supplement (`is_class_q and self._web_on and not _source_covers_topic(...)`) hung on "🌐 Vault coverage indirect — supplementing with web…" for 90s–5+ minutes with no resolution, reproduced twice across a fresh process restart. `ss` showed a genuine `ESTABLISHED` TCP connection to an external host that never completed the HTTP response — this is `duckduckgo_search` (deprecated upstream in favour of `ddgs`) apparently being rate-limited/stalled by DDG's anti-scraping measures after repeated test queries.
+- **Attempted fix:** wrapped both `web_search()` call sites in `asyncio.wait_for(..., timeout=20)`, then hardened further with explicit `except asyncio.CancelledError` (re-raise after logging) and `except Exception` handlers, on the theory that `CancelledError` (a `BaseException`, not `Exception`) might be escaping the original bare `except asyncio.TimeoutError`. **This did not fully resolve it** — the hang reproduced identically after the fix, with the worker silently completing (busy indicator cleared) without ever logging a timeout/failure message. Root-causing further would need a live stack trace (`py-spy dump`), which requires `ptrace_scope` permissions/sudo not available in this environment.
+- **Workaround used for the rest of this session:** toggled `/web off`. **Recommendation:** replace `duckduckgo_search` with the `ddgs` package it was renamed to, and/or move the actual search call into a subprocess with a hard OS-level kill timeout, since in-process `asyncio` timeouts cannot forcibly terminate a thread stuck in a real blocking syscall.
+
+### Other edge cases exercised, no issues found
+- Empty input (bare Enter) — silently ignored, no crash.
+- Mistyped command (`/disitll`) — fuzzy-matched to `/distill` correctly.
+- Case-insensitive commands (`/HELP`) — matched correctly.
+- `/distill` on a nonexistent session file — clean error message, no crash.
+- Special characters / injection-style input (`"quotes"`, `[[fake_wikilink]]`, backticks, `<tag>`, `%`) — no crash; model handled gracefully. Cosmetic-only issue: `[[double bracket]]` sequences get silently eaten by Rich markup parsing in the echoed query line (renders as `[]`), since Rich's `[style]` tag syntax conflicts with wikilink syntax. Low priority — display-only, doesn't affect processing.
+- Multi-part question ("what is RLHF, and also separately, what is photosynthesis") — handled as a single retrieval pass covering both; the model transitioned with "I'm glad we had a chance to cover that briefly. To recap—" despite photosynthesis never having been discussed before, and misattributed early photosynthesis biochemistry research to "Louis N. M. du Vigneaud" (a real biochemist, but known for oxytocin/insulin work, not photosynthesis) — a plain LLM hallucination, not a chatui bug, but worth knowing the deep-mode prompt template's "recap" framing can trigger false continuity claims.
+- `/export`, `/clear`, `/status` all behaved correctly under repeated/rapid invocation.
+
+### New gap found (not a bug, pre-existing content issue)
+- Many `[[wikilinks]]` in `600-applied-sciences/*.md` (and a few elsewhere) still point at pre-rename kebab-case stems (`[[fine-tuning-methods]]`, `[[rlhf-alignment]]`, `[[machine-learning]]`, `[[lo-ra-adaptations]]`, `[[knowledge-distillation-methods]]`, `[[language-models]]`, `[[retrieval-augmentation-models]]`, `[[embedding-models]]`, `[[vector-databases-for-search]]`, `[[dewey-decimal-system|...]]`) instead of the current Title Case filenames — broken since the Session 16 vault rename and never caught by `/organize`'s wikilink pass (which only adds new links, doesn't validate existing ones). Left unfixed pending user review — it's a bulk edit across ~6 established files, out of scope for unattended overnight cleanup.
+
+### Recommendations
+- Add semantic-similarity dedup to `/distill`, matching what `save_to_vault` already does for `/savefile`.
+- Add a distilled-marker to session files (or a manifest) so re-running `/distill` on the same session is idempotent.
+- Migrate `web_search()` from `duckduckgo_search` to `ddgs`.
+- Add a `/organize`-style validation pass that checks existing `[[wikilinks]]` against real vault stems and flags/fixes broken ones (separate from the existing "add new links" pass).
+

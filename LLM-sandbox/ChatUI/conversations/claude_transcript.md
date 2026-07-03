@@ -718,3 +718,25 @@ go ahead on all changes
 
 ### Assistant
 Traced (2)/(3) to `_cmd_distill`: `fpath = os.path.join(VAULT_PATH, slug + ".md")` (chatui.py:1794 pre-fix) always wrote to vault root using a lowercase-hyphen slug, and `title = question.strip()[:80]` used the raw question as frontmatter title. Fixed by reusing the placement infrastructure `/organize` already has (`_classify_for_placement`, previously only wired into Pass 4) to route new articles into the correct Dewey folder, and deriving both filename and title from the topic slug in Title Case. Also found the misfiled article was itself a near-total duplicate of two existing notes (DDS-vs-LCC section matched `Library of Congress Classification System.md`; Ontology/Folksonomy sections matched `Folksonomy Differences.md`) — deleted rather than relocated, since moving it would have violated the same no-duplication rule being enforced. Diagnosed (5) empirically: queried the live ChromaDB directly and found the tag-scoped retrieval pass (chatui.py:2867) re-queries with the same `TOP_K=5` even after narrowing to a single tag, so a 12-file topic cluster could only ever surface ~5 of them. Widened that pass to `TOP_K * 2`; a direct re-test against the taxonomy tag surfaced 7 distinct on-topic files instead of 1-2. Added a one-line prompt instruction for (6) biasing See Also selection toward same-subtopic notes over same-broad-field notes. Rewrote `000-information/INDEX.md` (4) to reflect the actual `000/300/500/600/misc` structure and current Title Case filenames. Re-ran `ingest_vault(force=True)` to reflect the deletion and INDEX.md rewrite (42 files, full rebuild).
+
+### User
+can you run some tests and look for edge cases, while filling out the knowledge base of chatui to make sure its actually becoming more effective as research is done through it
+
+### Assistant
+Drove a live ChatUI session via tmux. Validated the retrieval fix end-to-end: the original taxonomy/DDS query that scored 0.67 off one INDEX.md chunk now surfaces 3 distinct sources and a materially richer answer; after adding `Knowledge Graph vs Taxonomy.md`, a repeat of "knowledge graph vs taxonomy" jumped from 0.60 (model-knowledge fallback) to 0.87 (direct vault hit) — concrete before/after evidence that filling real vault gaps measurably improves retrieval. Validated the `/distill` placement fix live: a 7-Q&A run placed all 6 new files into real Dewey folders with proper names, zero landing in the root.
+
+Found two new `/distill` gaps in the process: no cross-file dedup (three of the six generated files were near-duplicates of existing content, one under a hallucinated filename for "LoRA"), and it's not idempotent — re-running `/distill` on the same growing daily session file reprocessed all 12 Q&A pairs from scratch, regenerating the same duplicates under yet more hallucinated names each time. Cleaned up the resulting clutter by hand each round, keeping only genuinely new articles (`Knowledge Graph vs Taxonomy.md`, `Semantic Web And Ontologies.md`, `Zettelkasten Method.md`, `Metadata Standards.md`).
+
+Found and attempted to fix a web-search hang: the class-question auto-web-supplement stalled indefinitely on an `ESTABLISHED` TCP connection that never completed (likely `duckduckgo_search`, deprecated upstream in favour of `ddgs`, being rate-limited). Wrapped both call sites in `asyncio.wait_for(timeout=20)` plus explicit `CancelledError`/`Exception` handling — this did not fully resolve the hang on retest; root-causing further needs a live stack trace, which needs `ptrace` permissions not available here. Worked around it for the rest of the session with `/web off`.
+
+Found and fixed a regression in my own placement fix: a malformed slug with double-dashes produced a filename with multiple consecutive spaces (`Semantic Web Frameworks    Or Alternatively   Onto.md`); fixed by collapsing consecutive dashes before title-casing.
+
+Exercised edge cases with no issues found: empty input, mistyped/case-varied commands, `/distill` on a missing file, special characters and injection-style input (one cosmetic-only issue: `[[double brackets]]` get eaten by Rich markup in the echoed query line), multi-part questions in one message (model hallucinated false conversational continuity and one incorrect historical attribution — an LLM limitation, not a chatui bug), and rapid repeated `/export`/`/clear`/`/status`.
+
+Found a pre-existing, out-of-scope issue: many `[[wikilinks]]` in `600-applied-sciences/*.md` still point at pre-rename kebab-case stems, broken since the Session 16 restructure and never caught by `/organize`'s wikilink pass. Logged for review rather than bulk-editing unsupervised.
+
+Fixed a stale `../.venv` path in both `CLAUDE.md` and `README.md` (actual venv is `ChatUI/.chat_venv`) — hit it firsthand trying to launch the app.
+
+Also caught and corrected a real mistake mid-session: deleted `Knowledge/training_data.jsonl` believing it was a fresh `/export` test artifact, but it was already tracked in git from an earlier session — restored via `git checkout HEAD --`.
+
+Full findings and recommendations logged in `config/ideas.md` under "Testing notes — 2026-07-02/03".
