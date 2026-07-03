@@ -8,9 +8,13 @@ summary: Backlog of improvement ideas for chatui.py — not yet directives, just
 
 - article text should appear as its being written
 - /distill command is confusing - consider an overhaul and simplification of /commands in general
-- [DONE, Phase 1 — see below] instead of automated writing and formatting, consider a guided approach, where the user and ChatUI co-edit the pending article
+- [DONE, Phase 1 + 2 — see below] instead of automated writing and formatting, consider a guided approach, where the user and ChatUI co-edit the pending article
 
-**Guided review framework (implemented, Phase 1):** `/organize` (tag/wikilink/placement/wikilink-fix passes) and `/distill` (article generation) now route every suggested change through a shared `Proposal` + `ChatApp._review()` mechanism instead of the old single-shot "Enter/skip/override" text prompts. Per suggestion: Enter=accept, `skip`, `edit` (opens a full-text editor pre-filled with the suggestion), `all`=accept the rest of the batch, `none`=skip the rest. Manual edits that change the substance of a suggestion are logged to `config/organize_feedback.md` with an optional one-line reason, and that log is fed back into the tag/wikilink/placement prompts on future runs. Still deferred: the actual split-pane UI (file/recommendation panel on the left, chat on the right) sketched in the original idea — Phase 1 kept the existing single-pane RichLog+Input layout and only changed the interaction model. See `Proposal`/`_review`/`ProposalEditScreen` in `chatui.py` and the plan this was built from.
+**Guided review framework (implemented):**
+- **Phase 1:** `/organize` (tag/wikilink/placement/wikilink-fix passes) and `/distill` (article generation) route every suggested change through a shared `Proposal` + `ChatApp._review()` mechanism instead of the old single-shot "Enter/skip/override" text prompts. Enter=accept, `skip`, `edit` (opens a full-text editor pre-filled with the suggestion), `all`=accept the rest of the batch, `none`=skip the rest. Manual edits that change the substance of a suggestion are logged to `config/organize_feedback.md` with an optional one-line reason, and that log is fed back into the tag/wikilink/placement prompts on future runs.
+- **Phase 2:** the split-pane UI from the original idea — a docked `#review-panel` on the left (file list with live status icons: pending/accepted/skipped/edited) alongside the existing chat on the right, matching "chat on the right, current file/file browser/organization menu on the left." The whole batch is visible up front, not revealed one at a time; a detail pane mirrors the item currently being decided; clicking the active row is equivalent to typing `edit`. The panel is hidden outside of a review (`display: none` by default) so normal chat use is unaffected. Built as a pure rendering layer on top of the Phase 1 `Proposal` data model — no interaction-logic changes were needed.
+
+See `Proposal` / `ChatApp._review()` / `ProposalEditScreen` / `_review_panel_*` methods in `chatui.py`.
 
 
 ## UX

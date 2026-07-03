@@ -23,7 +23,7 @@ import yaml
 from textual import work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Vertical
+from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Footer, Header, Input, Label, ListItem, ListView, RichLog, Static, TextArea
 from rich.markdown import Markdown
@@ -1246,6 +1246,36 @@ Input:focus { border: tall #5f87af; }
     color: #5f87af;
     text-align: center;
 }
+
+#main-body { height: 1fr; }
+
+#chat-pane { width: 1fr; height: 1fr; }
+
+#review-panel {
+    display: none;
+    width: 44;
+    height: 1fr;
+    border-right: solid #454545;
+    padding: 0 1;
+}
+
+#review-panel-header { color: #cccccc; margin: 1 0 1 0; }
+
+#review-list {
+    height: 1fr;
+    background: #1e1e1e;
+    border: solid #454545;
+    scrollbar-color: #454545;
+    scrollbar-background: #1e1e1e;
+}
+
+#review-detail {
+    height: auto;
+    max-height: 14;
+    color: #d4d4d4;
+    padding: 1 0;
+    overflow-y: auto;
+}
 """
 
 
@@ -1533,13 +1563,21 @@ class ChatApp(App[None]):
         self._session_file:   str | None = None
         self._session_events: list[str]  = []
         self._open_file:      OpenFile | None = None
+        self._review_proposals:     list[Proposal] | None = None
+        self._review_active_index:  int | None = None
 
     # ── Layout ────────────────────────────────────────────────────────────────
 
     def compose(self) -> ComposeResult:
         yield Header()
-        yield RichLog(id="log", markup=True, wrap=True, highlight=False)
-        yield Static("", id="stream")
+        with Horizontal(id="main-body"):
+            with Vertical(id="review-panel"):
+                yield Label("", id="review-panel-header")
+                yield ListView(id="review-list")
+                yield Static("", id="review-detail")
+            with Vertical(id="chat-pane"):
+                yield RichLog(id="log", markup=True, wrap=True, highlight=False)
+                yield Static("", id="stream")
         yield Static("", id="busy-bar")
         yield Input(placeholder="Ask anything, or type /help for commands...", id="input")
         yield Footer()
@@ -2780,16 +2818,68 @@ class ChatApp(App[None]):
             self._log(f"[dim]{hint}[/dim]")
         return await self._organize_queue.get()  # type: ignore[union-attr]
 
+    # ── Review panel (left dock) ────────────────────────────────────────────────
+
+    _REVIEW_ICONS = {"pending": "○", "accepted": "✓", "skipped": "⏭", "edited": "✎"}
+
+    def _review_row_text(self, proposal: Proposal, status: str) -> str:
+        icon = self._REVIEW_ICONS[status]
+        return f"{icon}  [{proposal.kind}] {proposal.label}"
+
+    def _review_panel_show(self, proposals: list[Proposal]) -> None:
+        panel  = self.query_one("#review-panel")
+        header = self.query_one("#review-panel-header", Label)
+        lv     = self.query_one("#review-list", ListView)
+        header.update(f"[bold]Reviewing {len(proposals)} item(s)[/bold]")
+        lv.clear()
+        for i, proposal in enumerate(proposals):
+            lv.append(ListItem(Label(self._review_row_text(proposal, "pending"), id=f"ri-label-{i}"), id=f"ri-{i}"))
+        panel.display = True
+
+    def _review_panel_set_status(self, index: int, proposal: Proposal, status: str) -> None:
+        try:
+            self.query_one(f"#ri-label-{index}", Label).update(self._review_row_text(proposal, status))
+        except Exception:
+            pass
+
+    def _review_panel_set_detail(self, proposal: Proposal) -> None:
+        try:
+            self.query_one("#review-list", ListView).index = self._review_active_index
+        except Exception:
+            pass
+        text = f"[bold #5f87af]{proposal.label}[/bold #5f87af]  [dim]({proposal.kind})[/dim]\n\n"
+        if proposal.detail:
+            text += f"{proposal.detail}\n\n"
+        text += f"[dim]Proposed:[/dim]\n{proposal.proposed}"
+        self.query_one("#review-detail", Static).update(Text.from_markup(text))
+
+    def _review_panel_hide(self) -> None:
+        self.query_one("#review-panel").display = False
+        self.query_one("#review-list", ListView).clear()
+        self.query_one("#review-detail", Static).update("")
+
+    def on_list_view_selected(self, event: ListView.Selected) -> None:
+        if self._review_proposals is None or self._review_active_index is None:
+            return
+        idx = event.list_view.index
+        if idx != self._review_active_index or self._organize_queue is None:
+            return
+        if isinstance(self.screen, (ProposalEditScreen, FileBrowserScreen)):
+            return
+        self._organize_queue.put_nowait("edit")
+
     async def _review(self, proposals: list[Proposal]) -> None:
         """Walk the user through a batch of Proposals one at a time.
 
         Enter=accept as proposed · skip=leave unchanged · edit=open an editor
-        pre-filled with the proposed value · all=accept this and every
-        remaining proposal · none=skip this and every remaining proposal.
-        An edit that changes the substance of the proposed value is logged
-        to organize_feedback.md (with an optional one-line reason) so future
-        suggestions can learn from it; edits that just restore the proposed
-        value are applied silently.
+        pre-filled with the proposed value (or click the active row in the
+        review panel) · all=accept this and every remaining proposal ·
+        none=skip this and every remaining proposal. An edit that changes
+        the substance of the proposed value is logged to organize_feedback.md
+        (with an optional one-line reason) so future suggestions can learn
+        from it; edits that just restore the proposed value are applied
+        silently. The left-hand review panel mirrors the whole batch —
+        status icons update live as each item is decided.
         """
         if not proposals:
             return
@@ -2801,18 +2891,26 @@ class ChatApp(App[None]):
         prior_placeholder = inp.placeholder
         inp.placeholder = "Enter=accept · skip · edit · all · none"
 
+        self._review_proposals = proposals
+        self._review_panel_show(proposals)
+
         try:
             accept_rest = False
             skip_rest   = False
-            for proposal in proposals:
+            for index, proposal in enumerate(proposals):
                 self._log(f"\n[bold #5f87af]{proposal.label}[/bold #5f87af]  [dim]({proposal.kind})[/dim]")
                 if proposal.detail:
                     self._log(f"  {proposal.detail}")
 
+                self._review_active_index = index
+                self._review_panel_set_detail(proposal)
+
                 if skip_rest:
+                    self._review_panel_set_status(index, proposal, "skipped")
                     continue
                 if accept_rest:
                     proposal.apply(proposal.proposed)
+                    self._review_panel_set_status(index, proposal, "accepted")
                     self._log("  [green]✓ Applied.[/green]")
                     continue
 
@@ -2823,33 +2921,42 @@ class ChatApp(App[None]):
 
                 if cmd == "none":
                     skip_rest = True
+                    self._review_panel_set_status(index, proposal, "skipped")
                     continue
                 if cmd == "skip":
+                    self._review_panel_set_status(index, proposal, "skipped")
                     continue
                 if cmd == "all":
                     proposal.apply(proposal.proposed)
                     accept_rest = True
+                    self._review_panel_set_status(index, proposal, "accepted")
                     self._log("  [green]✓ Applied.[/green]")
                     continue
                 if cmd == "edit":
                     final = await self.push_screen_wait(ProposalEditScreen(proposal.label, proposal.proposed))
                     self.query_one(Input).focus()
                     if final is None:
+                        self._review_panel_set_status(index, proposal, "skipped")
                         continue
                     if final.strip() != proposal.proposed.strip():
                         reason = await self._org_prompt("  Why the change? (optional, Enter to skip):")
                         _log_organize_feedback(proposal.kind, proposal.path, proposal.proposed, final, reason)
                     proposal.apply(final)
+                    self._review_panel_set_status(index, proposal, "edited")
                     self._log("  [green]✓ Applied (edited).[/green]")
                     continue
 
                 # Enter (empty input) → accept as proposed
                 proposal.apply(proposal.proposed)
+                self._review_panel_set_status(index, proposal, "accepted")
                 self._log("  [green]✓ Applied.[/green]")
         finally:
             if created_queue:
                 self._organize_queue = None
             inp.placeholder = prior_placeholder
+            self._review_active_index = None
+            self._review_proposals = None
+            self._review_panel_hide()
 
     async def _run_organize(self) -> None:
         # ── Pass 0: Rebuild conversation index ────────────────────────────────

@@ -832,3 +832,22 @@ Bypassed slow local-model inference for the interaction logic by writing an isol
 
 ### Assistant
 Implemented all five phase-1 tasks, verified via the pilot test and a live Pass 1 spot check, updated `ideas.md` (marked the paragraph done, documented what shipped vs. what's deferred), `changelog.md`, this transcript, and `README.md`'s `/organize`/`/distill` command descriptions.
+
+---
+
+## Session 19 — 2026-07-03: Phase 2 — Split-Pane Review UI
+
+**Commits:** _(this commit)_
+
+### User
+when you're finished, go ahead with phaze 2, also get rid of the stale tmux wakeup
+
+### Assistant
+Confirmed no stale tmux session or scheduled wakeup was actually pending (`tmux list-sessions` empty, `CronList` empty) — the prior wakeup had already fired and been handled. Proceeded directly to Phase 2 given it was already sketched and approved in the Session 18 plan.
+
+Implemented the split-pane UI deferred from Phase 1: `ChatApp.compose()` restructured from a flat vertical stack into `#main-body` (`Horizontal`) containing a docked `#review-panel` (`Vertical`: header `Label` + `ListView` + detail `Static`, `display: none` by default) on the left and the existing `RichLog`+stream in `#chat-pane` on the right. `ChatApp._review()` now shows the panel at the start of a batch, populates one `ListItem` per `Proposal` up front (not revealed one at a time), and updates each row's status icon (○ pending / ✓ accepted / ⏭ skipped / ✎ edited) live as decisions are made; a detail pane mirrors the item currently awaiting a decision. Added `on_list_view_selected` so clicking the currently-active row injects `"edit"` into the organize queue — equivalent to typing `edit` + Enter — guarded against firing during an already-open modal or on non-active rows. The panel hides and clears in `_review()`'s `finally` block so normal chat use (no review in progress) is unaffected.
+
+This was framed and delivered as a pure rendering layer on top of the Phase 1 `Proposal`/`_review()` data model — no changes to the underlying interaction logic (accept/skip/edit/all/none, override-reason logging) were needed, confirming the Phase 1 plan's premise that Phase 2 would be "a rendering change, not a new data model."
+
+### Verification
+Extended the isolated Textual pilot-test approach from Phase 1: verified the panel is hidden before any review, shows with correct pending-status rows once `_review()` starts, updates a row to ✓ on accept, opens `ProposalEditScreen` when the active row is clicked (`pilot.click("#ri-1")`), marks a row ⏭ on escape-cancel, and hides/clears once the batch completes — then ran a second independent batch through the same panel to confirm state resets cleanly between reviews. Also did a plain live boot of ChatUI in tmux to confirm the new split layout doesn't regress ordinary full-width chat (panel correctly stays hidden, no layout errors). Test-session noise this produced in `Knowledge/conversations/2026-07-03.md` was reverted before committing, same as the Phase 1 session.
