@@ -37,7 +37,7 @@ from langchain_core.documents import Document
 from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
 
 try:
-    from duckduckgo_search import DDGS
+    from ddgs import DDGS
     _DDG_AVAILABLE = True
 except ImportError:
     _DDG_AVAILABLE = False
@@ -590,6 +590,49 @@ def _classify_for_placement(tags: list[str], content: str, llm) -> str:
     return "misc"
 
 
+def _validate_wikilinks(dry_run: bool = False) -> dict[str, list[tuple[str, str]]]:
+    """Scan all vault files for [[wikilinks]] pointing at stale filenames (e.g. the
+    pre-rename kebab-case stems left over from the Session 16 Title Case migration)
+    and rewrite them to match the real current filename. Only touches links that
+    resolve to a real vault file once hyphens/spaces/case are normalised — never
+    invents or removes a link target. Returns {file: [(old_target, new_target), ...]}."""
+    files = _discover_vault_files()
+    stems = [os.path.splitext(os.path.basename(p))[0] for p in files]
+
+    def _norm(s: str) -> str:
+        return re.sub(r'[-\s_]+', ' ', s).strip().lower()
+
+    norm_map: dict[str, str] = {}
+    for stem in stems:
+        norm_map.setdefault(_norm(stem), stem)
+
+    fixes: dict[str, list[tuple[str, str]]] = {}
+    for path in files:
+        with open(path, encoding="utf-8") as fh:
+            content = fh.read()
+
+        file_fixes: list[tuple[str, str]] = []
+
+        def _repl(m: re.Match) -> str:
+            target, _, alias = m.group(1).partition('|')
+            target = target.strip()
+            real = norm_map.get(_norm(target))
+            if real and real != target:
+                file_fixes.append((target, real))
+                return f'[[{real}|{alias}]]' if alias else f'[[{real}]]'
+            return m.group(0)
+
+        new_content = re.sub(r'\[\[([^\]]+)\]\]', _repl, content)
+
+        if file_fixes:
+            fixes[path] = file_fixes
+            if not dry_run:
+                with open(path, "w", encoding="utf-8") as fh:
+                    fh.write(new_content)
+
+    return fixes
+
+
 def _load_manifest() -> dict[str, float]:
     try:
         with open(_MANIFEST_PATH, encoding="utf-8") as f:
@@ -859,7 +902,7 @@ def _rebuild_conversation_index(conversations_dir: str) -> int:
 
 def web_search(query: str) -> str:
     if not _DDG_AVAILABLE:
-        return "duckduckgo-search not installed."
+        return "ddgs not installed."
     try:
         with DDGS() as ddgs:
             results = list(ddgs.text(query, max_results=WEB_SEARCH_RESULTS))
@@ -1738,32 +1781,38 @@ class ChatApp(App[None]):
         # ── 4. Parse Q&A pairs from the session file ──────────────────────────
         with open(target, encoding="utf-8") as fh:
             text = fh.read()
-        all_blocks = re.findall(
+        # Q&A pairs already distilled on a prior run are marked with this comment
+        # right after their answer block, so re-running /distill on a growing
+        # daily session file only processes what's new.
+        _DISTILL_MARKER = "<!-- distilled -->"
+        all_blocks = list(re.finditer(
             r'^## \[\d+:\d+\] (User|Assistant)\n\n(.*?)(?=^## \[|\Z)',
             text, re.MULTILINE | re.DOTALL
-        )
-        qa_pairs: list[tuple[str, str]] = []
+        ))
+        qa_pairs: list[tuple[str, str, int]] = []
         i = 0
         while i < len(all_blocks):
-            role, content = all_blocks[i]
+            role, content = all_blocks[i].group(1), all_blocks[i].group(2)
             content = content.strip()
             if role == "User" and content and not content.startswith("/"):
                 answer_parts = []
                 j = i + 1
-                while j < len(all_blocks) and all_blocks[j][0] == "Assistant":
-                    part = all_blocks[j][1].strip()
+                while j < len(all_blocks) and all_blocks[j].group(1) == "Assistant":
+                    part = all_blocks[j].group(2).strip()
                     # Skip status/emoji-only lines
                     if part and not re.match(r'^[🔍📓🏷🧠⏳👁📚✅⚠➕✏]\s', part):
                         answer_parts.append(part)
                     j += 1
                 if answer_parts:
-                    qa_pairs.append((content, "\n\n".join(answer_parts)))
+                    combined = "\n\n".join(answer_parts)
+                    if _DISTILL_MARKER not in combined:
+                        qa_pairs.append((content, combined, all_blocks[j - 1].end()))
                 i = j
             else:
                 i += 1
 
         if not qa_pairs:
-            self._log("[yellow]No Q&A pairs found in session.[/yellow]")
+            self._log("[yellow]No new (undistilled) Q&A pairs found in session.[/yellow]")
             self._set_busy(False)
             return
         self._log(f"[dim]Found {len(qa_pairs)} Q&A pairs.[/dim]")
@@ -1778,7 +1827,8 @@ class ChatApp(App[None]):
 
         # ── 6. Generate one article per Q&A pair ──────────────────────────────
         created, updated = 0, 0
-        for question, answer in qa_pairs:
+        marked_positions: list[int] = []
+        for question, answer, mark_pos in qa_pairs:
             self._set_status(f"Writing article {created + updated + 1}/{len(qa_pairs)}…")
 
             # Derive filename slug from question
@@ -1800,13 +1850,33 @@ class ChatApp(App[None]):
             title = re.sub(r'-+', ' ', slug).strip().title()
             frontmatter = f'---\ntitle: "{title}"\ntags: [{", ".join(tags)}]\n---\n\n'
 
-            # Route into the same Dewey-style folder /organize would file this under,
-            # and use the vault's Title Case With Spaces filename convention —
-            # otherwise every /distill article lands unfiled in the vault root.
-            folder = await asyncio.to_thread(_classify_for_placement, tags, clean_answer, coding_llm)
-            target_dir = os.path.join(VAULT_PATH, folder)
-            os.makedirs(target_dir, exist_ok=True)
-            fpath = os.path.join(target_dir, title + ".md")
+            # Check for a near-duplicate existing file before creating a new one —
+            # save_to_vault uses 0.85 for /savefile's dedup, but empirically a genuine
+            # topical duplicate here (e.g. "Q: what is LoRA..." against the existing
+            # LoRA Adaptations.md prose) only scores ~0.69 — 0.85 never fires in practice
+            # for this query shape. 0.7 is set from that measurement, not copied blindly.
+            fpath = None
+            if self.db is not None:
+                try:
+                    dedup_hits = await asyncio.to_thread(
+                        lambda q=question: self.db.similarity_search_with_relevance_scores(f"Q: {q}", k=1)
+                    )
+                    if dedup_hits and dedup_hits[0][1] >= 0.7:
+                        existing = dedup_hits[0][0].metadata.get("source", "")
+                        if existing and existing.endswith(".md") and os.path.exists(existing):
+                            fpath = existing
+                except Exception:
+                    pass
+
+            if fpath is None:
+                # Route into the same Dewey-style folder /organize would file this under,
+                # and use the vault's Title Case With Spaces filename convention —
+                # otherwise every /distill article lands unfiled in the vault root.
+                folder = await asyncio.to_thread(_classify_for_placement, tags, clean_answer, coding_llm)
+                target_dir = os.path.join(VAULT_PATH, folder)
+                os.makedirs(target_dir, exist_ok=True)
+                fpath = os.path.join(target_dir, title + ".md")
+
             already_exists = os.path.exists(fpath)
 
             vault_ref_ctx = ""
@@ -1874,6 +1944,16 @@ class ChatApp(App[None]):
 
             if self.db:
                 await asyncio.to_thread(lambda p=fpath: _reingest_file(p, self.db))
+
+            marked_positions.append(mark_pos)
+
+        # Mark distilled Q&A pairs in the session file so a re-run only picks up
+        # what's new. Insert from the highest offset down so earlier offsets stay valid.
+        if marked_positions:
+            for pos in sorted(set(marked_positions), reverse=True):
+                text = text[:pos] + f"\n{_DISTILL_MARKER}\n" + text[pos:]
+            with open(target, "w", encoding="utf-8") as fh:
+                fh.write(text)
 
         self._log(f"✅ Distilled {os.path.basename(target)}: {created} created, {updated} updated.")
         self._set_busy(False)
@@ -2798,6 +2878,24 @@ class ChatApp(App[None]):
                     self.db = new_db
                     n       = new_db._collection.count()
                     self._log(f"[dim]✅ {n} chunks re-indexed.[/dim]")
+
+        # ── Pass 5: Wikilink validation ────────────────────────────────────────
+        self._log("\n[bold]Checking existing wikilinks for stale targets…[/bold]")
+        proposed_fixes = await asyncio.to_thread(_validate_wikilinks, True)
+        if not proposed_fixes:
+            self._log("[dim]No stale wikilinks found.[/dim]")
+        else:
+            total = sum(len(v) for v in proposed_fixes.values())
+            self._log(f"[dim]Found {total} stale wikilink(s) across {len(proposed_fixes)} file(s):[/dim]")
+            for path, file_fixes in proposed_fixes.items():
+                rel = os.path.relpath(path, VAULT_PATH)
+                self._log(f"\n[bold #5f87af]{rel}[/bold #5f87af]")
+                for old, new in file_fixes:
+                    self._log(f"  [[{old}]]  →  [[{new}]]")
+            raw = await self._org_prompt("\n  Enter=fix all  ·  skip=leave as-is:")
+            if raw.lower() != "skip":
+                await asyncio.to_thread(_validate_wikilinks, False)
+                self._log(f"  [green]✓ Fixed {total} wikilink(s).[/green]")
 
         self._log("\n[bold green]✓ Vault organisation complete.[/bold green]")
 

@@ -65,7 +65,7 @@ QLoRA combines LoRA with 4-bit quantisation (NF4 format) of the base model:
 
 ## See Also
 
-- [[fine-tuning-methods]]
-- [[_ref-fine-tuning]]
-- [[rlhf-alignment]]
-- [[machine-learning]]
+- [[Fine-Tuning Methods]]
+- [[_Ref Fine Tuning]]
+- [[RLHF Alignment]]
+- [[Machine Learning]]

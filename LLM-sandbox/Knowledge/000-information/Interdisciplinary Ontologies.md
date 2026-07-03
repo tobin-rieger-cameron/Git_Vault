@@ -35,7 +35,7 @@ Organizing all human knowledge into categories is a daunting task due to its com
 
 ## See also
 
-* [[taxonomy]]: A widely used method for categorizing objects or concepts based on their relationships and characteristics.
+* [[Taxonomy]]: A widely used method for categorizing objects or concepts based on their relationships and characteristics.
 * [[[[Taxonomy|Knowledge Taxonomy]]]]: An exploration of how to organize human knowledge into categories.
 * [[Interdisciplinary Research]]: A study that combines multiple disciplines to tackle complex problems.
 * [[Hybrid Categories]]: A concept in taxonomy that reflects the combining disciplines that define a field.

@@ -60,8 +60,8 @@ Given the probability distribution over next tokens:
 
 ## See Also
 
-- [[machine-learning]]
+- [[Machine Learning]]
 - [[lo-ra-adaptations]]
-- [[fine-tuning-methods]]
-- [[rlhf-alignment]]
-- [[retrieval-augmentation-models]]
+- [[Fine-Tuning Methods]]
+- [[RLHF Alignment]]
+- [[Retrieval Augmentation Models]]

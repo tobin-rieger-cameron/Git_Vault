@@ -55,8 +55,8 @@ During **training**, both forward and backward passes run, activations are store
 
 ## See Also
 
-- [[language-models]]
-- [[fine-tuning-methods]]
+- [[Language Models]]
+- [[Fine-Tuning Methods]]
 - [[lo-ra-adaptations]]
-- [[rlhf-alignment]]
-- [[knowledge-distillation-methods]]
+- [[RLHF Alignment]]
+- [[Knowledge Distillation Methods]]

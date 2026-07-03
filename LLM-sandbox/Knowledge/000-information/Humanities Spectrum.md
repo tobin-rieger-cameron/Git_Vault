@@ -47,6 +47,6 @@ Ultimately, there is no one "right" way to organize human knowledge into categor
 
 ## See Also
 
-* [[taxonomy]]
+* [[Taxonomy]]
 * [[Ontology]]
 * [[Fuzzy Logic]]

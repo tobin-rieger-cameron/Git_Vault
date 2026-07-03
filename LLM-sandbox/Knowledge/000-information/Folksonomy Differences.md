@@ -28,5 +28,5 @@ Another key difference between folksonomy and taxonomy is the role of expertise.
 
 ## See also
 
-*   [[taxonomy]]: A widely used method for categorizing objects or concepts based on their relationships and characteristics.
+*   [[Taxonomy]]: A widely used method for categorizing objects or concepts based on their relationships and characteristics.
 *   [[Decentralization]]: The dispersal of power and control across a network or system, allowing for greater flexibility and autonomy.

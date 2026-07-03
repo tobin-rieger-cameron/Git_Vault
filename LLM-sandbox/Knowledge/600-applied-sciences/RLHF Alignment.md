@@ -47,7 +47,7 @@ The KL penalty prevents **reward hacking** — generating text that gets high RM
 
 ## See Also
 
-- [[fine-tuning-methods]]
+- [[Fine-Tuning Methods]]
 - [[lo-ra-adaptations]]
-- [[machine-learning]]
-- [[knowledge-distillation-methods]]
+- [[Machine Learning]]
+- [[Knowledge Distillation Methods]]

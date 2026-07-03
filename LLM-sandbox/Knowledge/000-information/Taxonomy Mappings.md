@@ -42,6 +42,6 @@ While there is no clear consensus on how to organize all human knowledge into ca
 
 ## See Also
 
-* [[taxonomy]]
+* [[Taxonomy]]
 * [[Knowledge Organization Systems]]
 * [[Machine Learning Applications in Knowledge Organization]]

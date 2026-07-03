@@ -49,6 +49,6 @@ Run more self-supervised next-token prediction on a domain corpus (medical paper
 ## See Also
 
 - [[lo-ra-adaptations]]
-- [[rlhf-alignment]]
-- [[knowledge-distillation-methods]]
-- [[machine-learning]]
+- [[RLHF Alignment]]
+- [[Knowledge Distillation Methods]]
+- [[Machine Learning]]

@@ -9,7 +9,7 @@ ChatUI is a local-first vault assistant that uses Retrieval-Augmented Generation
 ```bash
 # Install dependencies
 pip install langchain langchain-ollama langchain-community chromadb \
-            duckduckgo-search textual pyyaml watchdog
+            ddgs textual pyyaml watchdog
 
 # Models are pulled automatically on first launch from ChatUI/config/models.md.
 # To pull manually:

@@ -46,8 +46,8 @@ The social sciences often overlap and intersect with one another, reflecting the
 
 ### Organizing Human Knowledge into Categories
 
-While there is no single, universally accepted method for organizing all human knowledge into categories, various approaches have been proposed. One such approach is [[taxonomy]], which involves categorizing objects or concepts based on their relationships and characteristics.
+While there is no single, universally accepted method for organizing all human knowledge into categories, various approaches have been proposed. One such approach is [[Taxonomy]], which involves categorizing objects or concepts based on their relationships and characteristics.
 
 ## See also
-* [[taxonomy]]: A widely used method for categorizing objects or concepts based on their relationships and characteristics.
+* [[Taxonomy]]: A widely used method for categorizing objects or concepts based on their relationships and characteristics.
 * [[[[Machine Learning]]]]: An interdisciplinary field that combines computer science, statistics, and domain-specific knowledge to enable machines to learn from data.

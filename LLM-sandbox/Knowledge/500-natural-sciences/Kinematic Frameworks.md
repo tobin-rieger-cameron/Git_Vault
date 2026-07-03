@@ -28,7 +28,7 @@ While kinematics provides a fundamental description of an object's motion using 
 
 ## See Also
 
-*   [[taxonomy]]
-*   [[kinematics]]
+*   [[Taxonomy]]
+*   [[Kinematics]]
 *   [[Physics]]
 *   [[Natural Sciences]]

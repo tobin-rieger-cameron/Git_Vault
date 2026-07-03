@@ -50,8 +50,8 @@ Self-consistency is a crucial aspect of prompt engineering — it ensures that t
 
 ## See Also
 
-- [[language-models]]
-- [[rlhf-alignment]]
-- [[fine-tuning-methods]]
+- [[Language Models]]
+- [[RLHF Alignment]]
+- [[Fine-Tuning Methods]]
 
 

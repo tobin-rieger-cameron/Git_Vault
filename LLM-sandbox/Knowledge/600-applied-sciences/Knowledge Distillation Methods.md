@@ -45,7 +45,7 @@ At temperature T, logits z are divided before softmax: `σ(z_i / T)`. Higher T p
 
 ## See Also
 
-- [[machine-learning]]
-- [[fine-tuning-methods]]
+- [[Machine Learning]]
+- [[Fine-Tuning Methods]]
 - [[lo-ra-adaptations]]
-- [[language-models]]
+- [[Language Models]]

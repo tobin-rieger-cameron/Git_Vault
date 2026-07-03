@@ -29,6 +29,6 @@ A classification system can be seen as a broader term that encompasses categoriz
 
 ## **See Also**
 
-* [[taxonomy]]
+* [[Taxonomy]]
 * [[Ontology]]
 * [[Classification System]]

@@ -28,6 +28,6 @@ The natural sciences is a major top-level branch of human knowledge that encompa
 While not exhaustive, these sub-disciplines represent some of the primary areas within the natural sciences. Other fields, such as mathematics and machine learning, are often considered part of the natural sciences due to their application in understanding and describing natural phenomena.
 
 ## See also
-[[taxonomy]], [[Knowledge Organization]], [[Science]]
+[[Taxonomy]], [[Knowledge Organization]], [[Science]]
  
 (This article has been written based on general information about the topic. Please let us know if you need a more detailed or accurate version.)

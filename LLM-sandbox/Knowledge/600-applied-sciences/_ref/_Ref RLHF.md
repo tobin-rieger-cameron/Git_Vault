@@ -52,7 +52,7 @@ Pretraining on web text teaches the model to predict internet text — including
 
 ## See Also
 
-- [[fine-tuning-methods]]
-- [[_ref-fine-tuning]]
+- [[Fine-Tuning Methods]]
+- [[_Ref Fine Tuning]]
 - [[lo-ra-adaptations]]
-- [[machine-learning]]
+- [[Machine Learning]]

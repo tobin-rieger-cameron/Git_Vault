@@ -740,3 +740,21 @@ Fixed a stale `../.venv` path in both `CLAUDE.md` and `README.md` (actual venv i
 Also caught and corrected a real mistake mid-session: deleted `Knowledge/training_data.jsonl` believing it was a fresh `/export` test artifact, but it was already tracked in git from an earlier session — restored via `git checkout HEAD --`.
 
 Full findings and recommendations logged in `config/ideas.md` under "Testing notes — 2026-07-02/03".
+
+### User
+check chatui tmux pane for /distill completion, then verify article placement/naming from the fix
+
+### Assistant
+Recognized this as a stale `ScheduleWakeup` firing after the fact — the tmux session it referred to had already been closed as part of wrapping up the prior turn, and all of that verification work was already done and reported. No action taken.
+
+### User
+go ahead and apply your suggested recommendations, after that I want to take a look at the existing vault and assess data quality
+
+### Assistant
+Implemented all four recommendations from the testing notes: (1) added `/distill` dedup using the same pattern as `save_to_vault`, but retuned the threshold from 0.85 to 0.7 after directly measuring that a genuine duplicate ("Q: what is LoRA..." vs. the existing `LoRA Adaptations.md`) only scored 0.689 — 0.85 would never fire for this query shape; (2) added an `<!-- distilled -->` marker inserted after each processed Q&A block so `/distill` is idempotent on repeat runs, verified live ("No new (undistilled) Q&A pairs found" on a second run); (3) migrated `web_search()` from the deprecated `duckduckgo_search` to `ddgs`; (4) added `_validate_wikilinks()` (hyphen/space/case-normalising, never invents targets) wired into `/organize` as Pass 5, then ran it directly and fixed 58 stale wikilinks across 24 files — far more than the ~6-file estimate from the prior finding.
+
+Validated the dedup+idempotency fixes with a live `/distill` re-run on the already-distilled session (still on the old 0.85 threshold at that point): 9 of 12 pairs still created duplicates (confirming the threshold problem empirically before retuning), 3 correctly deduped. Cleaned up the 9 duplicates and trimmed two redundant "Additional notes" appendices from `Knowledge Graph vs Taxonomy.md` back to the original clean version. Confirmed idempotency separately after the fix landed.
+
+Along the way, user flagged a related idea: fold `Knowledge/conversations/` into the KB proper (tagged as unrefined/lower-tier content) rather than keeping it fully excluded — logged to `ideas.md`, tied to the existing "two-collection design" recommendation from the 2026-06-25 testing notes.
+
+Noted two things not yet re-verified: the dedup threshold retune (0.7) hasn't been re-tested live since the code changed, and the `ddgs` migration hasn't been retested against the original hang bug.

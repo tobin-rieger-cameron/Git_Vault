@@ -7,7 +7,7 @@ tags: [taxonomy]
 ---
 LCC divides all knowledge into twenty-one basic classes, each given a single letter of the alphabet as an identifier. Most of these classes are divided further into two and three level sub-classes. With these sub-classes, numerical ranges are assigned to topics, going from more general to more specific. 
 
-Unlike in the [[dewey-decimal-system|Dewey Decimal Classification]], where the numbers assigned to a topic iterate throughout the system, the LCC numerical ranges are strictly hierarchical, only corresponding to their level on the outline. LCC is enumerative, meaning that it lists all the classes in officially published schedules, which are updated as needed by the Library of Congress.
+Unlike in the [[Dewey Decimal System|Dewey Decimal Classification]], where the numbers assigned to a topic iterate throughout the system, the LCC numerical ranges are strictly hierarchical, only corresponding to their level on the outline. LCC is enumerative, meaning that it lists all the classes in officially published schedules, which are updated as needed by the Library of Congress.
 
 
 

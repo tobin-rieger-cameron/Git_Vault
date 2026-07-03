@@ -122,6 +122,6 @@ Qdrant provides features such as clustering and dimensionality reduction, making
 
 ## See Also
 
-* [[taxonomy]]: Understanding the taxonomy of vector databases
+* [[Taxonomy]]: Understanding the taxonomy of vector databases
 * [[Machine Learning]]: Applying machine learning to vector database applications
-* [[kinematics]]: Understanding kinematic relationships in vector databases
+* [[Kinematics]]: Understanding kinematic relationships in vector databases

@@ -44,9 +44,9 @@ Some popular embedding models include:
 
 * [[[[Taxonomy]]]] for categorizing human knowledge
 * [[[[Kinematics]]]] for understanding the dynamics of motion
-* [[language-models]] for learning to represent language
+* [[Language Models]] for learning to represent language
 * [[Mathematics]] for solving problems in various domains
-* [[photosynthesis]] for understanding plant biology
-* [[cupcakes]] for baking and dessert-making
+* [[Photosynthesis]] for understanding plant biology
+* [[Cupcakes]] for baking and dessert-making
 
 Note: The article does not provide information on organizing all human knowledge into categories, as no relevant information was found. However, it suggests general approaches such as taxonomy that have been proposed by experts and scholars in various fields.

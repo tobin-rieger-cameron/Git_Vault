@@ -44,7 +44,7 @@ Dense retrieval is increasingly being used in RAG systems for tasks such as text
 
 ## See Also
 
-- [[retrieval-augmentation-models]]
-- [[embedding-models]]
-- [[vector-databases-for-search]]
-- [[language-models]]
+- [[Retrieval Augmentation Models]]
+- [[Embedding Models]]
+- [[Vector Databases for Search]]
+- [[Language Models]]

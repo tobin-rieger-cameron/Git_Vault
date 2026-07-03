@@ -58,7 +58,7 @@ QLoRA extends LoRA by also quantising the frozen base weights to 4-bit NF4 forma
 
 ## See Also
 
-- [[fine-tuning-methods]]
-- [[rlhf-alignment]]
-- [[machine-learning]]
-- [[knowledge-distillation-methods]]
+- [[Fine-Tuning Methods]]
+- [[RLHF Alignment]]
+- [[Machine Learning]]
+- [[Knowledge Distillation Methods]]

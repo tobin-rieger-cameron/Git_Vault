@@ -78,8 +78,8 @@ Cosine similarity in RAG is model-dependent. For nomic-embed-text, rough thresho
 
 ## See Also
 
-- [[retrieval-augmentation-models]]
-- [[sparse-vs-dense-retrieval]]
-- [[embedding-models]]
-- [[language-models]]
-- [[vector-databases-for-search]]
+- [[Retrieval Augmentation Models]]
+- [[Sparse vs Dense Retrieval]]
+- [[Embedding Models]]
+- [[Language Models]]
+- [[Vector Databases for Search]]
