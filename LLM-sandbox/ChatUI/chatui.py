@@ -1791,17 +1791,23 @@ class ChatApp(App[None]):
             if len(slug) < 3:
                 continue
 
-            fpath = os.path.join(VAULT_PATH, slug + ".md")
-            already_exists = os.path.exists(fpath)
-
             # Trim source to clean prose (drop raw Q&A artifact lines)
             clean_answer = re.sub(r'^#+\s+Q:.*$', '', answer[:2000], flags=re.MULTILINE).strip()
 
             # Don't ask the 3b model to generate frontmatter — it produces malformed output.
             # Build it programmatically from the slug + keyword-based tag extraction.
-            tags = _distill_tags(question, slug)
-            title = question.strip()[:80].replace('\n', ' ').replace('"', "'")
+            tags  = _distill_tags(question, slug)
+            title = slug.replace('-', ' ').title()
             frontmatter = f'---\ntitle: "{title}"\ntags: [{", ".join(tags)}]\n---\n\n'
+
+            # Route into the same Dewey-style folder /organize would file this under,
+            # and use the vault's Title Case With Spaces filename convention —
+            # otherwise every /distill article lands unfiled in the vault root.
+            folder = await asyncio.to_thread(_classify_for_placement, tags, clean_answer, coding_llm)
+            target_dir = os.path.join(VAULT_PATH, folder)
+            os.makedirs(target_dir, exist_ok=True)
+            fpath = os.path.join(target_dir, title + ".md")
+            already_exists = os.path.exists(fpath)
 
             vault_ref_ctx = ""
             if self.db is not None:
@@ -1820,7 +1826,9 @@ class ChatApp(App[None]):
                 f"TOPIC: {question}\n\n"
                 f"SOURCE (distil into prose, do not quote verbatim):\n{clean_answer}\n\n"
                 f"{f'REFERENCE MATERIAL FROM VAULT (prioritise this for accuracy):{chr(10)}{vault_ref_ctx}{chr(10)}{chr(10)}' if vault_ref_ctx else ''}"
-                f"VAULT NOTES (ONLY use [[note-name]] wikilinks from this exact list — no others): {stems_str}"
+                f"VAULT NOTES (ONLY use [[note-name]] wikilinks from this exact list — no others): {stems_str}\n"
+                f"For See Also, prefer notes on the same specific subtopic (e.g. the exact classification "
+                f"system or mechanism discussed) over notes that only share a broad field."
                 f"{f'{chr(10)}TAXONOMY CONTEXT:{chr(10)}{taxonomy_ctx[:400]}' if taxonomy_ctx else ''}\n\n"
                 f"FORMAT: # H1 title. Then 1-2 sentence summary. "
                 f"Then ## sections for key concepts. "
@@ -1852,15 +1860,16 @@ class ChatApp(App[None]):
 
             article = frontmatter + body
 
+            rel_fpath = os.path.relpath(fpath, VAULT_PATH)
             if already_exists:
                 with open(fpath, "a", encoding="utf-8") as fh:
                     fh.write(f"\n\n---\n\n## Additional notes\n\n{article}\n")
-                self._log(f"[dim]✏️  Updated: {slug}.md[/dim]")
+                self._log(f"[dim]✏️  Updated: {rel_fpath}[/dim]")
                 updated += 1
             else:
                 with open(fpath, "w", encoding="utf-8") as fh:
                     fh.write(article + "\n")
-                self._log(f"[dim]📝 Created: {slug}.md[/dim]")
+                self._log(f"[dim]📝 Created: {rel_fpath}[/dim]")
                 created += 1
 
             if self.db:
@@ -2866,9 +2875,11 @@ class ChatApp(App[None]):
             if results:
                 active_tags = _get_chunk_tags(results[0][0])
                 if active_tags:
+                    # Tag filter already narrows to one topic, so widen k here —
+                    # otherwise a 12+ file topic cluster still only surfaces 5 of them.
                     filtered = await asyncio.to_thread(
                         lambda: self.db.similarity_search_with_relevance_scores(
-                            question, k=TOP_K, filter=_make_tag_filter(active_tags)
+                            question, k=TOP_K * 2, filter=_make_tag_filter(active_tags)
                         )
                     )
                     filtered_top = max((s for _, s in filtered), default=0.0)

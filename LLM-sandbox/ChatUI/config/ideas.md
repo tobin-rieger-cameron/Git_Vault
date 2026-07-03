@@ -4,6 +4,12 @@ summary: Backlog of improvement ideas for chatui.py — not yet directives, just
 
 # Ideas
 
+## other
+
+- article writing should appear as its being written
+- /distill command is confusing - consider a simplification of /commands
+
+
 ## UX
 
 - **`/status` command** — show web state, open file, history length, vault status, pending notes, patch pending. ✅ done 2026-06-24
@@ -41,7 +47,8 @@ summary: Backlog of improvement ideas for chatui.py — not yet directives, just
 
 ## Vault hygiene
 
-- `taxonomy.md` — missing YAML frontmatter; `/organize` didn't tag it.
+- `taxonomy.md` — missing YAML frontmatter; `/organize` didn't tag it. *(Stale as of 2026-07-02 — current `Taxonomy.md` has frontmatter; verify and remove this line if `/organize` fixed it.)*
+- **Idea: consolidate all taxonomy-related notes into one `Taxonomy.md`** — considered 2026-07-02, not adopted for now. Current state: 13 files in `000-information/`, ~4,500 words total. Tradeoff discussed: merging hurts retrieval precision (chunk_size=800/top_k=5 means a query would pull cross-topic slices of one giant file instead of a tightly-scoped single-concept chunk) and collapses the `[[wikilink]]` backlink graph between sub-concepts. Lighter alternative floated instead: keep files separate, expand `Taxonomy.md` into a hub note with a one-line summary + link per sub-topic. Revisit if retrieval quality across the split files ever stabilizes and the real pain point turns out to be navigation rather than retrieval.
 
 ---
 
