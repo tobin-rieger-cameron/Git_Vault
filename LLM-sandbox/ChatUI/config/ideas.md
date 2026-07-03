@@ -18,15 +18,25 @@ summary: Backlog of improvement ideas for chatui.py — not yet directives, just
 ![[Pasted image 20260703171752.png]]
 	✅ done 2026-07-03: after running /organize, I have to just sit and wait with no visual feedback of what the program is doing while it's *generating* suggestions — root cause was `_run_organize` never calling `_set_busy(True, ...)`, so the busy-bar (already used everywhere else in the app) stayed invisible for the whole run. Fixed by turning the busy-bar on for the duration of `/organize`, adding a `_await_with_progress()` helper that ticks an elapsed-time counter onto it during any single long LLM call, and showing which file/session is currently being processed in Pass 2 ("Checking X.md for wikilinks… (i/N)"), Pass 3, and Pass 4. Same helper wired into `/distill`'s article-generation call for consistency.
 
-	running /organize should put the user right into the left/right
+	✅ done 2026-07-03: running /organize should put the user right into the left/right
 	screen, the user should be able to select files and folders,
 	presenting a checkbox next to selected items. then tags and/or
 	wikilinks can be generated for the selected items. unorganized
 	items should be highlighted, but user should be able to re-
-	organize all files in the working directory at their leisure
-	(partially done: the review panel now shows the whole batch with
-	live status, but there's still no upfront checkbox-style selection
-	before /organize runs — it always processes every unorganized file)
+	organize all files in the working directory at their leisure —
+	`/organize` now opens a checkbox picker in the review panel before
+	Pass 1 runs (`ChatApp._pick_files_to_organize()` in `chatui.py`),
+	pre-checking files missing frontmatter or not yet placed (tagged
+	`[unorganized]`) while leaving already-organized files selectable
+	too. `all`/`none`/`unorganized` bulk commands plus per-row click
+	toggling, Enter to start. Only Pass 1/2/4 (tag/wikilink/placement
+	generation) are scoped to the selection — Pass 2 still treats the
+	full vault as valid wikilink-target context so a selected file can
+	still link to an unselected one, and Pass 3/5 (conversation
+	condensing, wikilink validation) are vault-wide housekeeping
+	unrelated to the selection and run unconditionally. No folder-level
+	bulk selection yet (flat file list, naturally grouped by the
+	existing path sort) — a reasonable v2 if it's ever needed.
 
 - cleaner text writing to the console, current version clunkily cuts off the active text
 

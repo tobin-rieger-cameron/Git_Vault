@@ -1569,6 +1569,8 @@ class ChatApp(App[None]):
         self._open_file:      OpenFile | None = None
         self._review_proposals:     list[Proposal] | None = None
         self._review_active_index:  int | None = None
+        self._file_picker_checked:  dict[str, bool] | None = None
+        self._file_picker_entries:  list[tuple[str, str, bool]] | None = None  # (path, rel_path, unorganized)
 
     # ── Layout ────────────────────────────────────────────────────────────────
 
@@ -2908,10 +2910,110 @@ class ChatApp(App[None]):
         self.query_one("#review-list", ListView).clear()
         self.query_one("#review-detail", Static).update("")
 
+    # ── File picker (left dock, before proposals exist) ─────────────────────────
+
+    def _file_picker_row_text(self, rel_path: str, checked: bool, unorganized: bool) -> str:
+        box = "☑" if checked else "☐"
+        tag = "  [unorganized]" if unorganized else ""
+        return f"{box}  {rel_path}{tag}"
+
+    def _file_picker_render_row(self, i: int) -> None:
+        path, rel_path, unorganized = self._file_picker_entries[i]
+        checked = self._file_picker_checked[path]
+        try:
+            self.query_one(f"#fp-label-{i}", Label).update(
+                self._file_picker_row_text(rel_path, checked, unorganized)
+            )
+        except Exception:
+            pass
+
+    async def _pick_files_to_organize(self, md_files: list[str]) -> set[str]:
+        """Checkbox picker for which vault files /organize should generate
+        tags/wikilinks/placement for. Reuses the review panel dock. Files
+        missing frontmatter or not yet placed are flagged "unorganized" and
+        pre-checked; already-organized files start unchecked but stay
+        selectable, so the user can re-run passes on them at their leisure.
+        """
+        entries: list[tuple[str, str, bool]] = []
+        for path in md_files:
+            try:
+                with open(path, encoding="utf-8") as fh:
+                    content = fh.read()
+            except OSError:
+                content = ""
+            unorganized = not content.lstrip().startswith("---") or _needs_placement(path)
+            entries.append((path, os.path.relpath(path, VAULT_PATH), unorganized))
+
+        self._file_picker_entries = entries
+        self._file_picker_checked = {path: unorganized for path, _, unorganized in entries}
+
+        panel  = self.query_one("#review-panel")
+        header = self.query_one("#review-panel-header", Label)
+        lv     = self.query_one("#review-list", ListView)
+        header.update("[bold]Select files to organize[/bold]")
+        lv.clear()
+        for i, (path, rel_path, unorganized) in enumerate(entries):
+            row = Label(
+                self._file_picker_row_text(rel_path, self._file_picker_checked[path], unorganized),
+                id=f"fp-label-{i}", markup=False,
+            )
+            lv.append(ListItem(row, id=f"fp-{i}"))
+        panel.display = True
+
+        inp = self.query_one(Input)
+        prior_placeholder = inp.placeholder
+        created_queue = self._organize_queue is None
+        if created_queue:
+            self._organize_queue = asyncio.Queue()
+
+        selected_paths: set[str] = set()
+        try:
+            while True:
+                n_checked = sum(self._file_picker_checked.values())
+                inp.placeholder = f"{n_checked}/{len(entries)} selected — Enter=start · all · none · unorganized"
+                raw = await self._org_prompt(
+                    "  Click a row to toggle it, or type: all · none · unorganized · Enter=start:"
+                )
+                cmd = raw.strip().lower()
+                if cmd == "":
+                    break
+                if cmd == "all":
+                    for path in self._file_picker_checked:
+                        self._file_picker_checked[path] = True
+                elif cmd == "none":
+                    for path in self._file_picker_checked:
+                        self._file_picker_checked[path] = False
+                elif cmd == "unorganized":
+                    for path, _, unorganized in entries:
+                        self._file_picker_checked[path] = unorganized
+                else:
+                    continue
+                for i in range(len(entries)):
+                    self._file_picker_render_row(i)
+            selected_paths = {path for path, checked in self._file_picker_checked.items() if checked}
+        finally:
+            if created_queue:
+                self._organize_queue = None
+            inp.placeholder = prior_placeholder
+            self._file_picker_checked = None
+            self._file_picker_entries = None
+            self._review_panel_hide()
+
+        return {os.path.splitext(os.path.basename(p))[0] for p in selected_paths}
+
     def on_list_view_selected(self, event: ListView.Selected) -> None:
+        idx = event.list_view.index
+        if idx is None:
+            return
+        if self._file_picker_checked is not None and self._file_picker_entries is not None:
+            if idx >= len(self._file_picker_entries):
+                return
+            path = self._file_picker_entries[idx][0]
+            self._file_picker_checked[path] = not self._file_picker_checked[path]
+            self._file_picker_render_row(idx)
+            return
         if self._review_proposals is None or self._review_active_index is None:
             return
-        idx = event.list_view.index
         if idx != self._review_active_index or self._organize_queue is None:
             return
         if isinstance(self.screen, (ProposalEditScreen, FileBrowserScreen)):
@@ -3022,6 +3124,10 @@ class ChatApp(App[None]):
             self._log("[red]No .md files found in vault.[/red]")
             return
 
+        selected_stems = await self._pick_files_to_organize(md_files)
+
+        # `notes` stays built from the FULL vault regardless of selection — Pass 2
+        # needs every file as a potential wikilink target, not just selected ones.
         notes: dict[str, dict] = {}
         for path in md_files:
             stem = os.path.splitext(os.path.basename(path))[0]
@@ -3030,37 +3136,39 @@ class ChatApp(App[None]):
             h1 = re.search(r'^#\s+(.+)$', content, re.MULTILINE)
             notes[stem] = {"path": path, "title": h1.group(1).strip() if h1 else stem, "content": content}
 
-        self._log(f"[bold]Organising {len(notes)} notes…[/bold]\n")
+        self._log(f"[bold]Organising {len(selected_stems)} of {len(notes)} notes…[/bold]\n")
 
         # ── Pass 1: YAML frontmatter tags ─────────────────────────────────────
 
-        note_list_str = "\n".join(
-            f"- {s} ({d['title']}): {d['content'][:300].strip()}" for s, d in notes.items()
-        )
-        tag_feedback = _load_organize_feedback("tags")
-        tag_prompt = (
-            (f"{tag_feedback}\n\n" if tag_feedback else "") +
-            "You are organising a personal knowledge vault.\n"
-            "Suggest 1-3 lowercase tags for each note. Use the same tags across related notes.\n"
-            "Reply in this exact format, one note per line:\nstem: tag1, tag2\n\nNotes:\n"
-            f"{note_list_str}\n\nTags:"
-        )
-        self._log("[dim]Generating tag suggestions…[/dim]")
-        raw_tags = await self._await_with_progress(
-            "Generating tag suggestions…", asyncio.to_thread(lambda: coding_llm.invoke(tag_prompt).content.strip())
-        )
-
         tag_map: dict[str, list[str]] = {}
-        for line in raw_tags.splitlines():
-            if ":" not in line:
-                continue
-            stem_part, tags_part = line.split(":", 1)
-            key  = stem_part.strip().lstrip("- ").strip()
-            tags = [t.strip() for t in tags_part.split(",") if t.strip()]
-            for note_stem in notes:
-                if note_stem.lower() == key.lower() or key.lower() in note_stem.lower():
-                    tag_map[note_stem] = tags
-                    break
+        if not selected_stems:
+            self._log("[dim]No files selected — skipping tag/wikilink/placement passes.[/dim]")
+        else:
+            note_list_str = "\n".join(
+                f"- {s} ({notes[s]['title']}): {notes[s]['content'][:300].strip()}" for s in selected_stems
+            )
+            tag_feedback = _load_organize_feedback("tags")
+            tag_prompt = (
+                (f"{tag_feedback}\n\n" if tag_feedback else "") +
+                "You are organising a personal knowledge vault.\n"
+                "Suggest 1-3 lowercase tags for each note. Use the same tags across related notes.\n"
+                "Reply in this exact format, one note per line:\nstem: tag1, tag2\n\nNotes:\n"
+                f"{note_list_str}\n\nTags:"
+            )
+            self._log("[dim]Generating tag suggestions…[/dim]")
+            raw_tags = await self._await_with_progress(
+                "Generating tag suggestions…", asyncio.to_thread(lambda: coding_llm.invoke(tag_prompt).content.strip())
+            )
+            for line in raw_tags.splitlines():
+                if ":" not in line:
+                    continue
+                stem_part, tags_part = line.split(":", 1)
+                key  = stem_part.strip().lstrip("- ").strip()
+                tags = [t.strip() for t in tags_part.split(",") if t.strip()]
+                for note_stem in notes:
+                    if note_stem.lower() == key.lower() or key.lower() in note_stem.lower():
+                        tag_map[note_stem] = tags
+                        break
 
         def _make_tag_apply(stem: str, path: str):
             def _apply(final_tags_str: str) -> None:
@@ -3074,6 +3182,8 @@ class ChatApp(App[None]):
 
         tag_proposals: list[Proposal] = []
         for stem, data in notes.items():
+            if stem not in selected_stems:
+                continue
             if data["content"].lstrip().startswith("---"):
                 self._log(f"[dim]⏭  {stem}.md — already has frontmatter[/dim]")
                 continue
@@ -3127,9 +3237,11 @@ class ChatApp(App[None]):
 
         link_feedback  = _load_organize_feedback("wikilink")
         link_proposals: list[Proposal] = []
-        total_notes = len(notes)
-        for i, (stem, data) in enumerate(notes.items(), 1):
+        selected_notes = [(s, notes[s]) for s in notes if s in selected_stems]
+        for i, (stem, data) in enumerate(selected_notes, 1):
             content     = data["content"]
+            # Full vault, not just selected_stems — any vault file is a valid
+            # wikilink target even if it wasn't picked for this /organize run.
             other_notes = {s: d["title"] for s, d in notes.items() if s != stem}
             if not other_notes:
                 continue
@@ -3144,7 +3256,7 @@ class ChatApp(App[None]):
                 f"Note:\n{content}\n\nSuggestions:"
             )
             raw = await self._await_with_progress(
-                f"Checking {stem}.md for wikilinks… ({i}/{total_notes})",
+                f"Checking {stem}.md for wikilinks… ({i}/{len(selected_notes)})",
                 asyncio.to_thread(lambda: coding_llm.invoke(link_prompt).content.strip()),
             )
             if not raw or raw.lower() == "none":
@@ -3213,7 +3325,8 @@ class ChatApp(App[None]):
             (path, data["content"], _extract_frontmatter_tags(data["content"]))
             for path, data in [(p, notes[os.path.splitext(os.path.basename(p))[0]])
                                for p in md_files if _needs_placement(p)
-                               and os.path.splitext(os.path.basename(p))[0] in notes]
+                               and os.path.splitext(os.path.basename(p))[0] in notes
+                               and os.path.splitext(os.path.basename(p))[0] in selected_stems]
         ]
 
         def _is_ref(fname: str) -> bool:

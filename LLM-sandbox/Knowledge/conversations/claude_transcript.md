@@ -917,3 +917,32 @@ Matched the screenshot to the exact complaint already logged in `ideas.md`'s UX 
 Fixed by: (1) wrapping `_cmd_organize` with `_set_busy(True, "Organising vault…")`/`_set_busy(False)`; (2) adding a general `ChatApp._await_with_progress(label, awaitable)` helper that runs a 1-second ticker alongside any single long `await`, updating the busy-bar with an elapsed-time counter (`"{label} ({Ns})"`) so a single long LLM call doesn't look frozen even when there's no per-item structure to report; (3) wiring it into Pass 1's one big batched tag-suggestion call, Pass 2 and Pass 4's per-item loops (with a `"(i/N)"` counter and the current filename), Pass 3's per-session summary call, and `/distill`'s per-article generation call, for consistency across both LLM-heavy commands.
 
 Verified via an isolated Textual pilot test (separate `ChatApp(db=None)` instance, no interference with the user's live session): confirmed the busy-bar shows the label immediately at `(0s)` and advances to `(1s)` after roughly a second, and that the wrapped awaitable's return value passes through unchanged. Re-ran both existing Phase 1/2 pilot test suites to confirm no regressions.
+
+---
+
+## Session 22 — 2026-07-03: Upfront File Picker for /organize
+
+**Commits:** _(this commit)_
+
+### User
+fix tested, that's good. now lets look at the big paragraphs in ideas.md
+
+### Assistant
+Identified five multi-line paragraphs in the current `ideas.md` (as opposed to one-line bullets): the remaining half of the `/organize` UX idea (upfront file picker), the multi-instance discussion, the tmux-driving-gotcha note, and the two vault-hygiene decisions (taxonomy consolidation, folding conversations into the KB). Asked which one to focus on.
+
+### User
+[selected] UX: upfront file picker for /organize
+
+### Assistant
+Entered plan mode given the real architectural decisions involved (checkbox interaction model, how selection interacts with the existing `_review()` passes, avoiding a wikilink-target regression). Key design call, caught during planning rather than after: `notes` (the stem→{path,title,content} dict) serves two roles today — what gets proposals generated, and the pool of valid wikilink *targets* for Pass 2. Naively filtering `md_files` down to the user's selection before building `notes` would have narrowed Pass 2 to only linking selected files to *other selected* files, a real regression from today's full-vault target pool. Resolved by keeping `notes` built from the full vault always, and adding a separate `selected_stems` set that only gates which files get *proposals generated* in Pass 1/2/4 — Pass 2's `other_notes` (link targets) stays sourced from the full `notes` dict regardless of selection.
+
+### Implementation
+Added `ChatApp._pick_files_to_organize(md_files) -> set[str]`, reusing the same `#review-panel`/`#review-list` dock built for Phase 2 (matching the idea's own "put the user right into the left/right screen" language) rather than a new screen. Each row shows `☑`/`☐` + relative path + a `[unorganized]` tag for files missing frontmatter or not yet placed (reusing the existing `_needs_placement()` check, no new heuristics) — those start pre-checked; already-organized files start unchecked but remain clickable, so the user can deliberately re-run passes on them. Interaction reuses the same typed-keyword pattern as `_review()`: `all`/`none`/`unorganized` bulk commands plus click-to-toggle via a new branch in `on_list_view_selected`, confirmed with a bare Enter. Threaded `selected_stems` through `_run_organize`: Pass 1's batched tag-prompt content and per-note proposal loop, Pass 2's outer loop (but not its target pool), and Pass 4's `to_place` filter — Pass 3 (conversation condensing) and Pass 5 (wikilink validation) are untouched, vault-wide housekeeping independent of the selection. An empty selection skips straight to Pass 3 rather than aborting `/organize` entirely.
+
+### Debugging note
+While testing, `all`/`none`/`unorganized` bulk commands appeared to silently no-op in a pilot test — spent real time chasing it as a source-code bug (added debug prints inside `chatui.py`, then an inspectable instance-list when prints seemed suspiciously absent) before realizing the actual bug was in the *test script*: after `pilot.click()`-ing a row, focus stayed on the `ListView`, so the test's subsequent `pilot.press("enter")` calls were re-triggering row selection instead of submitting the `Input` widget's typed value. Fixed by having the test's `submit()` helper explicitly re-focus `Input` before pressing Enter — not a defect in the shipped code, but a reminder that pilot-driven tests need to track focus explicitly once a test starts mixing mouse and keyboard interactions.
+
+### Verification
+New isolated pilot test (`test_file_picker.py`, scratch vault with one organized/placed file, one unorganized-missing-frontmatter file, one organized-but-misplaced file — monkeypatching `chatui.VAULT_PATH`) confirms: correct pre-check/tagging on open, click-toggle, all three bulk commands, confirm returns the right stem set, and confirming with nothing checked returns an empty set. Re-ran the existing Phase 1/2 pilot suites (`test_review.py`, `test_review_panel.py`) to confirm the new `on_list_view_selected` branch didn't regress the proposal-review click-to-edit flow.
+
+While disentangling doc changes for this commit, again found and preserved the user's own real, still-running `/organize` test session in the conversation log (an 18:36 session hitting the exact same "Generating tag suggestions…" busy-bar checkpoint) — same care as the prior session's file-picker cleanup, checking session markers ("Vault loaded" vs "No vault database found") before touching anything.
