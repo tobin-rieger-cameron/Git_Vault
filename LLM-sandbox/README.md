@@ -1,15 +1,24 @@
-# ChatUI — Local RAG Vault Assistant
+# ChatUI — Local RAG Study Assistant
+
+## Status: mid-rebuild
+
+The app is being rebuilt from scratch around a redefined purpose (see below). The old single-file `chatui.py` was deliberately wiped; a new `chatui/` package skeleton exists (module/class/function signatures, no logic yet — everything raises `NotImplementedError`). Nothing in this README is runnable yet. This file will be updated as real behavior lands module by module.
 
 ## Overview
 
-ChatUI is a local-first vault assistant that uses Retrieval-Augmented Generation to answer questions from your personal knowledge vault. It runs entirely on-device via Ollama, stores vectors in ChromaDB, and provides a streaming terminal UI via Textual.
+ChatUI is a local-first tool for building and maintaining a growing library of living, stylized papers on subjects you're studying. It runs entirely on-device via Ollama, stores vectors in ChromaDB, and provides a terminal UI via Textual. It's organized around four verbs:
 
-## Setup
+1. **Ask** — vault-first RAG: retrieve from your notes, fall back to grounded/model knowledge, optionally supplement with a web search.
+2. **Draft a paper** — back-and-forth authoring of a long-form, living document on a subject, not one-shot generation.
+3. **Classify inline** — right after a paper is drafted or substantially revised, suggest where it belongs and what it should link to, in the same session — not a separate batch review queue.
+4. **Review** — generate lightweight recall questions from a paper and track when it was last reviewed.
+
+## Setup (once the rebuild lands)
 
 ```bash
 # Install dependencies
 pip install langchain langchain-ollama langchain-community chromadb \
-            ddgs textual pyyaml watchdog
+            ddgs textual pyyaml
 
 # Models are pulled automatically on first launch from ChatUI/config/models.md.
 # To pull manually:
@@ -17,11 +26,10 @@ ollama pull nomic-embed-text
 ollama pull llama3.1:8b
 ollama pull qwen2.5-coder:7b
 
-# Run (from LLM-sandbox/)
-cd ChatUI
+# Run (from LLM-sandbox/ChatUI)
 source .chat_venv/bin/activate
-python chatui.py --vault ../Knowledge
-# Then type /ingest to build the vector database on first launch
+python -m chatui --vault ../Knowledge
+# Then /ingest to build the vector database on first launch
 ```
 
 ## Stack
@@ -29,36 +37,26 @@ python chatui.py --vault ../Knowledge
 | Layer | Tool |
 |---|---|
 | Chat model | `llama3.1:8b` via Ollama (switch at runtime with `/model`) |
-| Coding model | `qwen2.5-coder:7b` — `/organize`, `/update`, concept naming |
+| Coding model | `qwen2.5-coder:7b` — classification suggestions, review-question generation |
 | Embedding model | `nomic-embed-text` |
 | Vector database | ChromaDB (persistent, local) |
 | LLM framework | LangChain (`langchain-ollama`, `langchain-community`) |
-| Web search | DuckDuckGo Search (no API key required) |
+| Web search | `ddgs` (no API key required) |
 | Terminal UI | Textual + Rich |
 
-## Commands
+## Command surface (planned — see `ChatUI/config/commands.md` once rewritten)
 
-| Command              | Description                                                            |
-| -------------------- | ---------------------------------------------------------------------- |
-| `/help`              | Show all commands                                                      |
-| `/ingest`            | Rebuild the vector database from vault files                           |
-| `/browse`            | Open file browser to load a vault file as context                      |
-| `/organize`          | Tag, link, condense, place, and fix wikilinks across the vault (5-pass LLM worker, guided review) |
-| `/savefile`          | Review and save pending notes to the vault                             |
-| `/distill <session>` | Distil a session file into structured vault articles (guided review before each is written) |
-| `/harvest`           | Promote conversation topics into vault stubs                           |
-| `/edit`              | LLM-guided edit of a vault file                                        |
-| `/daily`             | Summarize today's chat sessions                                        |
-| `/export`            | Export Q&A pairs as fine-tuning data (jsonl/alpaca/csv)                |
-| `/update`            | Detect `CHANGE:`/`FIX:` directives in config/ and propose code changes |
-| `/apply`             | Write the diff proposed by `/update` atomically                        |
-| `/model [name]`      | Show or switch the active chat model at runtime                        |
-| `/web`               | Toggle web search fallback (DuckDuckGo) on/off                         |
-| `/clear`             | Reset conversation history and unload open file                        |
-| `/status`            | Show current session state (model, web, file, history, vault)          |
-| `/stats`             | Show vault chunk count and ChromaDB size on disk                       |
-| `/readme`            | Regenerate this README from current source + config                    |
-| `/version`           | Print the chatui.py version string                                     |
+| Input | Verb |
+|---|---|
+| plain text, no `/` | Ask |
+| `/draft <subject>` | Draft a paper |
+| `/classify` | Classify the paper just drafted/saved |
+| `/review [subject]` | Generate review questions, or list papers due for review |
+| `/ingest` | Rebuild the vector database from vault files |
+| `/web` | Toggle web-search supplement on/off |
+| `/model [name]` | Show or switch the active chat model |
+
+The old app's much larger command list (`/organize`, `/distill`, `/harvest`, `/update`/`/apply`, `/export`, etc.) is not being carried forward as-is — `/organize`'s batch-classification model is replaced by inline classification (verb 3 above), and the `/update`/`/apply` self-modifying-code pipeline has been dropped entirely (didn't serve the app's actual purpose).
 
 ## Retrieval pipeline
 
@@ -66,13 +64,9 @@ Questions are answered from the best available source, tried in order:
 
 1. **Vault notes** — top similarity score ≥ 0.65 against ChromaDB
 2. **Model knowledge + vault context** — score < 0.65; vault chunks included only if on-topic
-3. **Web search** — DuckDuckGo supplement when `/web` is on and no vault match
+3. **Web search** — supplement when `/web` is on and vault retrieval didn't produce chunks (or, for broad-topic questions, when the vault hit doesn't actually cover the topic asked)
 
 Tag-aware retrieval: if the top chunk has frontmatter tags, a second scoped search runs filtered to those tags. If it scores within 10% of the baseline, its results replace the unfiltered ones.
-
-## Self-update pipeline
-
-Write `CHANGE:` or `FIX:` directives anywhere in a `config/*.md` file body, then run `/update` → `/apply`. The pipeline extracts only the relevant function (~30 lines), sends it to `qwen2.5-coder:7b`, self-reviews the result, validates with `ast.parse`, and writes atomically. `apply_update.py` is the headless equivalent.
 
 ## Vault layout
 
@@ -81,4 +75,4 @@ Knowledge/          ← vault articles (Title Case with Spaces filenames)
 └── *.md            ← YAML frontmatter with tags; [[wikilinks]] to related articles
 ```
 
-Config lives in `ChatUI/config/` — see `settings.md` for full architecture documentation.
+Config lives in `ChatUI/config/` — see `settings.md` for architecture documentation and `style_guide.md` for the coding standards the rebuild follows.

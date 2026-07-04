@@ -994,3 +994,48 @@ Pointed out that the ticker itself incrementing (131s and climbing) is direct pr
 
 ### Verification
 Wrote a `FakeStreamingModel` (mimics `ChatOllama.astream()`'s chunk-by-chunk interface without needing a live, slow Ollama call) and a new pilot test confirming: the stream doesn't crash mid-flight, the full accumulated text is returned correctly, `on_line`'s side effects (populating `tag_map`) fire correctly during streaming, and only recognized lines get appended as rows (an invalid stem in the fake stream was correctly skipped). Took real screenshots at two points mid-stream — one showing only raw partial text ("Taxonomy: ta"), a second further in showing the first line's row already appended ("✓ Taxonomy.md: taxonomy, classification") *while* the second line was still visibly typing in the detail pane below it — confirming both the token-level effect and the per-item "found" effect work together, inside the review panel, exactly as asked. Re-ran the full existing pilot suite (`test_review_list.py`, `test_file_tree.py`, `test_splitter.py`) to confirm no regressions.
+
+## Session 25 — 2026-07-04: Scope Reset, Four-Verb Redefinition, and Ground-Up Rebuild
+
+**Commits:** `6187ba7`, `71265c9`, `d6d0b2f`, `1fb5c9b`, `f01c352`, `eedd22d`, _(this commit)_
+
+### User
+Reported four concrete UX bugs from a live `/organize` run — three pre-checked files hidden below the fold in the file-picker tree with no scroll signal; generated tags vanishing between the streaming-discovery phase and the review phase instead of staying visible; unwanted placeholder text left in the Input box; an unspecified runtime error after finishing (details never provided). Then pivoted: *"I'm starting to lose scope as we work on this project, I want to take some time today to hone back in on the problem ChatUI is trying to solve, and come up with an efficient and user friendly way to solve that problem."*
+
+### Assistant
+Acknowledged each bug, then engaged with the scope question directly: named the pattern that the session had gone five commits deep into `/organize`'s internal review UX (guided-review framework, split-pane layout, full theme/layout refactor, streaming discovery) without touching the app's actual stated purpose.
+
+### User
+Gave a redefinition of ChatUI's purpose in five bullets: a tool for stylized long-form papers on any subject; a tool to classify/organize those papers as the library grows for intuitive retrieval; a local LLM that answers questions from the vault, suggests study material, and can reach the web; "not an automated bot... an 'intelligent' tool... personalized, opinionated"; a study tool.
+
+### Assistant
+Synthesized this into a single program definition and asked two clarifying questions (paper format: long-form/living vs. point-in-time; study tool: just the research loop, or active recall too). User answered "long-form, revised over time" and "wants active recall too." Proposed a four-verb structure — **Ask** (RAG, unchanged), **Draft a paper** (back-and-forth authoring), **Classify inline** (suggest placement/tags/links in the same session a paper is drafted, not a batch queue), **Review** (lightweight recall questions + a "last reviewed" signal) — which the user confirmed and asked to be saved to memory permanently (`project_chatui_redefinition`).
+
+### User
+"Let's rebuild this program from scratch completely, commit, then wipe all python code completely. We'll use past commits as a reference for any utility functions to re-incorporate."
+
+### Assistant
+Committed real pending vault/session content as a checkpoint (`d6d0b2f`) separately from the deletion, then deleted `chatui.py`/`apply_update.py` entirely (`1fb5c9b`) — full history stays recoverable via git log, nothing destructive without a paired safety commit first.
+
+### User
+Provided coding-guideline PDFs (PEP8, Effective Python, Clean Code, Clean Code in Python) and asked for notes distilled for the rebuild's own standards, then specifically prioritized function/class naming after noticing poorly-named functions in past projects, then asked what other guide topics would be worth distilling, then chose "do #1 and #2 next [async/concurrency, classes/data-modeling], make notes for any future chapters that could be useful to distill."
+
+### Assistant
+Wrote `ChatUI/config/style_guide.md` in three passes: naming conventions from PEP8/Clean Code Ch.2–3/Effective Python Items 30–39 (`f01c352`); async/concurrency from Clean Code in Python Ch.7 (coroutines, `async`/`await`, magic async methods) and classes/data-modeling from Clean Code Ch.6 (objects vs. data structures, Law of Demeter, DTOs, Active Record), plus a per-source backlog of undistilled chapters (`eedd22d`); error handling from Clean Code Ch.7/Ch.8-opening (raise don't return sentinels, wrap third-party exceptions at the boundary, don't return/pass `None`) added later this session alongside the rebuild plan. Used a `pdftotext` + form-feed-page-split technique to locate exact chapters inside large PDFs without guessing page offsets — user asked this process itself be remembered as a future ChatUI feature (`project_pdf_distillation_feature` memory), since it's a natural fit for the "Draft a paper" verb's source-ingestion needs.
+
+### User
+"alright lets start the rebuild by planning a skeleton of what the code will be. based on what the project is trying to accomplish, what classes/functions/methods will be useful"
+
+### Assistant
+Entered plan mode. Spawned an Explore agent against the deleted `chatui.py` (via `git show 1fb5c9b~1:...`) to catalog genuinely reusable logic before designing anything new: frontmatter parsing, wikilink-scanning/normalization, the two-stage `MarkdownHeaderTextSplitter`→`RecursiveCharacterTextSplitter` chunking + manifest-diff incremental ingest, the exact vault/grounded/model-knowledge retrieval-path decision tree (and where the settings.md docs had drifted from the actual code), the `ddgs` web-search wrapper, the token/line streaming pattern, and the `Proposal`/accept-edit-with-reason/feedback-log mechanism. Asked two clarifying questions: drop the `/update`/`/apply` self-modifying-code pipeline (doesn't map to any of the four verbs) — confirmed yes; restructure into a small package with objects (`Vault`, `ModelClient`, `Settings`) instead of the old single-file/module-globals shape, for testability — confirmed yes. Wrote the full plan (package layout, dataclasses, per-module signatures, verification approach) to the plan file.
+
+### User
+"I'm going to step away for the rest of the day - please continue planning as you see fit, until a robust structure is formed... log any planning questions that you think require my input, so that I can answer them when I return." Also asked about self-monitoring token/usage limits and pausing near a rate-limit reset.
+
+### Assistant
+Explained there's no tool-level visibility into account usage percentage or the platform's rate-limit reset — that's outside what's introspectable from within a session — so continued working directly instead of trying to fake-monitor a number that isn't visible, on the reasoning that nothing is lost if a limit is hit mid-session since context persists for a resume. Read Clean Code's Error Handling chapter (Ch.7) and the opening of Boundaries (Ch.8), added the error-handling section to `style_guide.md`, then substantially deepened the plan: an `errors.py` exception hierarchy (`ChatUIError` → `PaperNotFoundError`/`VaultWriteError`/`IngestError`/`RetrievalError`/`ModelUnavailableError`, defined by how callers catch them, not by source), a command-surface table mapping the four verbs onto actual `/` commands, and six logged open questions (draft as inline-vs-separate-screen; classify auto-trigger vs. explicit; wipe-vs-migrate `local_db/`; review-question structure; command naming; the pending `commands.md`/`settings.md` rewrite) — each with a recommended default so work wouldn't stall waiting on answers. Caught and fixed a real naming collision in the original plan (a top-level `chatui.py` script next to a `chatui/` package is an import ambiguity) by switching the entrypoint to `chatui/__main__.py` + `python -m chatui`.
+
+Then created the actual skeleton: 15 files under `ChatUI/chatui/` (`errors.py`, `models.py`, `config.py`, `vault.py`, `retrieval.py`, `llm.py`, `web.py`, `feedback.py`, `ask.py`, `draft.py`, `classify.py`, `review.py`, `app.py`, `ui/streaming.py`, `ui/picker.py`, `__main__.py`) — every class/function has a real signature (types, dataclass fields) and an unimplemented (`NotImplementedError`) body, no logic yet. Updated `CLAUDE.md` (new package layout, dropped self-update section, `Vault`/`ModelClient`/`Settings`-as-objects note replacing the old module-globals note, fixed a pre-existing stale path — `conversations/` actually moved from `ChatUI/` to `Knowledge/` back in `eb9a0f5`) and `README.md` (rebuild-status banner, new run command, four-verb command table, dropped self-update section) to match.
+
+### Verification
+`python -c "import chatui.<module>"` for every domain module (`models`, `config`, `vault`, `retrieval`, `llm`, `web`, `feedback`, `errors`, `ask`, `draft`, `classify`, `review`) and separately for the Textual-dependent layer (`app`, `ui.streaming`, `ui.picker`) — both groups import cleanly with no syntax/import errors. No behavior is implemented yet; this confirms structure only. Six open questions and the full rebuild plan are logged at `~/.claude/plans/jaunty-baking-hearth.md` for the user's review whenever they're back.

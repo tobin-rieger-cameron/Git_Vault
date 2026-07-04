@@ -1,14 +1,14 @@
 ---
-summary: Full history of changes to chatui.py — both Claude Code direct edits and self-update pipeline directives.
+summary: Full history of changes to ChatUI — the old single-file chatui.py (through 2026-07-04) and the chatui/ package rebuild (from 2026-07-04 on).
 ---
 
 # Changelog
 
 Two sources of change, both recorded here:
 - **claude** — direct edits made by Claude Code in a session
-- **pipeline** — CHANGE:/FIX: directives applied via `/update`+`/apply` or `apply_update.py`
+- **pipeline** — CHANGE:/FIX: directives applied via `/update`+`/apply` or `apply_update.py` (retired as of the 2026-07-04 rebuild — no longer a source of new entries)
 
-See `conversations/claude_transcript.md` for the full session context behind each entry.
+See `Knowledge/conversations/claude_transcript.md` for the full session context behind each entry.
 
 ---
 
@@ -143,3 +143,9 @@ See `conversations/claude_transcript.md` for the full session context behind eac
 | Source | What | Why | Commit(s) |
 |--------|------|-----|-----------|
 | claude | Stream Pass 1/2's LLM calls token-by-token instead of a single blocking `invoke()` — new `ChatApp._stream_lines()` switches to `coding_llm.astream()`, updating `#review-detail` live with raw tokens (the same "watch it type" effect as chat answers) while a growing `ListView` in the review panel shows each recognized `stem: tags` / `"phrase" -> target` line the instant it completes (`✓ Taxonomy.md: taxonomy, classification`) | User watched a live `/organize` run sit on "Checking [file] for wikilinks… (5/5) (131s)" with only the elapsed-time ticker as a signal, and asked for streaming "just like how prompts show each token" — the busy-bar ticker (added in an earlier session) fixed the "is it frozen" question but not the "what is it actually doing" one | _(this commit)_ |
+| claude | Checkpoint real vault/session content, then wipe `chatui.py`/`apply_update.py` entirely in a separate commit | User redefined ChatUI's purpose around four verbs (Ask/Draft/Classify/Review — see `project_chatui_redefinition` memory) after flagging that a full session had scope-crept into polishing `/organize`'s batch-review UI without touching the app's actual purpose; asked to rebuild from scratch, using old commits as reference for reusable utilities rather than the deleted file itself | `d6d0b2f`, `1fb5c9b` |
+| claude | Add `config/style_guide.md` — naming conventions (functions/classes) distilled from PEP8 §Naming, Clean Code Ch.2–3, Effective Python Items 30–39 | User provided coding-guideline PDFs and asked specifically for function/class naming standards, having noticed poorly-named functions in past projects | `f01c352` |
+| claude | Add async/concurrency (Clean Code in Python Ch.7) and classes/data-modeling (Clean Code Ch.6) sections to `style_guide.md`; replace vague "Open" note with a concrete per-source backlog of undistilled chapters | Textual/asyncio correctness is load-bearing for this app (the `NoActiveWorker` bug class), and objects-vs-data-structures discipline directly informs the rebuild's class design | `eedd22d` |
+| claude | Add error-handling section to `style_guide.md` (Clean Code Ch.7 + Ch.8 opening — raise don't return sentinels, wrap third-party exceptions at the boundary, don't return/pass `None`) | Directly needed while designing the rebuild's exception policy (`chatui/errors.py`) | _(this commit)_ |
+| claude | Design and scaffold the `chatui/` package skeleton — 15 files (`errors.py`, `models.py`, `config.py`, `vault.py`, `retrieval.py`, `llm.py`, `web.py`, `feedback.py`, `ask.py`, `draft.py`, `classify.py`, `review.py`, `app.py`, `ui/streaming.py`, `ui/picker.py`, `__main__.py`), every function with a real signature and an unimplemented (`NotImplementedError`) body, replacing the old module-level globals (`llm`/`coding_llm`/`VAULT_PATH`) with objects (`Vault`, `ModelClient`, `Settings`) owned by `ChatApp`. Confirmed with the user: drop the `/update`/`/apply` self-update pipeline entirely (doesn't map to any of the four verbs); package+objects over single-file+globals (testability). Entrypoint is `python -m chatui` (a sibling `chatui.py` script would collide with the `chatui/` package name). An Explore pass over the deleted `chatui.py` (via `git show 1fb5c9b~1:...`) catalogued reusable logic (frontmatter parsing, wikilink scanning, ChromaDB chunking/ingest, the retrieval-path decision tree, the ddgs web wrapper, the streaming pattern, the suggest/override/feedback loop) that the skeleton's functions are designed to receive, not reinvent | User asked to plan a skeleton of classes/functions/methods for the rebuild, then asked to keep going autonomously while away for the day, logging any open questions for their return (6 logged in the plan file at `~/.claude/plans/jaunty-baking-hearth.md`) | _(this commit)_ |
+| claude | Update `CLAUDE.md` (repo layout, run command, module-globals→objects note, drop self-update section, fix stale `ChatUI/conversations` path to `Knowledge/conversations`) and `README.md` (mark rebuild status, new run command, four-verb command surface, drop self-update section) to match the rebuild | Both were still describing the deleted single-file app; CLAUDE.md's `ChatUI/conversations/` path was already stale independent of the rebuild (moved to `Knowledge/conversations/` in `eb9a0f5`) | _(this commit)_ |

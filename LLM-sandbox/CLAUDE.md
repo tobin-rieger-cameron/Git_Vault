@@ -6,59 +6,62 @@
 Git_Vault/                    ← git root (branch: llm-sandbox)
 └── LLM-sandbox/              ← working directory (git subtree)
     ├── ChatUI/               ← canonical app code
-    │   ├── chatui.py         ← main app (~2850 lines)
-    │   ├── apply_update.py   ← headless self-update pipeline
+    │   ├── chatui/           ← app package (rebuild in progress — see config/style_guide.md)
+    │   │   ├── __main__.py   ← entrypoint: `python -m chatui --vault ../Knowledge`
+    │   │   ├── config.py, models.py, vault.py, retrieval.py, llm.py, web.py,
+    │   │   │   feedback.py, errors.py — domain layer, no Textual dependency
+    │   │   ├── ask.py, draft.py, classify.py, review.py  ← the four verbs
+    │   │   ├── app.py        ← ChatApp(App), thin — delegates to the verb modules
+    │   │   └── ui/           ← Textual-specific widgets (streaming.py, picker.py)
     │   ├── config/
-    │   │   ├── settings.md   ← runtime config (YAML frontmatter) + architecture docs
-    │   │   ├── models.md     ← model registry + auto-pull list
-    │   │   ├── changelog.md  ← full session history; update after every session
-    │   │   └── commands.md   ← command spec watched by /update
-    │   ├── conversations/
-    │   │   ├── claude_transcript.md  ← this project's Claude Code session log
-    │   │   └── YYYY-MM-DD.md         ← daily ChatUI session files
-    │   └── local_db/         ← ChromaDB vector store (gitignored)
+    │   │   ├── settings.md      ← runtime config (YAML frontmatter) + architecture docs
+    │   │   ├── models.md        ← model registry + auto-pull list
+    │   │   ├── changelog.md     ← full session history; update after every session
+    │   │   ├── commands.md      ← command spec (pending rewrite for the 4-verb surface)
+    │   │   └── style_guide.md   ← coding standards distilled from PEP8/Effective Python/Clean Code
+    │   └── local_db/         ← ChromaDB vector store (gitignored; wiped and reingested for the rebuild)
     └── Knowledge/            ← vault articles (canonical location)
+        ├── conversations/
+        │   ├── claude_transcript.md  ← this project's Claude Code session log
+        │   └── YYYY-MM-DD.md         ← daily ChatUI session files
         └── *.md              ← Title Case with Spaces filenames
 ```
 
 The repo root is `Git_Vault/` — always commit from there or use absolute paths. Never treat `LLM-sandbox/` as the git root.
+
+`chatui.py`/`apply_update.py` (the old single-file app) were deliberately wiped (commit `1fb5c9b`) and are being rebuilt as the `chatui/` package above, organized around four verbs — Ask, Draft a paper, Classify inline, Review (see memory `project_chatui_redefinition` / `ChatUI/config/style_guide.md`). As of the skeleton pass, every function in the package has a real signature but an unimplemented (`NotImplementedError`) body — nothing is functional yet.
+
+`conversations/` moved from `ChatUI/` to `Knowledge/` in commit `eb9a0f5` — always use the `Knowledge/conversations/` path, not `ChatUI/conversations/`.
 
 ## How to run ChatUI
 
 ```bash
 cd ChatUI
 source .chat_venv/bin/activate
-python chatui.py --vault ../Knowledge
+python -m chatui --vault ../Knowledge
 ```
 
-If blocked by stale PID: `rm -f ChatUI/.chatui.pid`
+Not yet functional — the package is skeleton-only (see above). This section describes the intended run command for when the rebuild lands.
 
-Testing pattern: launch in tmux, wait for "Ask anything", send `/ingest`, then test queries.
+Testing pattern (once functional): launch in tmux, wait for "Ask anything", send `/ingest`, then test queries.
 
 ## Critical constraints
 
 **ChromaDB API (v1.x):** Use `chromadb.PersistentClient(path=...)`. The old `chromadb.Client(persist_directory=...)` is gone — data silently vanishes on restart if you use it.
 
-**Module-level globals** — these are intentional and must stay module-level (never `self.xxx`):
-- `llm` — ChatOllama instance for chat; reassigned by `/model` at runtime via `global llm`
-- `coding_llm` — ChatOllama for /organize, /update, /apply
-- `VAULT_PATH`, `CONVERSATIONS_DIR` — paths set once at startup
+**No module-level globals in the rebuild.** The old `llm`/`coding_llm`/`VAULT_PATH`/`CONVERSATIONS_DIR` globals are gone. Their replacements — a `Vault`, a `ModelClient`, a `Settings` — are constructed once in `chatui/__main__.py` and owned by `ChatApp` (`self.vault`, `self.model`, `self.settings`); pass them as explicit arguments to verb functions rather than reaching for global state. This is a deliberate style-guide decision (`config/style_guide.md`), not an oversight — don't reintroduce globals to match the old shape.
 
-**Hardcoded filename** — `_article-guide.md` is referenced at line 1632 as a literal string. Do not rename it even if renaming other vault files.
+**Hardcoded filename** — `_article-guide.md` (`ChatUI/_article-guide.md`) is referenced by name by the article-formatting guidance the old `/distill`/classification logic used. Do not rename it even if renaming other vault files; whatever replaces that logic in `chatui/classify.py`/`draft.py` should keep referencing this same file.
 
 **Files with spaces** — Knowledge/ files use Title Case with Spaces. When removing untracked files: use `rm -f`, not `git rm` (git rm fails on untracked paths). Always quote paths.
 
 **After chunk_size changes** — run `/ingest` to rebuild ChromaDB. Current settings: chunk_size=800, overlap=100, top_k=5, threshold=0.65.
 
-## Self-update pipeline
-
-Write `CHANGE:` or `FIX:` directives anywhere in a `config/*.md` body. `/update` in ChatUI (or `apply_update.py` headlessly) picks them up via `git diff HEAD -- config/` against `.chatui_sync`, applies each as a surgical AST edit, self-reviews, then shows a diff before writing.
-
-No pending directives in `settings.md` as of Session 15.
+No self-update pipeline in the rebuild — `/update`/`/apply` and the `CHANGE:`/`FIX:` directive format were deliberately dropped (didn't map to any of the four verbs). Config changes go back to plain hand-editing.
 
 ## End-of-session checklist (do this before stopping, unprompted)
 
-1. **Transcript** — append a new session block to `ChatUI/conversations/claude_transcript.md`. Match the existing format: session number, date, focus line, commits, and the full Q&A exchange.
+1. **Transcript** — append a new session block to `Knowledge/conversations/claude_transcript.md`. Match the existing format: session number, date, focus line, commits, and the full Q&A exchange.
 2. **Changelog** — add a row to the current date section in `ChatUI/config/changelog.md` for every meaningful change. Replace any `_(this commit)_` placeholders with real hashes.
 3. **README** — check `LLM-sandbox/README.md` is accurate: model names, command list, run instructions. If anything drifted, update it now.
 4. **Git status** — run `git status` from the repo root (`Git_Vault/`). If ChatUI/ or Knowledge/ has unstaged changes, stage and commit them.
