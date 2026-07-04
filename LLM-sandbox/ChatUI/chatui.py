@@ -20,12 +20,12 @@ from typing import Callable
 
 import yaml
 
-from textual import work
+from textual import events, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
-from textual.widgets import Footer, Header, Input, Label, ListItem, ListView, RichLog, Static, TextArea
+from textual.widgets import Footer, Header, Input, Label, ListItem, ListView, RichLog, Static, TextArea, Tree
 from rich.markdown import Markdown
 from rich.markup import escape as rich_escape
 from rich.text import Text
@@ -1211,41 +1211,49 @@ if _WATCHDOG_AVAILABLE:
 # ── Shared CSS ────────────────────────────────────────────────────────────────
 
 _CSS = """
-Screen { background: #1e1e1e; }
-Header { background: #252526; color: #cccccc; }
-Footer { background: #252526; color: #6c6c6c; }
+/* Palette — a handful of reused values instead of ad hoc hex per widget.
+   Backgrounds stay transparent (see App.ansi_color = True) so the terminal's
+   own background/colorscheme shows through everywhere; $border/$accent/$dim
+   are the only fixed colors, used consistently for structure and emphasis. */
+$border: #454545;
+$accent: #5f87af;
+$dim:    #6c6c6c;
+$text:   #d4d4d4;
+
+Screen { background: transparent; }
+Header { background: transparent; }
+Footer { background: transparent; }
 
 RichLog {
     height: 1fr;
-    background: #1e1e1e;
+    background: transparent;
     padding: 1 4;
-    scrollbar-color: #454545;
-    scrollbar-background: #1e1e1e;
+    scrollbar-size: 0 0;
     overflow-x: hidden;
 }
 
 Input {
     margin: 0 4 1 4;
-    background: #252526;
-    color: #d4d4d4;
-    border: tall #454545;
+    background: transparent;
+    color: $text;
+    border: tall $border;
     padding: 0 1;
 }
 
-Input:focus { border: tall #5f87af; }
+Input:focus { border: tall $accent; }
 
 #stream {
     display: none;
     margin: 0 4;
     padding: 0 1;
-    color: #d4d4d4;
+    color: $text;
 }
 
 #busy-bar {
     display: none;
     height: 1;
-    background: #252526;
-    color: #5f87af;
+    background: transparent;
+    color: $accent;
     text-align: center;
 }
 
@@ -1257,26 +1265,33 @@ Input:focus { border: tall #5f87af; }
     display: none;
     width: 44;
     height: 1fr;
-    border-right: solid #454545;
+    border-right: solid $border;
     padding: 0 1;
 }
 
-#review-panel-header { color: #cccccc; margin: 1 0 1 0; }
+#review-panel-header { color: $text; margin: 1 0 1 0; }
 
 #review-list {
     height: 1fr;
-    background: #1e1e1e;
-    border: solid #454545;
-    scrollbar-color: #454545;
-    scrollbar-background: #1e1e1e;
+    background: transparent;
+    border: solid $border;
+    scrollbar-size: 0 0;
+}
+
+#file-tree {
+    height: 1fr;
+    background: transparent;
+    border: solid $border;
+    scrollbar-size: 0 0;
 }
 
 #review-detail {
     height: auto;
     max-height: 14;
-    color: #d4d4d4;
+    color: $text;
     padding: 1 0;
     overflow-y: auto;
+    scrollbar-size: 0 0;
 }
 """
 
@@ -1511,6 +1526,218 @@ def _file_icon(name: str) -> str:
     return icons.get(os.path.splitext(name)[1].lower(), "📄")
 
 
+# ── Resizable divider ─────────────────────────────────────────────────────────
+
+class Splitter(Static):
+    """A thin draggable divider that resizes a sibling widget's width."""
+
+    DEFAULT_CSS = """
+    Splitter {
+        display: none;
+        width: 1;
+        height: 1fr;
+        background: transparent;
+        color: $border;
+    }
+    Splitter:hover { color: $accent; }
+    """
+
+    def __init__(self, target_id: str, min_width: int = 24, max_width: int = 100) -> None:
+        super().__init__()
+        self._target_id = target_id
+        self._min_width = min_width
+        self._max_width = max_width
+        self._dragging  = False
+        self._start_x     = 0
+        self._start_width = 0
+
+    def render(self) -> Text:
+        return Text("\n".join("│" for _ in range(max(self.size.height, 1))))
+
+    def on_mouse_down(self, event: events.MouseDown) -> None:
+        self._dragging   = True
+        self._start_x    = int(event.screen_x)
+        self._start_width = self.app.query_one(f"#{self._target_id}").outer_size.width
+        self.capture_mouse()
+
+    def on_mouse_up(self, event: events.MouseUp) -> None:
+        self._dragging = False
+        self.release_mouse()
+
+    def on_mouse_move(self, event: events.MouseMove) -> None:
+        if not self._dragging:
+            return
+        delta = int(event.screen_x) - self._start_x
+        new_width = max(self._min_width, min(self._max_width, self._start_width + delta))
+        self.app.query_one(f"#{self._target_id}").styles.width = new_width
+
+
+# ── File picker tree ──────────────────────────────────────────────────────────
+
+class FileTree(Tree):
+    """Checkbox-style folder tree for picking which vault files /organize
+    should generate tags/wikilinks/placement for. Folders expand/collapse
+    via Tree's own behavior; files toggle checked state on select (click or
+    Enter) or Space. Fully self-contained: owns its own checked/unorganized
+    state and signals completion via `committed` rather than routing through
+    the app's Input/queue plumbing.
+    """
+
+    BINDINGS = [
+        Binding("space",      "toggle_checked",    "Toggle",       show=False),
+        Binding("ctrl+a",     "check_all",         "All"),
+        Binding("ctrl+r",     "check_none",        "None"),
+        Binding("ctrl+u",     "check_unorganized",  "Unorganized"),
+        Binding("ctrl+enter", "commit",            "Start"),
+    ]
+
+    def __init__(self, vault_path: str, md_files: list[str]) -> None:
+        super().__init__("Vault", id="file-tree")
+        self.show_root = False
+        self._vault_path = vault_path
+        self.checked:     dict[str, bool] = {}
+        self.unorganized: dict[str, bool] = {}
+        self.committed = asyncio.Event()
+        self._populate(md_files)
+
+    def _row_label(self, path: str) -> str:
+        box  = "☑" if self.checked[path] else "☐"
+        tag  = "  [unorganized]" if self.unorganized[path] else ""
+        name = os.path.basename(path)
+        return f"{box}  {name}{tag}"
+
+    def _populate(self, md_files: list[str]) -> None:
+        folder_nodes = {"": self.root}
+        for path in sorted(md_files):
+            try:
+                with open(path, encoding="utf-8") as fh:
+                    content = fh.read()
+            except OSError:
+                content = ""
+            unorganized = not content.lstrip().startswith("---") or _needs_placement(path)
+            self.unorganized[path] = unorganized
+            self.checked[path]     = unorganized
+
+            rel = os.path.relpath(path, self._vault_path)
+            *folder_parts, _fname = rel.split(os.sep)
+            accum = ""
+            for part in folder_parts:
+                parent_key = accum
+                accum = f"{accum}/{part}" if accum else part
+                if accum not in folder_nodes:
+                    folder_nodes[accum] = folder_nodes[parent_key].add(part, expand=True)
+            folder_nodes[accum].add_leaf(self._row_label(path), data=path)
+        self.root.expand()
+
+    def _toggle(self, node) -> None:
+        path = node.data
+        self.checked[path] = not self.checked[path]
+        node.set_label(self._row_label(path))
+
+    def _refresh_all_labels(self) -> None:
+        def walk(node) -> None:
+            if node.data is not None:
+                node.set_label(self._row_label(node.data))
+            for child in node.children:
+                walk(child)
+        walk(self.root)
+
+    def action_toggle_checked(self) -> None:
+        node = self.cursor_node
+        if node is not None and node.data is not None:
+            self._toggle(node)
+
+    def action_check_all(self) -> None:
+        for path in self.checked:
+            self.checked[path] = True
+        self._refresh_all_labels()
+
+    def action_check_none(self) -> None:
+        for path in self.checked:
+            self.checked[path] = False
+        self._refresh_all_labels()
+
+    def action_check_unorganized(self) -> None:
+        for path in self.checked:
+            self.checked[path] = self.unorganized[path]
+        self._refresh_all_labels()
+
+    def action_commit(self) -> None:
+        self.committed.set()
+
+    def on_tree_node_selected(self, event: Tree.NodeSelected) -> None:
+        if event.node.data is not None:
+            self._toggle(event.node)
+
+
+# ── Review list ───────────────────────────────────────────────────────────────
+
+class ReviewListView(ListView):
+    """Default-accepted checklist for reviewing a batch of Proposals. Every
+    item starts checked (accepted); Space toggles skip/include on the
+    highlighted row; Enter/click opens the full edit modal for it (handled
+    by the app, since that needs push_screen_wait); Ctrl+Enter commits.
+    Self-contained like FileTree: owns its own checked/edited state.
+    """
+
+    BINDINGS = [
+        Binding("space",      "toggle_checked", "Toggle", show=False),
+        Binding("ctrl+enter", "commit",         "Apply"),
+    ]
+
+    def __init__(self, proposals: list[Proposal]) -> None:
+        super().__init__(id="review-list")
+        self.proposals = proposals
+        self.checked: dict[int, bool] = {i: True for i in range(len(proposals))}
+        self.edited:  dict[int, str]  = {}
+        # A single queue instead of an asyncio.Event: push_screen_wait (needed to
+        # open the edit modal) only works from inside a Textual worker, but
+        # message handlers like on_list_view_selected are not workers. So the
+        # handler just enqueues ("edit", idx) here, and _review() — which does
+        # run in a worker — consumes both edit requests and the final commit
+        # signal from this one queue in its own loop, mirroring the existing
+        # _org_prompt/_organize_queue pattern used everywhere else in the app.
+        self.events: asyncio.Queue[tuple[str, int | None]] = asyncio.Queue()
+
+    def compose(self) -> ComposeResult:
+        for i in range(len(self.proposals)):
+            # markup=False: proposal.kind/label are arbitrary strings (e.g. a bare
+            # "[tags]" substring reads as an invalid Rich style tag and crashes
+            # Static.update's markup parser on paint).
+            yield ListItem(Label(self._row_text(i), id=f"rv-label-{i}", markup=False), id=f"rv-{i}")
+
+    def _row_text(self, i: int) -> str:
+        box = "☑" if self.checked[i] else "☐"
+        tag = "  (edited)" if i in self.edited else ""
+        p   = self.proposals[i]
+        return f"{box}  [{p.kind}] {p.label}{tag}"
+
+    def _refresh_row(self, i: int) -> None:
+        try:
+            self.query_one(f"#rv-label-{i}", Label).update(self._row_text(i))
+        except Exception:
+            pass
+
+    def set_edited(self, i: int, value: str) -> None:
+        self.edited[i]  = value
+        self.checked[i] = True
+        self._refresh_row(i)
+
+    def clear_edited(self, i: int) -> None:
+        self.edited.pop(i, None)
+        self.checked[i] = True
+        self._refresh_row(i)
+
+    def action_toggle_checked(self) -> None:
+        idx = self.index
+        if idx is not None:
+            self.checked[idx] = not self.checked[idx]
+            self._refresh_row(idx)
+
+    def action_commit(self) -> None:
+        self.events.put_nowait(("commit", None))
+
+
 # ── Help text ─────────────────────────────────────────────────────────────────
 
 _HELP_TEXT = """\
@@ -1555,6 +1782,10 @@ class ChatApp(App[None]):
 
     def __init__(self, db: Chroma | None) -> None:
         super().__init__()
+        # Render through the terminal's native ANSI palette instead of forcing
+        # truecolor hex, so a transparent background actually shows the
+        # terminal's own background/colorscheme instead of Textual's default.
+        self.ansi_color = True
         self.db              = db
         self._busy           = False
         self._history:  list[dict]        = []
@@ -1567,10 +1798,6 @@ class ChatApp(App[None]):
         self._session_file:   str | None = None
         self._session_events: list[str]  = []
         self._open_file:      OpenFile | None = None
-        self._review_proposals:     list[Proposal] | None = None
-        self._review_active_index:  int | None = None
-        self._file_picker_checked:  dict[str, bool] | None = None
-        self._file_picker_entries:  list[tuple[str, str, bool]] | None = None  # (path, rel_path, unorganized)
 
     # ── Layout ────────────────────────────────────────────────────────────────
 
@@ -1579,8 +1806,8 @@ class ChatApp(App[None]):
         with Horizontal(id="main-body"):
             with Vertical(id="review-panel"):
                 yield Label("", id="review-panel-header")
-                yield ListView(id="review-list")
                 yield Static("", id="review-detail", markup=False)
+            yield Splitter("review-panel", min_width=24, max_width=100)
             with Vertical(id="chat-pane"):
                 # min_width=0: RichLog defaults to a 78-column floor, which forces a
                 # phantom horizontal scrollbar once the review panel narrows this pane
@@ -2839,7 +3066,7 @@ class ChatApp(App[None]):
     async def _cmd_organize(self, _args: str = "") -> None:
         self._organize_queue = asyncio.Queue()
         inp = self.query_one(Input)
-        inp.placeholder = "Enter=accept · skip · edit · all · none"
+        inp.placeholder = "Use the review panel — this box is only for occasional prompts"
         # _run_organize never toggled this on, so the busy-bar (already wired up
         # and used everywhere else in the app) stayed invisible through the
         # entire run — the single biggest reason /organize looked frozen.
@@ -2860,37 +3087,7 @@ class ChatApp(App[None]):
 
     # ── Review panel (left dock) ────────────────────────────────────────────────
 
-    _REVIEW_ICONS = {"pending": "○", "accepted": "✓", "skipped": "⏭", "edited": "✎"}
-
-    def _review_row_text(self, proposal: Proposal, status: str) -> str:
-        icon = self._REVIEW_ICONS[status]
-        return f"{icon}  [{proposal.kind}] {proposal.label}"
-
-    def _review_panel_show(self, proposals: list[Proposal]) -> None:
-        panel  = self.query_one("#review-panel")
-        header = self.query_one("#review-panel-header", Label)
-        lv     = self.query_one("#review-list", ListView)
-        header.update(f"[bold]Reviewing {len(proposals)} item(s)[/bold]")
-        lv.clear()
-        for i, proposal in enumerate(proposals):
-            # markup=False: proposal.kind/label are arbitrary strings (e.g. a bare
-            # "[tags]" or "[[wikilink]]" substring reads as an invalid Rich style
-            # tag to the markup parser and crashes Static.update on paint).
-            row = Label(self._review_row_text(proposal, "pending"), id=f"ri-label-{i}", markup=False)
-            lv.append(ListItem(row, id=f"ri-{i}"))
-        panel.display = True
-
-    def _review_panel_set_status(self, index: int, proposal: Proposal, status: str) -> None:
-        try:
-            self.query_one(f"#ri-label-{index}", Label).update(self._review_row_text(proposal, status))
-        except Exception:
-            pass
-
     def _review_panel_set_detail(self, proposal: Proposal) -> None:
-        try:
-            self.query_one("#review-list", ListView).index = self._review_active_index
-        except Exception:
-            pass
         # Built with Text.append(), never Text.from_markup(): proposal.label/detail/
         # proposed are arbitrary file/LLM-generated content (wikilink targets, full
         # article bodies for /distill, ...) and must never be parsed as Rich markup.
@@ -2907,149 +3104,113 @@ class ChatApp(App[None]):
 
     def _review_panel_hide(self) -> None:
         self.query_one("#review-panel").display = False
-        self.query_one("#review-list", ListView).clear()
+        self.query_one(Splitter).display = False
         self.query_one("#review-detail", Static).update("")
+
+    def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
+        lv = event.list_view
+        if not isinstance(lv, ReviewListView):
+            return
+        idx = lv.index
+        if idx is not None and 0 <= idx < len(lv.proposals):
+            self._review_panel_set_detail(lv.proposals[idx])
 
     # ── File picker (left dock, before proposals exist) ─────────────────────────
 
-    def _file_picker_row_text(self, rel_path: str, checked: bool, unorganized: bool) -> str:
-        box = "☑" if checked else "☐"
-        tag = "  [unorganized]" if unorganized else ""
-        return f"{box}  {rel_path}{tag}"
-
-    def _file_picker_render_row(self, i: int) -> None:
-        path, rel_path, unorganized = self._file_picker_entries[i]
-        checked = self._file_picker_checked[path]
-        try:
-            self.query_one(f"#fp-label-{i}", Label).update(
-                self._file_picker_row_text(rel_path, checked, unorganized)
-            )
-        except Exception:
-            pass
-
     async def _pick_files_to_organize(self, md_files: list[str]) -> set[str]:
-        """Checkbox picker for which vault files /organize should generate
+        """Checkbox tree for which vault files /organize should generate
         tags/wikilinks/placement for. Reuses the review panel dock. Files
         missing frontmatter or not yet placed are flagged "unorganized" and
         pre-checked; already-organized files start unchecked but stay
         selectable, so the user can re-run passes on them at their leisure.
         """
-        entries: list[tuple[str, str, bool]] = []
-        for path in md_files:
-            try:
-                with open(path, encoding="utf-8") as fh:
-                    content = fh.read()
-            except OSError:
-                content = ""
-            unorganized = not content.lstrip().startswith("---") or _needs_placement(path)
-            entries.append((path, os.path.relpath(path, VAULT_PATH), unorganized))
-
-        self._file_picker_entries = entries
-        self._file_picker_checked = {path: unorganized for path, _, unorganized in entries}
-
-        panel  = self.query_one("#review-panel")
         header = self.query_one("#review-panel-header", Label)
-        lv     = self.query_one("#review-list", ListView)
-        header.update("[bold]Select files to organize[/bold]")
-        lv.clear()
-        for i, (path, rel_path, unorganized) in enumerate(entries):
-            row = Label(
-                self._file_picker_row_text(rel_path, self._file_picker_checked[path], unorganized),
-                id=f"fp-label-{i}", markup=False,
-            )
-            lv.append(ListItem(row, id=f"fp-{i}"))
-        panel.display = True
+        header.update(
+            "[bold]Select files to organize[/bold]  "
+            "[dim]Space/click=toggle · Ctrl+A=all · Ctrl+R=none · Ctrl+U=unorganized · Ctrl+Enter=start[/dim]"
+        )
+        tree = FileTree(VAULT_PATH, md_files)
+        review_panel = self.query_one("#review-panel", Vertical)
+        await review_panel.mount(tree, after=header)
 
-        inp = self.query_one(Input)
-        prior_placeholder = inp.placeholder
-        created_queue = self._organize_queue is None
-        if created_queue:
-            self._organize_queue = asyncio.Queue()
+        self.query_one("#review-panel").display = True
+        self.query_one(Splitter).display = True
+        tree.focus()
 
-        selected_paths: set[str] = set()
         try:
-            while True:
-                n_checked = sum(self._file_picker_checked.values())
-                inp.placeholder = f"{n_checked}/{len(entries)} selected — Enter=start · all · none · unorganized"
-                raw = await self._org_prompt(
-                    "  Click a row to toggle it, or type: all · none · unorganized · Enter=start:"
-                )
-                cmd = raw.strip().lower()
-                if cmd == "":
-                    break
-                if cmd == "all":
-                    for path in self._file_picker_checked:
-                        self._file_picker_checked[path] = True
-                elif cmd == "none":
-                    for path in self._file_picker_checked:
-                        self._file_picker_checked[path] = False
-                elif cmd == "unorganized":
-                    for path, _, unorganized in entries:
-                        self._file_picker_checked[path] = unorganized
-                else:
-                    continue
-                for i in range(len(entries)):
-                    self._file_picker_render_row(i)
-            selected_paths = {path for path, checked in self._file_picker_checked.items() if checked}
+            await tree.committed.wait()
+            selected_paths = {path for path, checked in tree.checked.items() if checked}
         finally:
-            if created_queue:
-                self._organize_queue = None
-            inp.placeholder = prior_placeholder
-            self._file_picker_checked = None
-            self._file_picker_entries = None
+            await tree.remove()
             self._review_panel_hide()
 
         return {os.path.splitext(os.path.basename(p))[0] for p in selected_paths}
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
-        idx = event.list_view.index
-        if idx is None:
+        lv = event.list_view
+        if not isinstance(lv, ReviewListView):
             return
-        if self._file_picker_checked is not None and self._file_picker_entries is not None:
-            if idx >= len(self._file_picker_entries):
-                return
-            path = self._file_picker_entries[idx][0]
-            self._file_picker_checked[path] = not self._file_picker_checked[path]
-            self._file_picker_render_row(idx)
-            return
-        if self._review_proposals is None or self._review_active_index is None:
-            return
-        if idx != self._review_active_index or self._organize_queue is None:
-            return
-        if isinstance(self.screen, (ProposalEditScreen, FileBrowserScreen)):
-            return
-        self._organize_queue.put_nowait("edit")
+        idx = lv.index
+        if idx is not None:
+            lv.events.put_nowait(("edit", idx))
 
     async def _review(self, proposals: list[Proposal]) -> None:
-        """Walk the user through a batch of Proposals one at a time.
-
-        Enter=accept as proposed · skip=leave unchanged · edit=open an editor
-        pre-filled with the proposed value (or click the active row in the
-        review panel) · all=accept this and every remaining proposal ·
-        none=skip this and every remaining proposal. An edit that changes
-        the substance of the proposed value is logged to organize_feedback.md
-        (with an optional one-line reason) so future suggestions can learn
-        from it; edits that just restore the proposed value are applied
-        silently. The left-hand review panel mirrors the whole batch —
-        status icons update live as each item is decided.
+        """Review a batch of Proposals: every item defaults to accepted, shown
+        all at once in the left panel. Arrow keys navigate, Space toggles
+        skip/include on the highlighted item, Enter/click opens a full-text
+        editor for it, Ctrl+Enter applies everything currently checked in one
+        pass. An edit that changes the substance of the proposed value is
+        logged to organize_feedback.md (with an optional one-line reason) so
+        future suggestions can learn from it; edits that just restore the
+        proposed value are applied silently as a plain accept.
         """
         if not proposals:
             return
 
+        # Still needed for the override-reason prompt below (genuine free-text
+        # input), even though accept/skip/edit/commit no longer go through it.
         created_queue = self._organize_queue is None
         if created_queue:
             self._organize_queue = asyncio.Queue()
-        inp = self.query_one(Input)
-        prior_placeholder = inp.placeholder
-        inp.placeholder = "Enter=accept · skip · edit · all · none"
 
-        self._review_proposals = proposals
-        self._review_panel_show(proposals)
+        header = self.query_one("#review-panel-header", Label)
+        header.update(
+            f"[bold]Reviewing {len(proposals)} item(s)[/bold]  "
+            "[dim]Space=toggle · Enter/click=edit · Ctrl+Enter=apply[/dim]"
+        )
+        review_panel = self.query_one("#review-panel", Vertical)
+        listview = ReviewListView(proposals)
+        await review_panel.mount(listview, after=header)
+        self._review_panel_set_detail(proposals[0])
+
+        self.query_one("#review-panel").display = True
+        self.query_one(Splitter).display = True
+        listview.focus()
 
         try:
-            accept_rest = False
-            skip_rest   = False
-            for index, proposal in enumerate(proposals):
+            # Consume edit requests (which need push_screen_wait, only valid
+            # inside this worker) until the user commits the batch.
+            while True:
+                kind, idx = await listview.events.get()
+                if kind == "commit":
+                    break
+                proposal = proposals[idx]
+                current  = listview.edited.get(idx, proposal.proposed)
+                final = await self.push_screen_wait(ProposalEditScreen(proposal.label, current))
+                listview.focus()
+                if final is None:
+                    continue  # cancelled — no change to checked/edited state
+                if final.strip() != proposal.proposed.strip():
+                    reason = await self._org_prompt(
+                        f"  Why the change to {rich_escape(proposal.label)}? (optional, Enter to skip):"
+                    )
+                    listview.focus()
+                    _log_organize_feedback(proposal.kind, proposal.path, proposal.proposed, final, reason)
+                    listview.set_edited(idx, final)
+                else:
+                    listview.clear_edited(idx)
+
+            for i, proposal in enumerate(proposals):
                 self._log(f"\n[bold #5f87af]{rich_escape(proposal.label)}[/bold #5f87af]  [dim]({proposal.kind})[/dim]")
                 if proposal.detail:
                     # escape: detail may embed arbitrary file/LLM content (wikilink
@@ -3057,60 +3218,18 @@ class ChatApp(App[None]):
                     # (invalid) Rich style tag and silently eats its own contents.
                     self._log(f"  {rich_escape(proposal.detail)}")
 
-                self._review_active_index = index
-                self._review_panel_set_detail(proposal)
-
-                if skip_rest:
-                    self._review_panel_set_status(index, proposal, "skipped")
-                    continue
-                if accept_rest:
-                    proposal.apply(proposal.proposed)
-                    self._review_panel_set_status(index, proposal, "accepted")
-                    self._log("  [green]✓ Applied.[/green]")
+                if not listview.checked[i]:
+                    self._log("  [dim]⏭ Skipped.[/dim]")
                     continue
 
-                raw = await self._org_prompt(
-                    "  Enter=accept  ·  skip  ·  edit  ·  all=accept rest  ·  none=skip rest:"
-                )
-                cmd = raw.strip().lower()
-
-                if cmd == "none":
-                    skip_rest = True
-                    self._review_panel_set_status(index, proposal, "skipped")
-                    continue
-                if cmd == "skip":
-                    self._review_panel_set_status(index, proposal, "skipped")
-                    continue
-                if cmd == "all":
-                    proposal.apply(proposal.proposed)
-                    accept_rest = True
-                    self._review_panel_set_status(index, proposal, "accepted")
-                    self._log("  [green]✓ Applied.[/green]")
-                    continue
-                if cmd == "edit":
-                    final = await self.push_screen_wait(ProposalEditScreen(proposal.label, proposal.proposed))
-                    self.query_one(Input).focus()
-                    if final is None:
-                        self._review_panel_set_status(index, proposal, "skipped")
-                        continue
-                    if final.strip() != proposal.proposed.strip():
-                        reason = await self._org_prompt("  Why the change? (optional, Enter to skip):")
-                        _log_organize_feedback(proposal.kind, proposal.path, proposal.proposed, final, reason)
-                    proposal.apply(final)
-                    self._review_panel_set_status(index, proposal, "edited")
-                    self._log("  [green]✓ Applied (edited).[/green]")
-                    continue
-
-                # Enter (empty input) → accept as proposed
-                proposal.apply(proposal.proposed)
-                self._review_panel_set_status(index, proposal, "accepted")
-                self._log("  [green]✓ Applied.[/green]")
+                edited = i in listview.edited
+                final  = listview.edited.get(i, proposal.proposed)
+                proposal.apply(final)
+                self._log(f"  [green]✓ Applied{' (edited)' if edited else ''}.[/green]")
         finally:
             if created_queue:
                 self._organize_queue = None
-            inp.placeholder = prior_placeholder
-            self._review_active_index = None
-            self._review_proposals = None
+            await listview.remove()
             self._review_panel_hide()
 
     async def _run_organize(self) -> None:

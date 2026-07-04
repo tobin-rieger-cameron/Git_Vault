@@ -8,37 +8,15 @@ summary: Backlog of improvement ideas for chatui.py — not yet directives, just
 
 - article text should appear as its being written
 - /distill command is confusing - consider an overhaul and simplification of /commands in general
-- ✅ done (Phase 1+2 — see `config/changelog.md` 2026-07-03): guided co-edit review framework for `/organize` and `/distill` — `Proposal` + `ChatApp._review()` + split-pane review panel in `chatui.py`. Split-pane UI, per-item accept/skip/edit/all/none, and override-reason feedback loop are all live.
+- ✅ done (Phase 1+2, then reworked in the full front-end refactor — see `config/changelog.md` 2026-07-03): guided co-edit review framework for `/organize` and `/distill` — `Proposal` (data model, unchanged since Phase 1) + `ChatApp._review()` + split-pane review panel in `chatui.py`. The interaction model changed from Phase 1's per-item typed `accept/skip/edit/all/none` prompts to a default-accepted `ReviewListView` (Space=toggle, Enter/click=edit, Ctrl+Enter=apply everything at once) — see UX section below for why. Override-reason feedback loop is unchanged and still live.
 
 ## UX
 
-- background should be transparent / adhere to the terminal colorscheme
-- user experience: ![[Pasted image 20260703171556.png]]
-	this is pretty confusing
-![[Pasted image 20260703171752.png]]
-	✅ done 2026-07-03: after running /organize, I have to just sit and wait with no visual feedback of what the program is doing while it's *generating* suggestions — root cause was `_run_organize` never calling `_set_busy(True, ...)`, so the busy-bar (already used everywhere else in the app) stayed invisible for the whole run. Fixed by turning the busy-bar on for the duration of `/organize`, adding a `_await_with_progress()` helper that ticks an elapsed-time counter onto it during any single long LLM call, and showing which file/session is currently being processed in Pass 2 ("Checking X.md for wikilinks… (i/N)"), Pass 3, and Pass 4. Same helper wired into `/distill`'s article-generation call for consistency.
-
-	✅ done 2026-07-03: running /organize should put the user right into the left/right
-	screen, the user should be able to select files and folders,
-	presenting a checkbox next to selected items. then tags and/or
-	wikilinks can be generated for the selected items. unorganized
-	items should be highlighted, but user should be able to re-
-	organize all files in the working directory at their leisure —
-	`/organize` now opens a checkbox picker in the review panel before
-	Pass 1 runs (`ChatApp._pick_files_to_organize()` in `chatui.py`),
-	pre-checking files missing frontmatter or not yet placed (tagged
-	`[unorganized]`) while leaving already-organized files selectable
-	too. `all`/`none`/`unorganized` bulk commands plus per-row click
-	toggling, Enter to start. Only Pass 1/2/4 (tag/wikilink/placement
-	generation) are scoped to the selection — Pass 2 still treats the
-	full vault as valid wikilink-target context so a selected file can
-	still link to an unselected one, and Pass 3/5 (conversation
-	condensing, wikilink validation) are vault-wide housekeeping
-	unrelated to the selection and run unconditionally. No folder-level
-	bulk selection yet (flat file list, naturally grouped by the
-	existing path sort) — a reasonable v2 if it's ever needed.
-
-- cleaner text writing to the console, current version clunkily cuts off the active text
+- ✅ done 2026-07-03: seperator between split pages should be resizeable with the mouse — new `Splitter` widget (`chatui.py`) between `#review-panel` and `#chat-pane`, drag via `MouseDown`/`MouseMove`/`MouseUp` to resize within a 24–100 column range; scrollbar should be invisible ✅ done — `scrollbar-size: 0 0` on `RichLog`/`#review-list`/`#review-detail`
+- ✅ done 2026-07-03: general design of the ui, while going in the right direction, feels clunky and unpolished — full front-end refactor: theme (transparent/ANSI-adaptive background, hidden scrollbars, consolidated `$border`/`$accent`/`$dim`/`$text` palette), resizable divider, real folder tree for file picking, and the default-accepted `ReviewListView` interaction model all shipped together this session. Not a total visual redesign — same layout skeleton (left dock + chat) — but the biggest sources of "clunky" (typed bulk commands, flat file list, hardcoded dark background, fixed divider) are gone.
+- ✅ done 2026-07-03: background color of the program should be transparent and adapt to terminals colorscheme — `ChatApp.ansi_color = True` + `background: transparent` on `Screen`/`Header`/`Footer`/`RichLog`/`#review-list`; verified live in tmux that zero background escape codes are emitted, so the terminal's own background genuinely shows through
+- ✅ done 2026-07-03: /organize shows a list of all files, rather than a tree of folders and the files within them — new `FileTree` widget (`chatui.py`, subclasses Textual's `Tree`) replaces the flat `ListView` picker with real expandable folder nodes; files as leaves with `☑`/`☐` + `[unorganized]`, toggled via click/Enter/Space; `Ctrl+A`/`Ctrl+R`/`Ctrl+U`/`Ctrl+Enter` bulk keybindings replace the old typed `all`/`none`/`unorganized` Input commands (shown automatically in the footer). No folder-level bulk selection yet — a reasonable v2.
+- ✅ addressed differently than originally asked, 2026-07-03: after interactively selecting files, program goes back to uninteractive "generating tag suggestions..." and "scanning for wikilink opportunities..." — the individual LLM calls themselves are still opaque (the busy-bar elapsed-time ticker from the earlier session is the only signal during those), but the root cause of the *serial waiting feeling* — a long chain of one-at-a-time prompts you had to babysit after each generation step — is what's actually fixed: the whole batch now shows at once, default-accepted, reviewed and applied in one pass instead of N sequential decisions. Revisit per-call progress detail (e.g. streaming partial LLM output) separately if the opaque-generation gap is still the dominant complaint after using the new flow.
 
 ## Commands
 
