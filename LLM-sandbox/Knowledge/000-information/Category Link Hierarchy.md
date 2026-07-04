@@ -19,5 +19,5 @@ The combination of category browsing and hyperlink navigation allows readers to 
 
 ## See Also
 
-* [[Evaluating Systems of Classification]]: For an in-depth look at the principles behind Wikipedia's categorization system.
-* [[Taxonomy Hierarchy Differences]]: To understand how Wikipedia's category structure compares to other classification systems.
+* [[[[Evaluating Systems of Classification]]]]: For an in-depth look at the principles behind Wikipedia's categorization system.
+* [[[[Taxonomy Hierarchy Differences]]]]: To understand how Wikipedia's category structure compares to other classification systems.

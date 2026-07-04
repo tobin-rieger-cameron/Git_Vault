@@ -29,6 +29,6 @@ Another significant distinction lies in the level of granularity and expressiven
 
 ## See Also
 
-* [[Taxonomy Hierarchy Differences]]: A comparison of taxonomy hierarchy differences.
+* [[[[Taxonomy|Taxonomy Hierarchy Differences]]]]: A comparison of taxonomy hierarchy differences.
 * [[Interdisciplinary Ontologies]]: A discussion on interdisciplinary ontologies and their relationship to knowledge graphs.
 * [[Knowledge Distillation Methods]]: An overview of knowledge distillation methods, which can be used in conjunction with knowledge graphs.
