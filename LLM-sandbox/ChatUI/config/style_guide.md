@@ -1,10 +1,10 @@
 ---
-summary: Coding standards for the ChatUI rebuild, distilled from PEP8, Effective Python (3rd ed.), and Clean Code (Martin). Naming conventions are the current focus.
+summary: Coding standards for the ChatUI rebuild, distilled from PEP8, Effective Python (3rd ed.), Clean Code (Martin), and Clean Code in Python (Anaya). Covers naming, function/class design, async/concurrency, and data modeling so far.
 ---
 
 # Style Guide
 
-Sources: `Example Database/Python_PEP8_TheStyleGuideForPythonCode.pdf`, `Effective-Python_Third-Edition.pdf`, `Clean Code_ A Handbook of Agile Software Craftsmanship - Robert C. Martin.pdf`, `_OceanofPDF.com_Clean_Code_in_Python...pdf`.
+Sources: `Example Database/Python_PEP8_TheStyleGuideForPythonCode.pdf`, `Effective-Python_Third-Edition.pdf`, `Clean Code_ A Handbook of Agile Software Craftsmanship - Robert C. Martin.pdf`, `_OceanofPDF.com_Clean_Code_in_Python_-_Second_Edition_-_Mariano_Anaya.pdf`.
 
 ## Naming conventions
 
@@ -63,6 +63,52 @@ Most naming trouble doesn't start with a bad vocabulary choice — it starts wit
 - Keyword-only arguments (`*,` in the signature) for anything where argument order at the call site could be confused; positional-only (`/`) for parameter names that are implementation detail, not public API.
 - `None` + docstring for any default argument value that needs to be computed fresh per call (a timestamp, a new list) — a literal mutable default is shared across every call.
 
-## Open
+## Async and concurrency (Clean Code in Python, Ch.7)
 
-Formatting/comments/error-handling/objects-and-data-structures chapters of Clean Code, and most of Clean Code in Python (SOLID, decorators, descriptors, design patterns), haven't been distilled into this doc yet — added as they become relevant to actual rebuild decisions, not all at once up front.
+The rebuild is a Textual app — `async def`/`await`, workers, and the event loop are load-bearing, not incidental. This is the exact bug class that bit the old `chatui.py` (`NoActiveWorker` from calling `push_screen_wait` outside worker context), so get the mental model right before writing more async code.
+
+- **Generators vs. coroutines are the same mechanism, different intent.** Both use `yield`/are driven by `__next__`-like advancement, but a generator exists for lazy iteration; a coroutine exists to suspend a piece of work and resume it later (I/O, event-loop scheduling). Don't let the syntactic overlap blur the purpose — code that *iterates* (produces a stream of values for a `for` loop) should be a plain generator; code that *waits on something* (a model call, a file read, a subprocess) should be `async def`.
+- **`async def` + `await` replaced hand-rolled coroutines (`yield from` + `.send()`/`.throw()`/`.close()`) on purpose.** Never write the old PEP-342-style manual coroutine plumbing in new code — `await` only works with `awaitable` objects and raises immediately if you hand it something that isn't one, which is exactly the fail-fast behavior you want instead of a runtime surprise deep in a callback.
+- **An event loop (here: Textual's, built on asyncio) owns every coroutine.** `await <coroutine>` doesn't block — it hands control back to the loop, which resumes something else, then resumes you when your result is ready. A blocking call inside an `async def` (a synchronous `requests.get`, a tight CPU loop, a plain `time.sleep`) stalls the *entire* app, not just that one task — this is almost certainly what "the program just looks frozen completely" during Pass 1/2 boiled down to when a genuinely-async step got mixed with something synchronous.
+- **`push_screen_wait`, and anything else that suspends waiting on the app, must run inside worker context.** Textual workers are the sanctioned place to `await` UI-suspending calls; a plain message handler is not a coroutine driven by the same scheduling guarantee. If a handler needs to `await` something that can block, route it into a worker (`self.run_worker(...)`) rather than awaiting it directly from the handler.
+- **Async context managers (`async with`, `__aenter__`/`__aexit__`) and async iteration (`async for`, `__aiter__`/`__anext__`) exist for the same reason their sync counterparts do — resource setup/teardown and streaming — just for resources that need to `await` during enter/exit/each step.** Prefer an async generator (`async def f(): ... yield x`) over hand-writing a class with `__aiter__`/`__anext__` — same reason plain generators beat hand-written iterators: less boilerplate, same capability, per the book's own explicit recommendation.
+- **Don't put a coroutine where a magic method expects a plain function**, e.g. `__init__`, `__getattr__`. Object construction and attribute access should stay synchronous and side-effect-light; if initialization needs an awaited call, that belongs in an explicit async factory/setup step the caller awaits, not hidden inside `__init__`.
+
+## Classes and data modeling (Clean Code, Ch.6 — Objects and Data Structures)
+
+- **Objects and data structures are opposites, and a class should commit to being one or the other, not both.** An *object* hides its data behind an abstraction and exposes behavior (`Paper.reclassify()`); a *data structure* exposes its data plainly and has no meaningful behavior (`ParsedFrontmatter` with public fields, no methods). Adding getters/setters over private fields doesn't turn a data structure into an object — it's still just exposing implementation through an extra layer of indirection. Decide, per class, which one it is.
+- **This split has a real payoff, not just a style preference.** Data-structure code (procedures operating on plain data) makes it easy to add new *operations* without touching existing data shapes. Object code (behavior hidden behind an interface) makes it easy to add new *data shapes/implementations* without touching existing callers. In the rebuild: things like `Paper`/`ReviewProposal` that gain new kinds of operations over time (draft, classify, review, export) should probably be data structures operated on by functions; things where new *variants* are the likely growth axis (multiple retrieval backends, multiple paper-source formats) should be objects behind a shared interface.
+- **Law of Demeter: a method should only call methods on itself, its own fields, objects it created, or objects passed to it as arguments — not on objects returned by those calls.** `ctxt.getOptions().getScratchDir().getAbsolutePath()` ("train wreck" chaining) is the smell; it only actually violates Demeter if `ctxt`/`options`/`scratchDir` are *objects* hiding behavior — if they're plain data structures, chaining through their public fields (`ctxt.options.scratch_dir.absolute_path`) is fine, because data structures are supposed to expose their shape. Don't apply Demeter to attribute access on dataclasses; do apply it to method-chaining on things with real behavior.
+- **Don't fix a train wreck by asking an object about its internals just to do something with the answer** (`ctxt.getAbsolutePathOfScratchDirectoryOption()` and its ilk explode into a combinatorial pile of accessor methods). If the caller's actual goal is "get `ctxt` to do X," tell it to do X directly (`ctxt.create_scratch_file_stream(name)`) instead of extracting pieces to do X yourself.
+- **Avoid hybrids** — a class with both real behavior *and* public fields/bean-style accessors that let outside code bypass that behavior. Hybrids are the worst of both worlds: hard to add new operations to (because behavior is baked in) and hard to add new data shapes to (because callers already depend on the exposed fields). If a class is accumulating both, split it into a plain data structure plus a separate object that holds the business logic and references it.
+- **Data Transfer Objects (DTOs)** — a class with public fields and no functions — are the right shape for boundary data: parsed frontmatter, a row from ChromaDB, a raw model response before it's interpreted. In Python, this is exactly what `@dataclass` is for (ties back to Effective Python's dataclass recommendation already in this doc). Don't add business-rule methods onto a DTO "for convenience" — that's how a DTO turns into a hybrid.
+- **Active Record** (a DTO with `save()`/`find()`-style navigational methods bolted on, common in ORM-backed models) is fine as long as it stays a data structure with persistence methods — the moment business rules get added to it, split those rules into a separate object that holds/wraps the record rather than growing the record into a hybrid.
+
+## Backlog — chapters not yet distilled, by source
+
+Notes for future sessions on what's still available in each source PDF but hasn't been turned into style-guide content yet. Pull from this list when a rebuild decision actually needs the material — don't distill ahead of need.
+
+**Clean Code (Martin), full 462pp — chapters read so far: 1 (skim), 2 (full), 3 (full, naming guide + function guide above).**
+- Ch.4 Comments — when a comment earns its place vs. when it's compensating for a bad name (directly extends the naming guide already written).
+- Ch.5 Formatting — team-level layout conventions beyond PEP8's mechanical rules (vertical density, conceptual affinity between nearby lines).
+- Ch.6 Objects and Data Structures — Data Abstraction, the Data/Object Anti-Symmetry, Law of Demeter, Train Wrecks, DTOs, Active Record. **Immediate next read** — feeds the classes/data-modeling section above.
+- Ch.7 Error Handling — exceptions over error codes, unchecked exceptions, providing context, don't return/pass `None`. Directly relevant given Effective Python Item 32 is already in this doc; would consolidate both sources under one section.
+- Ch.8 Boundaries — wrapping third-party APIs (relevant to the Ollama/ChromaDB/Textual boundary code in the rebuild).
+- Ch.9 Unit Tests — the "F.I.R.S.T." properties; relevant once the rebuild has enough surface area to need a real test suite rather than the ad hoc pilot scripts used this session.
+- Ch.10 Classes — class organization/encapsulation/cohesion, Single Responsibility, Open-Closed; the class-design half of what Ch.6 covers from the data-shape half.
+- Ch.11 Systems, Ch.12 Emergence, Ch.13 Concurrency (Java-specific — cross-reference against Ch.7 of Clean Code in Python instead, which is Python-native), Ch.14 Successive Refinement, Ch.15–16 (case-study chapters, lowest priority), Ch.17 Smells and Heuristics — a checklist worth a pass near the end of the rebuild as a self-review tool, not up front.
+
+**Clean Code in Python (Anaya), full 504pp — chapter read so far: 7 (full, async guide above).**
+- Ch.1 Introduction, Formatting, and Tools — linters/formatters/type-checking tooling for Python specifically (mypy, pylint, black-equivalents); worth a pass when setting up the rebuild's project scaffolding.
+- Ch.2 Pythonic Code — indexing/slicing protocols, context managers, comprehensions, properties vs. getters/setters — likely the single highest-value untouched chapter given how much of the rebuild will be idiomatic Python over a TUI.
+- Ch.3 General Traits of Good Code — design by contract, defensive programming, DRY/YAGNI/KIS, EAFP vs. LBYL, inheritance, function arguments — overlaps but doesn't duplicate the Clean Code (Martin) function guide already written; EAFP vs. LBYL specifically isn't covered yet anywhere in this doc.
+- Ch.4 SOLID Principles — as applied in Python specifically (duck typing changes how Liskov/Interface-Segregation show up); relevant once the rebuild has more than one implementation of something (e.g. multiple retrieval backends).
+- Ch.5 Decorators — relevant if the rebuild ends up with repeated cross-cutting concerns (logging, retry-on-model-timeout) worth factoring out.
+- Ch.6 Descriptors — lower priority; niche unless the rebuild needs custom attribute validation/computed properties at scale.
+- Ch.8 Unit Testing and Refactoring — Python-specific pytest/mock guidance, pairs with Clean Code (Martin) Ch.9.
+- Ch.9 Common Design Patterns — worth a pass once the rebuild's actual architecture (Ask/Draft/Classify/Review) reveals which patterns it's already informally using.
+- Ch.10 Clean Architecture — layering/boundaries at the whole-application level; most useful once the four-verb structure has enough code to organize.
+
+**Effective Python (3rd ed.) — only an 80-page free-sample PDF (front matter + full Ch.5 Functions, already distilled above, + full index). Chapters 1–4 and 6–14 are NOT available in full prose, only as item titles via the index/TOC.** No further distillation possible from this source until (if) a full edition is obtained. Known-relevant item titles worth sourcing prose for later, from the index: Ch.9's asyncio items (Item 67ish "Achieve Highly Concurrent I/O with Coroutines," "Know How to Port Threaded I/O to asyncio," "Maximize Responsiveness of asyncio Event Loops with async-Friendly Worker Threads," "Consider concurrent.futures for True Parallelism") and Item 51 "Prefer dataclasses for Defining Lightweight Classes."
+
+**PEP8 — fully read and distilled (25pp, no backlog).**
