@@ -1930,6 +1930,33 @@ class ChatApp(App[None]):
             done.set()
             await ticker
 
+    async def _stream_lines(
+        self, prompt: str, model, live_list: ListView, detail: Static,
+        on_line: Callable[[str], str | None],
+    ) -> str:
+        """Stream one LLM call token-by-token: raw text goes into `detail`
+        live (the same "watch it type" effect as chat answers), and each time
+        a complete line finishes, `on_line(line)` decides whether it's worth
+        surfacing — batched/no-structure calls (a whole vault's tag
+        suggestions, one note's wikilink scan) otherwise show nothing until
+        the entire response lands. Returns the full accumulated text.
+        """
+        parts: list[str] = []
+        processed = 0
+        async for chunk in model.astream(prompt):
+            parts.append(chunk.content)
+            text = "".join(parts)
+            detail.update(Text(text))
+            complete_lines = text.split("\n")[:-1]  # last line may still be mid-stream
+            while processed < len(complete_lines):
+                line = complete_lines[processed]
+                processed += 1
+                shown = on_line(line)
+                if shown is not None:
+                    live_list.append(ListItem(Label(shown, markup=False)))
+                    live_list.scroll_end(animate=False)
+        return "".join(parts)
+
     def _note_event(self, event: str) -> None:
         self._session_events.append(event)
 
@@ -3274,20 +3301,33 @@ class ChatApp(App[None]):
                 "Reply in this exact format, one note per line:\nstem: tag1, tag2\n\nNotes:\n"
                 f"{note_list_str}\n\nTags:"
             )
-            self._log("[dim]Generating tag suggestions…[/dim]")
-            raw_tags = await self._await_with_progress(
-                "Generating tag suggestions…", asyncio.to_thread(lambda: coding_llm.invoke(tag_prompt).content.strip())
-            )
-            for line in raw_tags.splitlines():
+            def _on_tag_line(line: str) -> str | None:
                 if ":" not in line:
-                    continue
+                    return None
                 stem_part, tags_part = line.split(":", 1)
                 key  = stem_part.strip().lstrip("- ").strip()
                 tags = [t.strip() for t in tags_part.split(",") if t.strip()]
+                if not tags:
+                    return None
                 for note_stem in notes:
                     if note_stem.lower() == key.lower() or key.lower() in note_stem.lower():
                         tag_map[note_stem] = tags
-                        break
+                        return f"✓ {note_stem}.md: {', '.join(tags)}"
+                return None
+
+            header = self.query_one("#review-panel-header", Label)
+            header.update("[bold]Generating tag suggestions…[/bold]")
+            detail = self.query_one("#review-detail", Static)
+            review_panel = self.query_one("#review-panel", Vertical)
+            live_list = ListView()
+            await review_panel.mount(live_list, after=header)
+            self.query_one("#review-panel").display = True
+            self.query_one(Splitter).display = True
+            try:
+                raw_tags = await self._stream_lines(tag_prompt, coding_llm, live_list, detail, _on_tag_line)
+            finally:
+                await live_list.remove()
+                detail.update("")
 
         def _make_tag_apply(stem: str, path: str):
             def _apply(final_tags_str: str) -> None:
@@ -3357,40 +3397,61 @@ class ChatApp(App[None]):
         link_feedback  = _load_organize_feedback("wikilink")
         link_proposals: list[Proposal] = []
         selected_notes = [(s, notes[s]) for s in notes if s in selected_stems]
-        for i, (stem, data) in enumerate(selected_notes, 1):
-            content     = data["content"]
-            # Full vault, not just selected_stems — any vault file is a valid
-            # wikilink target even if it wasn't picked for this /organize run.
-            other_notes = {s: d["title"] for s, d in notes.items() if s != stem}
-            if not other_notes:
-                continue
 
-            link_prompt = (
-                (f"{link_feedback}\n\n" if link_feedback else "") +
-                "You are editing a markdown note to add Obsidian [[wikilinks]].\n"
-                f"Available notes:\n{chr(10).join(f'  {s}: {t}' for s, t in other_notes.items())}\n\n"
-                "Find phrases in the note BODY that clearly refer to one of the above notes.\n"
-                "Only the FIRST occurrence. Nothing inside --- frontmatter or existing [[...]].\n"
-                'Reply one per line as: "exact phrase" -> target_stem  — or reply "none".\n\n'
-                f"Note:\n{content}\n\nSuggestions:"
-            )
-            raw = await self._await_with_progress(
-                f"Checking {stem}.md for wikilinks… ({i}/{len(selected_notes)})",
-                asyncio.to_thread(lambda: coding_llm.invoke(link_prompt).content.strip()),
-            )
-            if not raw or raw.lower() == "none":
-                continue
+        header = self.query_one("#review-panel-header", Label)
+        detail = self.query_one("#review-detail", Static)
+        review_panel = self.query_one("#review-panel", Vertical)
+        live_list = ListView()
+        await review_panel.mount(live_list, after=header)
+        self.query_one("#review-panel").display = True
+        self.query_one(Splitter).display = True
 
-            subs = _parse_link_subs(raw, content)
-            if not subs:
-                continue
+        try:
+            for i, (stem, data) in enumerate(selected_notes, 1):
+                content     = data["content"]
+                # Full vault, not just selected_stems — any vault file is a valid
+                # wikilink target even if it wasn't picked for this /organize run.
+                other_notes = {s: d["title"] for s, d in notes.items() if s != stem}
+                if not other_notes:
+                    continue
 
-            link_proposals.append(Proposal(
-                kind="wikilink", path=data["path"], label=f"{stem}.md",
-                detail="\n".join(f"  '{phrase}'  →  [[{target}]]" for phrase, target in subs),
-                proposed="\n".join(f'"{phrase}" -> {target}' for phrase, target in subs),
-                apply=_make_link_apply(stem, data["path"], content),
-            ))
+                link_prompt = (
+                    (f"{link_feedback}\n\n" if link_feedback else "") +
+                    "You are editing a markdown note to add Obsidian [[wikilinks]].\n"
+                    f"Available notes:\n{chr(10).join(f'  {s}: {t}' for s, t in other_notes.items())}\n\n"
+                    "Find phrases in the note BODY that clearly refer to one of the above notes.\n"
+                    "Only the FIRST occurrence. Nothing inside --- frontmatter or existing [[...]].\n"
+                    'Reply one per line as: "exact phrase" -> target_stem  — or reply "none".\n\n'
+                    f"Note:\n{content}\n\nSuggestions:"
+                )
+
+                def _on_link_line(line: str, stem=stem, content=content) -> str | None:
+                    subs = _parse_link_subs(line, content)
+                    if not subs:
+                        return None
+                    phrase, target = subs[0]
+                    return f"✓ {stem}.md: '{phrase}' → [[{target}]]"
+
+                header.update(
+                    f"[bold]Checking {stem}.md for wikilinks…[/bold]  [dim]({i}/{len(selected_notes)})[/dim]"
+                )
+                raw = await self._stream_lines(link_prompt, coding_llm, live_list, detail, _on_link_line)
+                if not raw or raw.lower() == "none":
+                    continue
+
+                subs = _parse_link_subs(raw, content)
+                if not subs:
+                    continue
+
+                link_proposals.append(Proposal(
+                    kind="wikilink", path=data["path"], label=f"{stem}.md",
+                    detail="\n".join(f"  '{phrase}'  →  [[{target}]]" for phrase, target in subs),
+                    proposed="\n".join(f'"{phrase}" -> {target}' for phrase, target in subs),
+                    apply=_make_link_apply(stem, data["path"], content),
+                ))
+        finally:
+            await live_list.remove()
+            detail.update("")
 
         await self._review(link_proposals)
 

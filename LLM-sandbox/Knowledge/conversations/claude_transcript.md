@@ -971,3 +971,26 @@ Verified feasibility directly against the installed Textual (8.2.8) before desig
 
 ### Verification
 New pilot tests per milestone (`test_splitter.py`, `test_file_tree.py`, `test_review_list.py`), reusing the `app.run_test()` + `app.run_worker()` pattern established earlier this session. `test_review_list.py` covers default-checked state, Space-toggle, arrow navigation, edit+changed-value (with reason logged to `organize_feedback.md`), edit+escape (new semantic: no forced skip), edit+no-change (no feedback logged), and Ctrl+Enter committing only checked items with edited values applied. Retired `test_review.py`/`test_review_panel.py` (tested the now-fully-replaced typed-command interaction) rather than patch them. Took real screenshots (`export_screenshot()` → SVG → PNG) at each milestone to visually confirm rendering, not just assertion state — caught nothing new this round, but is now the standard verification step for any UI change in this project.
+
+---
+
+## Session 24 — 2026-07-04: Streaming Tag/Wikilink Discovery in /organize
+
+**Commits:** _(this commit)_
+
+### User
+okay so right now, I've just been waiting for the program to look for wikilinks with no visual queue. same for the tags. I want these two steps to stay in the split menu, I want them to show each tag and wikilink on the screen as its found, just like how prompts show each token as its picked for a response
+
+### Assistant
+Checked the existing chat-answer streaming mechanism (`ChatApp._stream_llm`, using `model.astream(prompt)` token-by-token into a `Static` widget) and reused the same underlying primitive for Pass 1 (tag generation) and Pass 2 (wikilink scanning), rather than inventing a new streaming approach.
+
+Added `ChatApp._stream_lines()`: streams one LLM call via `.astream()`, updating `#review-detail` live with the raw accumulating text (the token-by-token "typing" effect, staying inside the split panel as asked) and — each time a complete line finishes — calling a caller-supplied `on_line(line)` to decide whether it's a recognized tag/wikilink line worth surfacing as a new row in a growing `ListView`, appended live rather than waiting for the whole response. Pass 1's line-recognition (`stem: tag1, tag2`) now populates `tag_map` as a direct side effect of streaming rather than a separate post-hoc parsing pass; Pass 2 reuses the existing `_parse_link_subs()` per-line for validated live recognition, with the authoritative full-response parse afterward unchanged.
+
+### User
+[mid-implementation, screenshot showing a live /organize run stuck at "Checking Polythematic Structured Subject Heading System.md for wikilinks… (5/5) (131s)"] I think it might be done here, but the program just looks frozen completely
+
+### Assistant
+Pointed out that the ticker itself incrementing (131s and climbing) is direct proof the event loop isn't deadlocked — a genuinely frozen app couldn't keep that counter moving. What's actually stalled is the `coding_llm` call for that one file specifically, running in a background thread via `asyncio.to_thread`, with no visibility into *why* since it's a single opaque `invoke()` — precisely the gap the in-progress streaming work closes. Continued the implementation rather than interrupting it, since this was a live instance running the *previous* commit's code, not something actionable through the current session.
+
+### Verification
+Wrote a `FakeStreamingModel` (mimics `ChatOllama.astream()`'s chunk-by-chunk interface without needing a live, slow Ollama call) and a new pilot test confirming: the stream doesn't crash mid-flight, the full accumulated text is returned correctly, `on_line`'s side effects (populating `tag_map`) fire correctly during streaming, and only recognized lines get appended as rows (an invalid stem in the fake stream was correctly skipped). Took real screenshots at two points mid-stream — one showing only raw partial text ("Taxonomy: ta"), a second further in showing the first line's row already appended ("✓ Taxonomy.md: taxonomy, classification") *while* the second line was still visibly typing in the detail pane below it — confirming both the token-level effect and the per-item "found" effect work together, inside the review panel, exactly as asked. Re-ran the full existing pilot suite (`test_review_list.py`, `test_file_tree.py`, `test_splitter.py`) to confirm no regressions.
