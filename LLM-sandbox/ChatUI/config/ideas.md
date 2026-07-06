@@ -20,9 +20,11 @@ summary: Backlog of improvement ideas for chatui.py — not yet directives, just
 
 ## Commands
 
-- **`/rename` file action** — `/savefile` and `/organize` let you type a new name, but there's no way to rename an existing vault file from inside chatui. Would fix the `individual-sized-cakes.md` problem (user tried to request a rename via the tags field).
-- **`/find` or `/search` command** — raw semantic search without the LLM answer, showing chunk scores and source lines. Useful for debugging retrieval.
-- **`/savefile` doesn't capture vault-grounded answers** — confirmed still true: `_queue_note` is only called from the model-knowledge and web-search/supplement paths in `_process()`, never from the vault (`top_score >= SIMILARITY_THRESHOLD`) branch. So a vault-grounded Q&A can't be queued via `/savefile` — `/distill` is the only route to turn one into an article. Worth deciding if that split is intentional or should be unified.
+Note: `/organize`, `/savefile`, `/distill`, and `/update`/`/apply` no longer exist — the app was rebuilt from scratch around four verbs (Ask/Draft/Classify/Review, see `project_chatui_redefinition` memory). Ideas below are re-evaluated against that surface rather than dropped outright, since the underlying need may still apply to `/classify` or `/draft`.
+
+- **`/rename` file action** — no command in the new surface lets you rename an existing vault file either; `Vault.save_file()` doesn't cover renames. Still an open gap, now against `vault.py`/`app.py` rather than the old `/savefile`/`/organize`.
+- **`/find` or `/search` command** — raw semantic search without the LLM answer, showing chunk scores and source lines. Useful for debugging retrieval; would sit alongside `Retriever.search()` as a thin support command, same idea as before.
+- **Ask doesn't have a save-to-vault action** — the old `/savefile` queued model-knowledge/web answers for review and writing to the vault, but only from non-vault-grounded paths. That whole flow is gone; `/draft` is now the only route from a conversation to a saved paper. Worth deciding whether Ask should be able to hand a good answer straight to `/draft` as a starting point, rather than requiring the user to re-type the subject.
 
 ## Retrieval
 
@@ -34,11 +36,6 @@ summary: Backlog of improvement ideas for chatui.py — not yet directives, just
 - **Running multiple ChatUI instances simultaneously** — currently blocked by a PID file lock. Consider whether multi-instance is a desirable pattern: one instance per vault (different `--vault` paths), or a server mode where one background process serves multiple front-ends. Key challenges: shared `local_db/` writes would corrupt ChromaDB (it's not concurrent-write-safe), and two watchdog observers on the same vault directory would double-ingest. If multi-instance is wanted, the DB would need to move to a read-only mode for secondary instances, or ChromaDB would need to be replaced with something that supports concurrent writers (e.g. Qdrant, Weaviate).
 
 - **Watching the tmux session while Claude Code drives it** — root cause of the TUI locking up: Claude Code drives ChatUI via `tmux send-keys` to an existing session. When the user is simultaneously attached (`tmux attach -t chatui`), both are writing to the same pseudo-terminal — input races are possible but not the core issue. The real problem is that Claude Code's polling loops (`until condition; do sleep N; done`) require explicit user approval and get rejected mid-run, leaving the pane in an indeterminate state (partial command sent, ingest or LLM call still in progress, no one consuming output). The TUI appears frozen because Textual is waiting on async work that has no one driving its event loop cleanly. **Fix when this pattern is needed:** open a second tmux window (`Ctrl+b c`) for read-only observation (`tmux attach -t chatui:1`), and keep the driving window separate. Alternatively, Claude Code should use `run_in_background: true` for any wait loops so approval prompts don't interrupt mid-flight.
-
-## Self-update
-
-- **`/update` function needs fine-tuning / improvement** — really, this function exists to make the iteration process easier
-- perhaps the method should suggest ways of implementing changes, basic code structure, which the user can take into free online LLM models to implement by hand.
 
 ## Vault hygiene
 

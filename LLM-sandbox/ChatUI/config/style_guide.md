@@ -1,5 +1,5 @@
 ---
-summary: Coding standards for the ChatUI rebuild, distilled from PEP8, Effective Python (3rd ed.), Clean Code (Martin), and Clean Code in Python (Anaya). Covers naming, function/class design, async/concurrency, and data modeling so far.
+summary: Coding standards for the ChatUI rebuild, distilled from PEP8, Effective Python (3rd ed.), Clean Code (Martin), and Clean Code in Python (Anaya). Covers naming, function/class design, async/concurrency, data modeling, and comments so far.
 ---
 
 # Style Guide
@@ -46,6 +46,37 @@ Most naming trouble doesn't start with a bad vocabulary choice — it starts wit
 - **A boolean/flag argument is a naming smell in disguise** — it means the function does two different things depending on the flag's value (`render(is_suite: bool)`). Split it into two clearly-named functions (`render_for_suite()` / `render_for_single()`) rather than trying to find one name that covers both branches.
 - **No hidden side effects.** If `check_password` also silently initializes a session, the name is lying to every caller who trusts it. Either the side effect belongs in the name (`check_password_and_start_session`) or it shouldn't be there.
 - **Command/query separation.** A function either *does* something (a command — mutates state, returns `None`) or *answers* something (a query — returns a value, no visible mutation). A function trying to be both (`set(attr, val) -> bool`) can't be named well because it's not one thing.
+
+## Comments (PEP8 + Clean Code Ch.4)
+
+The default is not to write one. A comment is what you reach for only after you've tried and failed to make the code say it. Every comment in this codebase should be able to answer "why did I need this instead of a better name/function?"
+
+### The Clean Code framing
+
+- **A comment is a failure, not a virtue.** It exists because we couldn't express the intent in code — never a reason to feel good about "documenting" something. If you're about to write one, first ask whether a renamed function/variable, an extracted helper, or a dataclass field would make the comment unnecessary.
+- **Comments rot; code doesn't.** They live apart from the code they describe, so nothing enforces that they stay true when the code changes. An inaccurate comment is worse than none — it actively misleads. Treat every existing comment you encounter with suspicion: check it's still true before trusting it.
+- **Never comment instead of cleaning up.** "This is confusing, I'd better comment it" is the wrong move — fix the confusion instead. A short, well-named function beats a long one with a header explaining what it does.
+- **Don't restate what the code already says** (`i += 1  # increment i`). If removing the comment loses zero information, delete it.
+- **Don't leave commented-out code.** Git remembers it; a comment claiming to "explain" a dead code block just invites the next reader to wonder if it's safe to delete. Delete it — it's in history if it's ever needed.
+- **No banner/section-divider comments, no closing-brace comments, no attribution/byline comments, no changelog-in-a-docstring.** Source control already owns authorship and history; this repo's own `config/changelog.md` already owns the changelog, so it especially shouldn't be duplicated in-file.
+- **Never document what a stub will do — only what it does.** A `raise NotImplementedError` body has no behavior yet; a docstring describing the intended implementation ("calls X, streams to Y") is describing code that isn't there, which is the same lie-in-waiting as an outdated comment, just pre-dated instead of stale. Skeleton methods get a docstring only once they have a real body to describe.
+- **Comments that earn their place** (rare, and all of these still need to be short and directly attached to the code they describe): a non-obvious *why* behind a decision (a workaround for a specific external bug, a deliberately-unusual choice made for a reason that isn't visible locally); a warning of a real consequence (a slow/dangerous test, a thread-safety constraint); a `# TODO:` marking known-incomplete work that's actually tracked, not a permanent excuse.
+- **A comment must be local.** If understanding it requires jumping to another module or a design doc, it isn't doing its job — put that context in `config/` docs, not scattered inline.
+
+### PEP8's mechanical rules, when a comment is warranted
+
+- Comments should be complete sentences; capitalize the first word (unless it's an identifier that starts lowercase — never alter identifier case). Short comments can drop the trailing period; block comments should punctuate every sentence.
+- **Block comments**: same indentation as the code they describe, each line starts with `# ` (one space after `#`). Separate paragraphs within a block comment with a bare `#` line.
+- **Inline comments** (on the same line as a statement): use sparingly. Separate from the statement by at least two spaces, then `# ` (one space). Never state the obvious (`x += 1  # increment x`) — only worth it when it explains something not visible in the line itself (`x += 1  # compensate for border`).
+- Keep comments in English unless certain no one who lacks that language will ever read the code.
+
+### Docstrings (PEP8 → PEP257)
+
+- Every **public** module, function, class, and method gets a docstring. Non-public (`_`-prefixed) functions don't need one, but per this codebase's "no comments unless the why is non-obvious" rule, they also don't get a comment by default — only if there's a genuine non-obvious why.
+- For a multi-line docstring, the closing `"""` goes on its own line. For a one-liner, keep the closing `"""` on the same line as the opening.
+- This project's own rule (from the top of this doc) still governs docstring *content*: no multi-paragraph docstrings, one line describing intent, not restating the signature. A public function's docstring should say what it does at a level the name doesn't already cover — not a repeat of the parameter list.
+- **Function/method docstrings: imperative mood, not descriptive.** PEP257 is explicit: "It prescribes the function or method's effect as a command ("Do this", "Return that"), not as a description ("Returns the pathname...")." Write `"""Return the pathname of the KOS root directory."""`, never `"""Returns the pathname..."""`. This applies to every function/method docstring in this codebase — a docstring that answers "what does this do" as a command reads as a fixed spec; one that answers it as a description of behavior reads like an aside pulled from a conversation about the code, which is exactly the tone to avoid. Class/enum/module docstrings are the one exception — they describe *what a thing is*, not an effect, so a noun phrase is correct there (`"""A retrieved passage; ..."""`, not `"""Represents a retrieved passage..."""`).
+- **Pick one voice per file and hold it.** Google's style guide allows either imperative or descriptive style but requires "the style should be consistent within a file" — this codebase standardizes on imperative for all function/method docstrings, full stop, so there's no per-file judgment call to make.
 
 ## Formatting and layout (PEP8, brief — expand later as needed)
 
@@ -99,8 +130,7 @@ The rebuild is a Textual app — `async def`/`await`, workers, and the event loo
 
 Notes for future sessions on what's still available in each source PDF but hasn't been turned into style-guide content yet. Pull from this list when a rebuild decision actually needs the material — don't distill ahead of need.
 
-**Clean Code (Martin), full 462pp — chapters read so far: 1 (skim), 2 (full), 3 (full), 6 (full), 7 (full). Ch.8 read only its opening ("Using Third-Party Code").**
-- Ch.4 Comments — when a comment earns its place vs. when it's compensating for a bad name (directly extends the naming guide already written).
+**Clean Code (Martin), full 462pp — chapters read so far: 1 (skim), 2 (full), 3 (full), 4 (full), 6 (full), 7 (full). Ch.8 read only its opening ("Using Third-Party Code").**
 - Ch.5 Formatting — team-level layout conventions beyond PEP8's mechanical rules (vertical density, conceptual affinity between nearby lines).
 - Ch.8 Boundaries — only the opening ("Using Third-Party Code" — wrap boundary APIs, don't let their types leak, already applied to the Error Handling section above) has been read. The rest of the chapter (learning boundaries via tests, using code that doesn't exist yet, clean boundaries) is still unread — relevant once the rebuild actually integrates ChromaDB/Ollama and needs a concrete wrapping pattern, not just the principle.
 - Ch.9 Unit Tests — the "F.I.R.S.T." properties; relevant once the rebuild has enough surface area to need a real test suite rather than the ad hoc pilot scripts used this session.

@@ -8,5 +8,7 @@ from textual.widgets import Static
 
 
 class StreamingText(Static):
+    """A widget that updates its own display token-by-token as a ModelClient stream call runs."""
+
     async def stream(self, model_stream_call: Callable, prompt: str) -> str:
         raise NotImplementedError

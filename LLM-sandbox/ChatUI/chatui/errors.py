@@ -5,7 +5,7 @@ class ChatUIError(Exception):
     pass
 
 
-class PaperNotFoundError(ChatUIError):
+class VaultFileNotFoundError(ChatUIError):
     pass
 
 

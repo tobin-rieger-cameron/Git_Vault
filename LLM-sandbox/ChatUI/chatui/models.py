@@ -9,13 +9,15 @@ from pathlib import Path
 
 
 class RetrievalPath(Enum):
+    """Which source ask() drew its answer from — vault chunks, weak/no match, or the model alone."""
+
     VAULT = "vault"
-    GROUNDED = "grounded"
+    WEAK_MATCH = "weak_match"
     MODEL_KNOWLEDGE = "model_knowledge"
 
 
 @dataclass
-class Paper:
+class File:
     path: Path
     title: str
     body: str
@@ -28,6 +30,8 @@ class Paper:
 
 @dataclass
 class Chunk:
+    """A retrieved passage; score is Chroma's similarity score, not a raw distance."""
+
     text: str
     source_path: Path
     tags: list[str]
@@ -44,7 +48,7 @@ class AskResult:
 
 @dataclass
 class ClassificationSuggestion:
-    paper_path: Path
+    file_path: Path
     suggested_folder: str | None
     suggested_tags: list[str]
     suggested_links: list[str]
@@ -52,13 +56,15 @@ class ClassificationSuggestion:
 
 @dataclass
 class ReviewQuestion:
-    paper_path: Path
+    file_path: Path
     question: str
     answer_hint: str
 
 
 @dataclass
 class Override:
+    """A record of the user rejecting a suggestion; kind is e.g. "tags"/"placement"/"wikilink"."""
+
     kind: str
     path: Path
     proposed: str

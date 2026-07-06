@@ -1,4 +1,4 @@
-"""ChatApp — thin Textual shell. Holds one Vault/Retriever/ModelClient/Settings; no business logic here."""
+"""ChatApp — thin Textual shell."""
 
 from __future__ import annotations
 
@@ -11,6 +11,8 @@ from chatui.vault import Vault
 
 
 class ChatApp(App):
+    """Owns the one Vault/Retriever/ModelClient/Settings instance set and dispatches to the verb modules."""
+
     def __init__(self, vault: Vault, retriever: Retriever, model: ModelClient, settings: Settings) -> None:
         super().__init__()
         self.vault = vault

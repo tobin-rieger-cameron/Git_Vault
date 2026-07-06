@@ -1,10 +1,11 @@
 ---
 summary: >
   Defines which Ollama models are assigned to each role (chat, coding, embed)
-  and maintains the registry of models that should exist locally. chatui.py
-  reads this at startup — any model in the models: list that is not installed
-  will be pulled automatically before the app launches. Edit role keys to swap
-  models; add to models: before assigning a new model to a role.
+  and maintains the registry of models that should exist locally.
+  chatui.config.load_settings() reads this at startup — any model in the
+  models: list that is not installed will be pulled automatically before the
+  app launches. Edit role keys to swap models; add to models: before assigning
+  a new model to a role.
 chat_model: llama3.1:8b
 coding_model: qwen2.5-coder:7b
 embed_model: nomic-embed-text
@@ -22,7 +23,7 @@ models:
 | Role | Model | Purpose |
 |---|---|---|
 | `chat_model` | `llama3.1:8b` | Live streaming responses — quality default; switch to `llama3.2:3b` for speed via `/model` |
-| `coding_model` | `qwen2.5-coder:7b` | `/organize`, `/update` code generation, concept suggestions |
+| `coding_model` | `qwen2.5-coder:7b` | `/classify` structured suggestions (folder/tags/wikilinks), concept suggestions |
 | `embed_model` | `nomic-embed-text` | Vault ingestion and similarity search |
 
 ## Installed models
