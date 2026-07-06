@@ -29,7 +29,7 @@ Git_Vault/                    ← git root (branch: llm-sandbox)
 
 The repo root is `Git_Vault/` — always commit from there or use absolute paths. Never treat `LLM-sandbox/` as the git root.
 
-`chatui.py`/`apply_update.py` (the old single-file app) were deliberately wiped (commit `1fb5c9b`) and are being rebuilt as the `chatui/` package above, organized around four verbs — Ask, Draft a paper, Classify inline, Review (see memory `project_chatui_redefinition` / `ChatUI/config/style_guide.md`). As of the skeleton pass, every function in the package has a real signature but an unimplemented (`NotImplementedError`) body — nothing is functional yet.
+`chatui.py`/`apply_update.py` (the old single-file app) were deliberately wiped (commit `1fb5c9b`) and are being rebuilt as the `chatui/` package above, organized around four verbs — Ask, Draft a paper, Classify inline, Review (see memory `project_chatui_redefinition` / `ChatUI/config/style_guide.md`). The domain modules, the four verbs, `app.py`, and the `ui/` widgets are all implemented, with a passing unit + integration test suite under `ChatUI/tests/`.
 
 `conversations/` moved from `ChatUI/` to `Knowledge/` in commit `eb9a0f5` — always use the `Knowledge/conversations/` path, not `ChatUI/conversations/`.
 
@@ -41,9 +41,7 @@ source .chat_venv/bin/activate
 python -m chatui --vault ../Knowledge
 ```
 
-Not yet functional — the package is skeleton-only (see above). This section describes the intended run command for when the rebuild lands.
-
-Testing pattern (once functional): launch in tmux, wait for "Ask anything", send `/ingest`, then test queries.
+Testing pattern: launch in tmux, wait for the input prompt, send `/ingest`, then test queries. Unit tests run with `python -m pytest tests/ --ignore-glob='*integration*'`; the integration tests need a local Ollama and are skipped when it's unreachable.
 
 ## Critical constraints
 
@@ -58,6 +56,17 @@ Testing pattern (once functional): launch in tmux, wait for "Ask anything", send
 **After chunk_size changes** — run `/ingest` to rebuild ChromaDB. Current settings: chunk_size=800, overlap=100, top_k=5, threshold=0.65.
 
 No self-update pipeline in the rebuild — `/update`/`/apply` and the `CHANGE:`/`FIX:` directive format were deliberately dropped (didn't map to any of the four verbs). Config changes go back to plain hand-editing.
+
+## Code style — apply while writing, not in a later pass
+
+`ChatUI/config/style_guide.md` is the full standard (naming, functions, async, data modeling, error handling, comments, docstrings). Write and edit code to it as you go — every new function, comment, and docstring should land already conforming, so no formatting pass is needed afterward. The load-bearing comment/docstring rules, in-context:
+
+- **Docstrings are one line.** Imperative mood for functions/methods (`"""Return …"""`, `"""Route …"""`, never `"""Returns …"""`); a noun phrase for modules and classes. One-liner → closing `"""` on the same line. No multi-paragraph docstrings.
+- **Docstring only where it earns it.** Public functions/methods get one. A `_`-private function gets one only for a non-obvious return contract (a multi-value tuple, a sentinel); otherwise the name carries it. A trivial marker class (a bare exception subclass) or a self-describing `@dataclass` DTO is exempt — docstring it only to add a unit, invariant, or allowed-value set the fields don't already state.
+- **Comments are for the non-obvious *why*, and are rare.** Never restate what the code does. If a rename or an extracted helper removes the need for the comment, do that instead.
+- **Comments and docstrings stand on their own.** No author/book/methodology/design-doc provenance — no `per Norman`, `(CLIG)`, `matching the artifact`, `see ui_style_guide.md`. State the reasoning inline. A short pointer to an authoritative in-repo spec (`per CLAUDE.md's retrieval table`) is the only allowed reference.
+- **No commented-out code, no banner/section-divider comments, no changelog-in-a-docstring** — git and `config/changelog.md` own that history.
+- **The house style already lives in the domain modules** — match `chatui/ask.py`, `vault.py`, `retrieval.py` (sparse local why-comments, one-line imperative docstrings, bare private helpers), not the pre-cleanup shape `app.py` had.
 
 ## End-of-session checklist (do this before stopping, unprompted)
 

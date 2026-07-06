@@ -12,6 +12,7 @@ chunk_size: 800
 chunk_overlap: 100
 history_window: 2
 web_search_results: 3
+review_staleness_days: 30
 ---
 
 # Settings
@@ -25,6 +26,7 @@ web_search_results: 3
 | `chunk_overlap` | `100` | Overlap between adjacent chunks |
 | `history_window` | `2` | Conversation exchanges kept in prompt context |
 | `web_search_results` | `3` | Web results fetched per query (via `ddgs`) |
+| `review_staleness_days` | `30` | Days after a note's last review before `/review` (with no file selected) lists it as due again; never-reviewed notes are always due |
 
 ## Notes
 

@@ -20,6 +20,7 @@ _DEFAULTS = {
     "similarity_threshold": 0.65,
     "history_window": 2,
     "web_search_results": 3,
+    "review_staleness_days": 30,
 }
 
 
@@ -37,6 +38,7 @@ class Settings:
     similarity_threshold: float
     history_window: int
     web_search_results: int
+    review_staleness_days: int
 
 
 def _read_frontmatter(path: Path) -> dict:
@@ -72,4 +74,5 @@ def load_settings(config_dir: Path) -> Settings:
         similarity_threshold=merged["similarity_threshold"],
         history_window=merged["history_window"],
         web_search_results=merged["web_search_results"],
+        review_staleness_days=merged["review_staleness_days"],
     )

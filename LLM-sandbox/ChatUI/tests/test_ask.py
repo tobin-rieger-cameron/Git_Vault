@@ -138,7 +138,7 @@ async def test_ask_weak_match_path_below_threshold(tmp_path: Path) -> None:
     )
 
     assert result.path is RetrievalPath.WEAK_MATCH
-    # weak-match path never gets a web supplement in the old behavior
+    # weak-match path never adds a web supplement, even with web enabled
     assert result.web_supplement is None
 
 

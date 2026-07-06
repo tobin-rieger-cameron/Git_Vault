@@ -1,8 +1,8 @@
 # ChatUI — Local RAG Study Assistant
 
-## Status: mid-rebuild
+## Status: functional
 
-The app is being rebuilt from scratch around a redefined purpose (see below). The old single-file `chatui.py` was deliberately wiped; a new `chatui/` package skeleton exists (module/class/function signatures, no logic yet — everything raises `NotImplementedError`). Nothing in this README is runnable yet. This file will be updated as real behavior lands module by module.
+The rebuild described below is implemented and running: `chatui/app.py` wires a real Textual UI (fuzzy file search, command autocomplete, a live-diff draft view, per-item wikilink walkthrough) to the four real verb modules. Verified against actual Ollama models and a real ChromaDB instance, plus the full unit test suite. The `chatui.py` single-file predecessor was deliberately wiped as part of this rebuild; its full history is still in git if anything from it is ever needed.
 
 ## Overview
 
@@ -13,7 +13,7 @@ ChatUI is a local-first tool for building and maintaining a growing library of l
 3. **Classify inline** — right after a paper is drafted or substantially revised, suggest where it belongs and what it should link to, in the same session — not a separate batch review queue.
 4. **Review** — generate lightweight recall questions from a paper and track when it was last reviewed.
 
-## Setup (once the rebuild lands)
+## Setup
 
 ```bash
 # Install dependencies
@@ -44,19 +44,24 @@ python -m chatui --vault ../Knowledge
 | Web search | `ddgs` (no API key required) |
 | Terminal UI | Textual + Rich |
 
-## Command surface (planned — see `ChatUI/config/commands.md` once rewritten)
+## Command surface
+
+Click a file in the tree, or fuzzy-search for one (`ctrl+f`), to make it the *active file* — every per-file command below acts on whichever one is currently active, so there's no separate lookup step and no way to accidentally target something other than what's on screen. Autocomplete (Tab or →) completes any command below as you type it.
 
 | Input | Verb |
 |---|---|
 | plain text, no `/` | Ask |
-| `/draft <subject>` | Draft a paper |
-| `/classify` | Classify the paper just drafted/saved |
-| `/review [subject]` | Generate review questions, or list papers due for review |
+| `/draft` | Revise the active file — write an instruction next, `/done` saves |
+| `/draft <subject>` | Start a brand-new paper titled subject, then revise as above |
+| `/tags`, `/wikilinks`, `/folder` (or just mentioning one) | Classify: suggest tags / wikilinks / folder for the active file |
+| `/review` | Generate recall questions for the active file, or list papers due for review if none is active |
 | `/ingest` | Rebuild the vector database from vault files |
 | `/web` | Toggle web-search supplement on/off |
 | `/model [name]` | Show or switch the active chat model |
+| `/explorer` (or `f2`) | Toggle the file tree |
+| `/palette` (or `ctrl+p`) | Open the command palette |
 
-The old app's much larger command list (`/organize`, `/distill`, `/harvest`, `/update`/`/apply`, `/export`, etc.) is not being carried forward as-is — `/organize`'s batch-classification model is replaced by inline classification (verb 3 above), and the `/update`/`/apply` self-modifying-code pipeline has been dropped entirely (didn't serve the app's actual purpose).
+The old app's much larger command list (`/organize`, `/distill`, `/harvest`, `/update`/`/apply`, `/export`, etc.) was not carried forward as-is — `/organize`'s batch-classification model is replaced by inline, per-file classification (`/tags`/`/wikilinks`/`/folder` above), and the `/update`/`/apply` self-modifying-code pipeline was dropped entirely (didn't serve the app's actual purpose).
 
 ## Retrieval pipeline
 

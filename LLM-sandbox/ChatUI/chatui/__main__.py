@@ -19,7 +19,12 @@ def main() -> None:
 
     settings = load_settings(config_dir=Path(__file__).parent.parent / "config")
     vault = Vault(root=args.vault)
-    retriever = Retriever(db_path=Path(__file__).parent.parent / "local_db", embed_model=settings.embed_model)
+    retriever = Retriever(
+        db_path=Path(__file__).parent.parent / "local_db",
+        embed_model=settings.embed_model,
+        chunk_size=settings.chunk_size,
+        chunk_overlap=settings.chunk_overlap,
+    )
     model = ModelClient(chat_model=settings.chat_model, coding_model=settings.coding_model)
 
     ChatApp(vault=vault, retriever=retriever, model=model, settings=settings).run()
