@@ -1,7 +1,9 @@
 ---
-title: "Mathematics"
-tags: [mathematics]
+title: Mathematics
+tags:
+- mathematics
 ---
+
 #todo - the formating is complete garbage here, 
 # Math
 
@@ -25,3 +27,15 @@ Assistant:
 Based on the context from your notes, math is a language that describes patterns and relationships in the world around us. It's a way of using symbols, numbers, and shapes to solve problems, understand phenomena, and make predictions. Math provides the tools we need to navigate and make sense of our world, with practical applications in various fields such as science, engineering, economics, finance, and technology.
 
 ---
+
+## See Also
+
+- [[Economics]]
+
+## See Also
+
+- [[Natural Sciences]]
+
+## See Also
+
+- [[Vector Search Engines]]
