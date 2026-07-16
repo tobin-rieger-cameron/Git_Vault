@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from datetime import datetime
 from pathlib import Path
@@ -10,6 +11,8 @@ import yaml
 
 from chatui.errors import VaultFileNotFoundError, VaultWriteError
 from chatui.models import File
+
+_log = logging.getLogger(__name__)
 
 _FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?\n)---\s*\n?", re.DOTALL)
 _WIKILINK_RE = re.compile(r"\[\[([^\]]+)\]\]")
@@ -46,7 +49,9 @@ class Vault:
             file.path.parent.mkdir(parents=True, exist_ok=True)
             file.path.write_text(content, encoding="utf-8")
         except OSError as exc:
+            _log.error("failed to write %s: %s", file.path, exc)
             raise VaultWriteError(f"Failed to write {file.path}: {exc}") from exc
+        _log.info("saved %s (tags=%s)", file.path, file.tags)
 
     def find_by_tag(self, tag: str) -> list[File]:
         return [f for f in self.list_files() if tag in f.tags]
@@ -91,6 +96,15 @@ def extract_wikilinks(body: str) -> list[str]:
         target, _, _alias = match.group(1).partition("|")
         links.append(target.strip())
     return links
+
+
+def find_wikilinks(body: str) -> list[tuple[int, int, str]]:
+    """Return (start, end, target) for each [[target]] match's full span, for highlighting/click mapping."""
+    spans = []
+    for match in _WIKILINK_RE.finditer(body):
+        target, _, _alias = match.group(1).partition("|")
+        spans.append((match.start(), match.end(), target.strip()))
+    return spans
 
 
 def normalize_link_target(name: str) -> str:

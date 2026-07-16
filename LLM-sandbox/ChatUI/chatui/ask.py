@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from pathlib import Path
 
@@ -10,6 +11,8 @@ from chatui.models import AskResult, Chunk, RetrievalPath
 from chatui.retrieval import Retriever
 from chatui.vault import Vault
 from chatui.web import search_web
+
+_log = logging.getLogger(__name__)
 
 _UNCERTAIN_PREFIX = "i'm not certain"
 
@@ -49,6 +52,10 @@ async def ask(
                 chunks = scoped
 
     path = choose_retrieval_path(chunks, similarity_threshold)
+    _log.debug(
+        "path=%s scores=%s threshold=%s question=%r",
+        path.name, [round(c.score, 3) for c in chunks], similarity_threshold, question,
+    )
     history_text = _format_history(history, history_window)
     sources = sorted({_relative_to_vault(c.source_path, vault) for c in chunks}, key=str)
 

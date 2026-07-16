@@ -48,7 +48,7 @@ async def test_suggest_and_apply_classification_end_to_end(tmp_path: Path) -> No
     )
     vault.save_file(file)
 
-    suggestion = await suggest_classification(file, vault, model)
+    suggestion = await suggest_classification(file, model)
 
     assert suggestion.suggested_tags
     assert suggestion.suggested_folder

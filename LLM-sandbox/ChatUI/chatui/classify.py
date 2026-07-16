@@ -2,51 +2,66 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
+from typing import Callable
 
 from chatui.feedback import load_recent_overrides
 from chatui.llm import ModelClient
 from chatui.models import ClassificationSuggestion, File, Override
 from chatui.vault import Vault, extract_wikilinks
 
+_log = logging.getLogger(__name__)
+
 _STRUCTURE_PLAN_PATH = Path(__file__).resolve().parent.parent / "config" / "vault-structure-plan.md"
 
 _TABLE_ROW_RE = re.compile(r"^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*$", re.MULTILINE)
 
 
-async def suggest_classification(file: File, vault: Vault, model: ModelClient) -> ClassificationSuggestion:
-    """Suggest tags, then a folder (tag-map first, LLM fallback), then wikilinks — nothing is applied yet."""
+async def suggest_classification(
+    file: File, model: ModelClient, on_status: Callable[[str], None] | None = None
+) -> ClassificationSuggestion:
+    """Suggest tags, then a folder (tag-map first, LLM fallback) — nothing is applied yet."""
+    status = on_status or (lambda _text: None)
+    status("suggesting tags…")
     tags = await _suggest_tags(file, model)
+    status("choosing a folder…")
     folder = await _suggest_folder(tags or file.tags, file, model)
-    links = await _suggest_links(file, vault, model)
-    return ClassificationSuggestion(
-        file_path=file.path, suggested_folder=folder, suggested_tags=tags, suggested_links=links
-    )
+    return ClassificationSuggestion(file_path=file.path, suggested_folder=folder, suggested_tags=tags)
+
+
+async def suggest_wikilinks(
+    file: File, vault: Vault, model: ModelClient, on_status: Callable[[str], None] | None = None
+) -> tuple[list[str], list[str]]:
+    """Return (new links to propose, links proposed but already present) — nothing is applied yet."""
+    status = on_status or (lambda _text: None)
+    status(f"searching for wikilinks in {file.path.name}…")
+    return await _suggest_links(file, vault, model)
 
 
 def apply_classification(file: File, suggestion: ClassificationSuggestion, vault: Vault) -> File:
-    """Move the file if a folder was suggested, merge in new tags, and append a See Also section for new links."""
+    """Move the file if a folder was suggested and merge in new tags — links are applied separately, see apply_wikilink."""
     new_path = file.path
     if suggestion.suggested_folder:
         new_path = vault.root / suggestion.suggested_folder / file.path.name
 
     merged_tags = list(dict.fromkeys([*file.tags, *suggestion.suggested_tags]))
-    new_body = _apply_see_also(file.body, suggestion.suggested_links)
 
-    updated = replace(
-        file,
-        path=new_path,
-        tags=merged_tags,
-        body=new_body,
-        links=extract_wikilinks(new_body),
-        updated=datetime.now(),
-    )
+    updated = replace(file, path=new_path, tags=merged_tags, updated=datetime.now())
 
     if new_path != file.path and file.path.exists():
         file.path.unlink()
+    vault.save_file(updated)
+    return updated
+
+
+def apply_wikilink(file: File, link: str, vault: Vault) -> File:
+    """Wrap link's first occurrence in the body as [[link]] — caller has already confirmed it's present in the text."""
+    new_body = _wrap_occurrence(file.body, link)
+    updated = replace(file, body=new_body, links=extract_wikilinks(new_body), updated=datetime.now())
     vault.save_file(updated)
     return updated
 
@@ -89,11 +104,12 @@ async def _suggest_folder(tags: list[str], file: File, model: ModelClient) -> st
     return "misc"
 
 
-async def _suggest_links(file: File, vault: Vault, model: ModelClient) -> list[str]:
+async def _suggest_links(file: File, vault: Vault, model: ModelClient) -> tuple[list[str], list[str]]:
+    """Return (new links to propose, links proposed but already present in the note)."""
     existing_links = set(file.links)
     candidates = sorted({f.title for f in vault.list_files() if f.path != file.path} - {file.title})
     if not candidates:
-        return []
+        return [], []
 
     feedback = _format_feedback(load_recent_overrides("wikilink"))
     prompt = (
@@ -107,17 +123,35 @@ async def _suggest_links(file: File, vault: Vault, model: ModelClient) -> list[s
     )
     raw = await model.ask_coding(prompt)
     if raw.strip().upper() == "NONE":
-        return []
+        _log.info("wikilinks: model replied NONE for %s", file.path)
+        return [], []
     candidate_set = set(candidates)
-    return [t.strip() for t in raw.split(",") if t.strip() in candidate_set and t.strip() not in existing_links]
+    proposed = [t.strip() for t in raw.split(",") if t.strip()]
+    already_linked = [t for t in proposed if t in existing_links]
+    invalid = [t for t in proposed if t not in candidate_set and t not in existing_links]
+    if invalid:
+        _log.warning("wikilinks: dropped %s for %s (not an exact vault-title match)", invalid, file.path)
+
+    # Linking to a topic the note doesn't literally mention is a separate feature (deferred);
+    # for now only offer candidates whose phrase actually occurs in the body, since applying
+    # wraps that occurrence in place rather than appending a list of unrelated topics.
+    candidates_in_body = [t for t in proposed if t in candidate_set and t not in existing_links]
+    kept = [t for t in candidates_in_body if t.lower() in file.body.lower()]
+    not_in_body = [t for t in candidates_in_body if t not in kept]
+    if not_in_body:
+        _log.info("wikilinks: deferred (not found in body text) %s for %s", not_in_body, file.path)
+    if already_linked:
+        _log.info("wikilinks: %s already linked in %s", already_linked, file.path)
+    return kept, already_linked
 
 
-def _apply_see_also(body: str, links: list[str]) -> str:
-    new_links = [link for link in links if link not in extract_wikilinks(body)]
-    if not new_links:
+def _wrap_occurrence(body: str, link: str) -> str:
+    """Wrap link's first case-insensitive occurrence in body as [[link]], preserving the canonical title."""
+    start = body.lower().find(link.lower())
+    if start == -1:
         return body
-    section = "\n## See Also\n\n" + "\n".join(f"- [[{link}]]" for link in new_links) + "\n"
-    return body.rstrip("\n") + "\n" + section
+    end = start + len(link)
+    return f"{body[:start]}[[{link}]]{body[end:]}"
 
 
 def _load_tag_folder_map(plan_text: str) -> dict[str, str]:

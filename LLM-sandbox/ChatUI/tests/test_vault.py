@@ -8,6 +8,7 @@ from chatui.models import File
 from chatui.vault import (
     Vault,
     extract_wikilinks,
+    find_wikilinks,
     normalize_link_target,
     parse_frontmatter,
     render_frontmatter,
@@ -62,6 +63,17 @@ def test_extract_wikilinks_handles_aliases() -> None:
 def test_normalize_link_target_collapses_separators() -> None:
     assert normalize_link_target("fine-tuning_methods") == "fine tuning methods"
     assert normalize_link_target("Taxonomy") == "taxonomy"
+
+
+def test_find_wikilinks_returns_spans_covering_the_full_match() -> None:
+    body = "See [[Taxonomy]] and [[Dewey Decimal System|DDS]] for more."
+
+    spans = find_wikilinks(body)
+
+    assert [target for _, _, target in spans] == ["Taxonomy", "Dewey Decimal System"]
+    for start, end, _target in spans:
+        assert body[start:end].startswith("[[")
+        assert body[start:end].endswith("]]")
 
 
 def test_vault_list_files_excludes_conversations(tmp_path: Path) -> None:

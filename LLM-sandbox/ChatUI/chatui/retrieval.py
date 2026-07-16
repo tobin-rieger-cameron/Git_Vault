@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 
 import chromadb
@@ -13,6 +14,8 @@ from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharac
 
 from chatui.errors import IngestError, RetrievalError
 from chatui.models import Chunk, File, IngestStats
+
+_log = logging.getLogger(__name__)
 
 _COLLECTION_NAME = "vault"
 _MD_HEADERS = [("#", "h1"), ("##", "h2"), ("###", "h3")]
@@ -40,8 +43,11 @@ class Retriever:
         try:
             results = self._db.similarity_search_with_relevance_scores(query, k=top_k)
         except Exception as exc:
+            _log.error("vault search failed for %r: %s", query, exc)
             raise RetrievalError(f"Vault search failed: {exc}") from exc
-        return [_to_chunk(doc, score) for doc, score in results]
+        chunks = [_to_chunk(doc, score) for doc, score in results]
+        _log.debug("search %r top_k=%s -> %s", query, top_k, [(str(c.source_path), round(c.score, 3)) for c in chunks])
+        return chunks
 
     def search_scoped(self, query: str, tags: list[str], top_k: int) -> list[Chunk]:
         """Run a similarity search restricted to chunks carrying any one of tags (OR, not AND)."""
@@ -50,8 +56,14 @@ class Retriever:
                 query, k=top_k, filter=_tag_filter(tags)
             )
         except Exception as exc:
+            _log.error("scoped vault search failed for %r tags=%s: %s", query, tags, exc)
             raise RetrievalError(f"Scoped vault search failed: {exc}") from exc
-        return [_to_chunk(doc, score) for doc, score in results]
+        chunks = [_to_chunk(doc, score) for doc, score in results]
+        _log.debug(
+            "scoped search %r tags=%s top_k=%s -> %s",
+            query, tags, top_k, [(str(c.source_path), round(c.score, 3)) for c in chunks],
+        )
+        return chunks
 
     def ingest(self, files: list[File], force: bool = False) -> IngestStats:
         """Re-embed only new/changed files against a path→mtime manifest; force wipes and rebuilds."""
@@ -90,12 +102,14 @@ class Retriever:
             raise IngestError(f"Ingest failed: {exc}") from exc
 
         _save_manifest(self._db_path, {str(f.path): f.updated.timestamp() for f in files})
-        return IngestStats(
+        stats = IngestStats(
             new=len(new_paths),
             updated=len(changed_paths),
             removed=len(removed_paths),
             unchanged=unchanged,
         )
+        _log.info("ingest force=%s -> %s", force, stats)
+        return stats
 
     def reingest_one(self, file: File) -> None:
         """Re-embed a single file immediately, bypassing the batch ingest() diff."""

@@ -48,10 +48,11 @@ class AskResult:
 
 @dataclass
 class ClassificationSuggestion:
+    """Tags/folder suggestion for a file; wikilinks are a separate suggest/apply pair (see classify.py)."""
+
     file_path: Path
     suggested_folder: str | None
     suggested_tags: list[str]
-    suggested_links: list[str]
 
 
 @dataclass

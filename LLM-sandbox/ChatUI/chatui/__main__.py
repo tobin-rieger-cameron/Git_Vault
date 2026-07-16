@@ -7,6 +7,7 @@ from pathlib import Path
 
 from chatui.app import ChatApp
 from chatui.config import load_settings
+from chatui.debug_log import configure as configure_debug_log
 from chatui.llm import ModelClient
 from chatui.retrieval import Retriever
 from chatui.vault import Vault
@@ -17,6 +18,7 @@ def main() -> None:
     parser.add_argument("--vault", type=Path, required=True)
     args = parser.parse_args()
 
+    configure_debug_log(Path(__file__).parent.parent / "chatui_debug.log")
     settings = load_settings(config_dir=Path(__file__).parent.parent / "config")
     vault = Vault(root=args.vault)
     retriever = Retriever(

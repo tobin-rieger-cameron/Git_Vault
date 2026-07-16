@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import difflib
+import logging
 from datetime import timedelta
 from pathlib import Path
 from typing import Iterable
@@ -26,24 +27,14 @@ from chatui.retrieval import Retriever
 from chatui.ui import theme
 from chatui.ui.picker import FilePicker
 from chatui.ui.streaming import StreamingText
-from chatui.vault import Vault
+from chatui.vault import Vault, normalize_link_target
+
+_log = logging.getLogger(__name__)
 
 _COMMANDS = [
     "/draft", "/done", "/tags", "/wikilinks", "/folder", "/review",
     "/ingest", "/web", "/model", "/explorer", "/palette",
 ]
-
-
-def _highlight_candidate(text: str, candidate: str) -> tuple[Text, bool, int]:
-    """Return text with candidate's first match highlighted, whether it matched, and its start offset."""
-    start = text.lower().find(candidate.lower())
-    if start == -1:
-        return Text(text), False, 0
-    end = start + len(candidate)
-    result = Text(text[:start])
-    result.append(text[start:end], style=f"bold {theme.ACCENT_DARK} on {theme.ACCENT}")
-    result.append(text[end:])
-    return result, True, start
 
 
 def _diff_highlight(old: str, new: str) -> Text:
@@ -201,6 +192,7 @@ class ChatApp(App):
         Binding("f2", "toggle_sidebar", "Toggle explorer"),
         Binding("ctrl+f", "focus_search", "Find file"),
         Binding("tab", "accept_suggestion_or_focus_next", "Accept suggestion", priority=True, show=False),
+        Binding("ctrl+x", "dismiss_focused_wikilink", "Dismiss wikilink", show=False),
     ]
 
     def get_system_commands(self, screen: Screen) -> Iterable[SystemCommand]:
@@ -221,9 +213,8 @@ class ChatApp(App):
         self._history: list[tuple[str, str]] = []
         self._web_enabled = False
         self._classification: ClassificationSuggestion | None = None
-        self._wikilink_queue: list[str] = []
-        self._wikilink_index = 0
-        self._wikilink_snapshot = ""
+        self._pending_titles: list[str] = []  # wikilink candidates not yet applied or dismissed
+        self._pending_focus = -1
         self._review_queue: list[ReviewQuestion] = []
         self._review_index = 0
 
@@ -254,6 +245,7 @@ class ChatApp(App):
         _write_hint(log, "instruction, /done saves. /tags, /wikilinks, /folder, /review, /ingest,")
         _write_hint(log, "/model, /web, /palette also work.")
         self.query_one("#cmd", Input).focus()
+        self.query_one(StreamingText).on_link_click = self._open_wikilink_target
         self._update_statusbar()
 
     def _update_statusbar(self) -> None:
@@ -273,14 +265,21 @@ class ChatApp(App):
         self.query_one("#file-search", Input).focus()
 
     def action_accept_suggestion_or_focus_next(self) -> None:
-        # Tab should do what Right-arrow does here — accept the pending suggestion, the more
-        # common intent than tabbing away. cmd._suggestion is private, but Input exposes no
-        # public "is a suggestion pending" accessor.
+        # Tab cycles pending wikilink candidates first, since that's the more common intent
+        # while a /wikilinks pass is live; otherwise it does what Right-arrow does here — accept
+        # the pending suggestion. cmd._suggestion is private, but Input exposes no public
+        # "is a suggestion pending" accessor.
+        if self._pending_titles:
+            self._cycle_pending_wikilink()
+            return
         cmd = self.query_one("#cmd", Input)
         if self.focused is cmd and cmd._suggestion:
             cmd.action_cursor_right()
         else:
             self.screen.focus_next()
+
+    def action_dismiss_focused_wikilink(self) -> None:
+        self._dismiss_focused_wikilink()
 
     def on_tree_node_selected(self, event: Tree.NodeSelected) -> None:
         picker = self.query_one(FilePicker)
@@ -291,6 +290,14 @@ class ChatApp(App):
     def _preview_file(self, path: Path) -> None:
         self._set_active_file(self.vault.load_file(path))
 
+    def _open_wikilink_target(self, target: str) -> None:
+        """Navigate to the vault file a clicked committed [[wikilink]] points to, if it exists."""
+        normalized = normalize_link_target(target)
+        for file in self.vault.list_files():
+            if normalize_link_target(file.title) == normalized:
+                self._preview_file(file.path)
+                return
+
     def _set_active_file(self, file: File) -> None:
         log = self.query_one("#log", RichLog)
         if self._drafting and self._active_file is not None:
@@ -298,15 +305,25 @@ class ChatApp(App):
         self._active_file = file
         self._classification = None
         self._drafting = False
-        self._wikilink_queue = []
+        self._pending_titles = []
+        self._pending_focus = -1
         self._review_queue = []
         self.query_one("#cmd", Input).placeholder = "_"
-        self.query_one(StreamingText).show(file.body)
+        self._refresh_preview()
+        self.query_one("#preview-scroll", VerticalScroll).scroll_to(y=0, animate=False)
         self.query_one("#cmd", Input).focus()
+        self._update_statusbar()
 
     def _refresh_preview(self) -> None:
-        if self._active_file is not None:
-            self.query_one(StreamingText).show(self._active_file.body)
+        if self._active_file is None:
+            return
+        body = self._active_file.body
+        spans = []
+        for title in self._pending_titles:
+            start = body.lower().find(title.lower())
+            if start != -1:
+                spans.append((title, start, start + len(title)))
+        self.query_one(StreamingText).show_links(body, spans, self._pending_focus)
 
     @on(Input.Changed, "#file-search")
     def on_search_changed(self, event: Input.Changed) -> None:
@@ -354,6 +371,7 @@ class ChatApp(App):
                 history_window=self.settings.history_window, web_search_results=self.settings.web_search_results,
             )
         except ChatUIError as exc:
+            _log.error("ask failed for %r: %s", question, exc)
             _write_status(log, f"couldn't answer: {exc}")
             return
         self._history.append((question, result.answer))
@@ -381,6 +399,7 @@ class ChatApp(App):
         try:
             revised = await draft.revise_draft(self._active_file, instruction, self.model)
         except ChatUIError as exc:
+            _log.error("draft revision failed for %r: %s", self._active_file.path, exc)
             _write_status(log, f"revision failed: {exc}")
             return
         self._active_file = revised
@@ -398,6 +417,7 @@ class ChatApp(App):
         try:
             self.retriever.reingest_one(self._active_file)
         except ChatUIError as exc:
+            _log.error("reindex failed for %s: %s", self._active_file.path, exc)
             _write_status(log, f"saved, but re-indexing failed: {exc}")
         else:
             _write_status(log, f'"{self._active_file.title}": saved')
@@ -410,12 +430,16 @@ class ChatApp(App):
             return None
         if self._classification is None or self._classification.file_path != self._active_file.path:
             log = self.query_one("#log", RichLog)
-            _write_status(log, "thinking…")
             try:
-                self._classification = await classify.suggest_classification(self._active_file, self.vault, self.model)
+                self._classification = await classify.suggest_classification(
+                    self._active_file, self.model,
+                    on_status=lambda text: _write_status(log, text),
+                )
             except ChatUIError as exc:
+                _log.error("classification failed for %s: %s", self._active_file.path, exc)
                 _write_status(log, f"couldn't get suggestions: {exc}")
                 return None
+            _log.info("classification for %s: %s", self._active_file.path, self._classification)
         return self._classification
 
     # push_screen_wait raises NoActiveWorker unless it runs inside a worker, so this method
@@ -443,84 +467,94 @@ class ChatApp(App):
             file_path=self._active_file.path,
             suggested_folder=suggestion.suggested_folder if kind == "folder" else None,
             suggested_tags=suggestion.suggested_tags if kind == "tags" else [],
-            suggested_links=[],
         )
         updated = classify.apply_classification(self._active_file, partial, self.vault)
         self._active_file = updated
         self.query_one(FilePicker).reload()
         try:
             self.retriever.reingest_one(updated)
-        except ChatUIError:
-            pass  # best-effort re-index; the vault write itself already succeeded
+        except ChatUIError as exc:
+            _log.warning("best-effort reindex failed for %s: %s", updated.path, exc)
         self._refresh_preview()
         _write_status(log, f"{kind}: applied")
 
-    # --- Classify: wikilinks (per-item walkthrough) -----------------------------------------
+    # --- Classify: wikilinks (highlighted in the preview, not the chat log) ------------------
 
     async def _start_wikilink_walkthrough(self) -> None:
-        """Highlight each suggested wikilink in the preview in turn for accept or skip."""
-        # One at a time rather than a popup like tags/folder, since each candidate maps to an
-        # actual span of text worth showing in place.
-        log = self.query_one("#log", RichLog)
+        """Suggest new wikilinks and highlight them (plus any existing ones) directly in the preview."""
+        # No chat-log messages and no popup: candidates are highlighted in place in the preview,
+        # cycled with tab, applied with enter, dismissed with ctrl+x — status lives in the
+        # statusbar only. A dedicated suggest call, not _ensure_classification: wikilinks don't
+        # need tags/folder computed alongside them.
         if self._active_file is None:
-            _write_status(log, "nothing to link: click a file or search for one first")
+            self._flash_status("nothing to link: click a file or search for one first")
             return
-        suggestion = await self._ensure_classification()
-        if suggestion is None:
+        self._flash_status(f"searching for wikilinks in {self._active_file.path.name}…")
+        try:
+            links, already_linked = await classify.suggest_wikilinks(self._active_file, self.vault, self.model)
+        except ChatUIError as exc:
+            _log.error("wikilink suggestion failed for %s: %s", self._active_file.path, exc)
+            self._flash_status(f"couldn't get suggestions: {exc}")
             return
-        if not suggestion.suggested_links:
-            _write_status(log, "no wikilinks suggested")
-            return
-        self._wikilink_queue = list(suggestion.suggested_links)
-        self._wikilink_index = 0
-        self._wikilink_snapshot = self._active_file.body
-        self._advance_wikilink()
-
-    def _advance_wikilink(self) -> None:
-        log = self.query_one("#log", RichLog)
-        cmd = self.query_one("#cmd", Input)
-        if self._wikilink_index >= len(self._wikilink_queue):
-            _write_status(log, "wikilinks: done")
-            self._wikilink_queue = []
-            cmd.placeholder = "_"
-            self._refresh_preview()
-            return
-        candidate = self._wikilink_queue[self._wikilink_index]
-        highlighted, found, offset = _highlight_candidate(self._wikilink_snapshot, candidate)
-        self.query_one(StreamingText).update(highlighted)
-        if found:
-            self._scroll_preview_to(self._wikilink_snapshot, offset)
-        position = f"{self._wikilink_index + 1}/{len(self._wikilink_queue)}"
-        if found:
-            _write_status(log, f'wikilink {position}: "{candidate}" — enter: apply   n: skip')
+        # Already-linked candidates need no action: they're real [[wikilinks]] already, so the
+        # preview's normal committed-link styling covers them — only new ones go into the queue.
+        self._pending_titles = links
+        self._pending_focus = 0 if links else -1
+        self._refresh_preview()
+        if not links and not already_linked:
+            self._flash_status("no wikilinks suggested")
         else:
-            _write_status(log, f'wikilink {position}: "{candidate}" (not found in text) — enter: apply anyway   n: skip')
-        cmd.placeholder = "enter: apply   n: skip"
+            self._update_wikilink_status()
 
-    def _resolve_wikilink(self, answer: str) -> None:
-        # An unrecognized answer re-asks instead of advancing: applying is the only action
-        # here that isn't reversible, so it must not be the fallback for "didn't understand".
-        candidate = self._wikilink_queue[self._wikilink_index]
-        log = self.query_one("#log", RichLog)
-        lowered = answer.lower()
-        if lowered in ("", "y", "yes", "apply"):
-            partial = ClassificationSuggestion(
-                file_path=self._active_file.path, suggested_folder=None, suggested_tags=[], suggested_links=[candidate]
+    def _cycle_pending_wikilink(self) -> None:
+        if not self._pending_titles:
+            return
+        self._pending_focus = (self._pending_focus + 1) % len(self._pending_titles)
+        self._refresh_preview()
+        body = self._active_file.body
+        start = body.lower().find(self._pending_titles[self._pending_focus].lower())
+        if start != -1:
+            self._scroll_preview_to(body, start)
+        self._update_wikilink_status()
+
+    def _apply_focused_wikilink(self) -> None:
+        if not self._pending_titles or self._pending_focus < 0:
+            return
+        title = self._pending_titles[self._pending_focus]
+        updated = classify.apply_wikilink(self._active_file, title, self.vault)
+        self._active_file = updated
+        try:
+            self.retriever.reingest_one(updated)
+        except ChatUIError:
+            pass
+        del self._pending_titles[self._pending_focus]
+        self._pending_focus = self._pending_focus % len(self._pending_titles) if self._pending_titles else -1
+        self._refresh_preview()
+        self._update_wikilink_status()
+
+    def _dismiss_focused_wikilink(self) -> None:
+        if not self._pending_titles or self._pending_focus < 0:
+            return
+        del self._pending_titles[self._pending_focus]
+        self._pending_focus = self._pending_focus % len(self._pending_titles) if self._pending_titles else -1
+        self._refresh_preview()
+        self._update_wikilink_status()
+
+    def _flash_status(self, text: str) -> None:
+        self.query_one("#statusbar", Static).update(Text(text, style=theme.ACCENT))
+
+    def _update_wikilink_status(self) -> None:
+        if not self._pending_titles:
+            self._update_statusbar()
+            return
+        focused = self._pending_titles[self._pending_focus]
+        bar = self.query_one("#statusbar", Static)
+        bar.update(
+            Text.assemble(
+                (f"{len(self._pending_titles)} pending wikilink(s)", theme.ACCENT),
+                (f' — "{focused}" focused — tab: next  enter: apply  ctrl+x: dismiss', theme.ACCENT_MUTED),
             )
-            updated = classify.apply_classification(self._active_file, partial, self.vault)
-            self._active_file = updated
-            try:
-                self.retriever.reingest_one(updated)
-            except ChatUIError:
-                pass
-            _write_status(log, f'"{candidate}": applied — added to See Also')
-        elif lowered in ("n", "no", "skip"):
-            _write_status(log, f'"{candidate}": skipped')
-        else:
-            _write_status(log, f'not understood: "{answer}" — enter: apply   n: skip')
-            return
-        self._wikilink_index += 1
-        self._advance_wikilink()
+        )
 
     # --- Review ------------------------------------------------------------------------------
 
@@ -586,6 +620,7 @@ class ChatApp(App):
             # thread to keep embedding from stalling the UI.
             stats = await asyncio.to_thread(self.retriever.ingest, self.vault.list_files())
         except ChatUIError as exc:
+            _log.error("ingest failed: %s", exc)
             _write_status(log, f"ingest failed: {exc}")
             return
         _write_status(log, f"ingest: {stats.new} new, {stats.updated} updated, {stats.removed} removed, {stats.unchanged} unchanged")
@@ -609,15 +644,8 @@ class ChatApp(App):
         event.input.value = ""
         log = self.query_one("#log", RichLog)
 
-        if self._wikilink_queue:
-            _write_you(log, text or "(apply)")
-            if text == "/done":
-                _write_status(log, "wikilinks: walkthrough cancelled")
-                self._wikilink_queue = []
-                self.query_one("#cmd", Input).placeholder = "_"
-                self._refresh_preview()
-                return
-            self._resolve_wikilink(text)
+        if self._pending_titles and not text:
+            self._apply_focused_wikilink()
             return
 
         if self._review_queue:
@@ -628,6 +656,7 @@ class ChatApp(App):
         if not text:
             return
         _write_you(log, text)
+        _log.debug("dispatch: %r (active_file=%s)", text, self._active_file.path if self._active_file else None)
 
         if text == "/done":
             await self._finish_draft()
