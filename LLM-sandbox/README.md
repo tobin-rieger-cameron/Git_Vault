@@ -2,7 +2,7 @@
 
 ## Status: functional
 
-The rebuild described below is implemented and running: `chatui/app.py` wires a real Textual UI (fuzzy file search, command autocomplete, a live-diff draft view, per-item wikilink walkthrough) to the four real verb modules. Verified against actual Ollama models and a real ChromaDB instance, plus the full unit test suite. The `chatui.py` single-file predecessor was deliberately wiped as part of this rebuild; its full history is still in git if anything from it is ever needed.
+The rebuild described below is implemented and running: `chatui/app.py` wires a real Textual UI (fuzzy file search, command autocomplete, a live-diff draft view, in-preview wikilink highlighting with click-to-navigate) to the four real verb modules. Verified against actual Ollama models and a real ChromaDB instance, plus the full unit test suite. The `chatui.py` single-file predecessor was deliberately wiped as part of this rebuild; its full history is still in git if anything from it is ever needed.
 
 ## Overview
 
@@ -26,11 +26,14 @@ ollama pull nomic-embed-text
 ollama pull llama3.1:8b
 ollama pull qwen2.5-coder:7b
 
-# Run (from LLM-sandbox/ChatUI)
-source .chat_venv/bin/activate
+# Run (from LLM-sandbox/)
+source .venv/bin/activate
+cd ChatUI
 python -m chatui --vault ../Knowledge
 # Then /ingest to build the vector database on first launch
 ```
+
+Debug logging: every run writes `ChatUI/chatui_debug.log` (gitignored) — prompts/responses to both models, retrieval scores, and any error that's only otherwise shown in the UI.
 
 ## Stack
 

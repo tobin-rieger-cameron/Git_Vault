@@ -1153,3 +1153,57 @@ Read every package module and confirmed the domain layer (`ask`/`vault`/`retriev
 
 ### Verification
 `py_compile` on all 16 modules, the 80-test unit suite green throughout, and a grep sweep confirming no author/book/design-doc citations remain in `chatui/`.
+## Session 28 — 2026-07-16: Debug Logging, and a Full `/wikilinks` Rework
+
+**Commits:** `f4954f7`
+
+### User
+"lets take a look at what was done in the last few sessions, and what we can get done today"
+
+### Assistant
+Read the changelog/transcript history and re-created the missing venv, then actually launched the app in tmux against a real Ollama — the last commit's "UI Rework: first pass... currently untested" held up fine (a suspected duplicate-statusbar rendering bug turned out to be a tmux window-sizing artifact, not an app bug). Live-drove an `/ask` query end-to-end to confirm the retrieval/streaming path worked.
+
+### User
+"I already have a .venv - instead of creating an entirely new one and leaving the stale one, you should just update the stale one"
+
+### Assistant
+Deleted the duplicate `ChatUI/.chat_venv` I'd created and updated the user's existing root-level `.venv` instead (added `ddgs`/`pytest`/`pytest-asyncio`, removed the stale deprecated `duckduckgo_search`). Flagged that the README/CLAUDE.md still documented the wrong venv path.
+
+### User
+"I just ran /wikilinks on two files and got 'no wikilinks suggested'"
+
+### Assistant
+No mechanism existed to see why — the old `chatui.py` appended every command's output to a session log file, but that was dropped in the rebuild, and `classify.py` discarded the raw LLM response after filtering it. Named the likely cause (exact-string-match filtering against vault titles could silently drop near-misses) but had no way to confirm without live-testing.
+
+### User
+"this entire program should have propper debugging prints that go to a single log file for situations like this, that way you can look at the log rather than having to test the program yourself"
+
+### Assistant
+Added `chatui/debug_log.py` — a single gitignored `chatui_debug.log`, every module getting its own `logging.getLogger(__name__)` feeding it (never `print()`, since that would corrupt the Textual TUI). Instrumented `llm.py` (every prompt/response), `classify.py` (which wikilink candidates got dropped and why), `ask.py` (retrieval path + scores), `retrieval.py` (search calls, ingest stats), `vault.py` (saves), and `app.py` (dispatched commands, every caught `ChatUIError`).
+
+### User
+"okay, I just ran /wikilinks on Knowledge Distillation.md and got no wikilinks suggested"
+
+### Assistant
+Read the log: the model had proposed exactly one link, `Machine Learning`, and it was correctly filtered as *already linked* — not a bug, but a message-clarity gap (the same "no wikilinks suggested" wording covered two different situations). Reproduced the filter logic directly against the real vault to confirm before touching code.
+
+### User
+"yeah, split those, does /wikilinks only search for existing .md file right now?"
+
+### Assistant
+Confirmed `/wikilinks` only ever proposes links to titles already in the vault (the model is constrained to an explicit candidate list, no stub-creation). Added `ClassificationSuggestion.already_linked` so the UI could say `wikilinks: already linked to X` instead of the ambiguous generic message, with a new test covering it.
+
+### User
+"I'd like to implament the two recent ideas, pre-existing wikilinks should still be highlighted as they are found as well as new unlinked titles"
+
+/ "running /wikilinks says 'suggesting tags...' and then 'choosing a folder...'? > should only say searching for wikilinks... Instead of wrapping the existing economics word in a [[wikilink]] economics was added to a ## See Also - also now /wikilinks is suggesting links that dont exist within the file... all found wikilink suggestions should remain highlighted, even after the pass is finished, there should be two different highlight formats, one for pending wikilink suggestion, and another for commited wikilink. I should be able to click on a commited link... I want to explore options for the format of the 'walking through suggested wikilinks' process, right now I dont like all the messages showing up in the chat like that"
+
+### Assistant
+A large bundle — split into "implement now" (clear bugs/scoping) vs. "discuss first" (a real UI subsystem). Fully split `suggest_classification` (tags+folder) from a new `suggest_wikilinks` (links only, its own status), so `/wikilinks` never touches tags/folder again. Applying now wraps the phrase inline (`classify.apply_wikilink`/`_wrap_occurrence`) instead of appending "## See Also"; candidates not literally present in the body are filtered before ever being offered. Removed `suggested_links`/`already_linked` from `ClassificationSuggestion` entirely once wikilinks no longer routed through it. Asked which direction to take the walkthrough's presentation and whether to fold the bigger highlight/click work into this session — user picked "inline in preview only" plus doing it now.
+
+Rebuilt the walkthrough around that: `vault.find_wikilinks()` returns span+target for every `[[link]]`; `StreamingText.show_links()` renders existing links underlined (and clickable via a new wrap-aware `on_click`/`_offset_at` offset mapper) plus any pending candidates in a distinct highlight, brightest on the focused one. `Tab` cycles focus, empty `Enter` applies the focused candidate in place, `Ctrl+X` dismisses it — no chat-log messages, status lives in the statusbar only. Clicking a committed link calls `_open_wikilink_target` to navigate there.
+
+Verified live end-to-end: phase-scoped status messages, the exact-match/not-found/already-linked filtering (confirmed via the new debug log), the pending highlight's raw ANSI codes, Tab/Enter/apply, the resulting underline style, and a synthetic SGR mouse click that successfully navigated to the linked file. That test surfaced a real bug — switching files never reset the preview's scroll position, so a shorter file loaded while scrolled down looked blank — fixed by resetting `#preview-scroll` in `_set_active_file`.
+
+### Verification
+`py_compile` across the package throughout; unit suite grew from 80 → 86 passing tests (new coverage: `suggest_wikilinks`'s body-match filtering and status callback, `apply_wikilink`'s inline-wrap/no-op/casing behavior, `find_wikilinks`'s span extraction). Live tmux testing against real Ollama models and the real vault at every step, with test-file artifacts and cosmetic frontmatter round-trip diffs cleaned up (reverted) after each check — left the user's own pre-existing, unrelated `Mathematics.md`/`PDF Database` changes untouched.
