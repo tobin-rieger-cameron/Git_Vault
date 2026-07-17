@@ -1,5 +1,5 @@
 ---
-summary: Backlog of improvement ideas for chatui.py — not yet directives, just notes.
+summary: Backlog of improvement ideas for ChatUI — not yet directives, just notes.
 ---
 
 # Ideas
@@ -8,16 +8,16 @@ summary: Backlog of improvement ideas for chatui.py — not yet directives, just
 
 - article text should appear as its being written
 - /distill command is confusing - consider an overhaul and simplification of /commands in general
-- ✅ done (Phase 1+2, then reworked in the full front-end refactor — see `config/changelog.md` 2026-07-03): guided co-edit review framework for `/organize` and `/distill` — `Proposal` (data model, unchanged since Phase 1) + `ChatApp._review()` + split-pane review panel in `chatui.py`. The interaction model changed from Phase 1's per-item typed `accept/skip/edit/all/none` prompts to a default-accepted `ReviewListView` (Space=toggle, Enter/click=edit, Ctrl+Enter=apply everything at once) — see UX section below for why. Override-reason feedback loop is unchanged and still live.
+- ✅ done — guided co-edit review framework for `/organize` and `/distill` (see [[changelog#2026-07-03|changelog]])
 
 ## UX
 
-- ✅ done 2026-07-03: seperator between split pages should be resizeable with the mouse — new `Splitter` widget (`chatui.py`) between `#review-panel` and `#chat-pane`, drag via `MouseDown`/`MouseMove`/`MouseUp` to resize within a 24–100 column range; scrollbar should be invisible ✅ done — `scrollbar-size: 0 0` on `RichLog`/`#review-list`/`#review-detail`
-- ✅ done 2026-07-03: general design of the ui, while going in the right direction, feels clunky and unpolished — full front-end refactor: theme (transparent/ANSI-adaptive background, hidden scrollbars, consolidated `$border`/`$accent`/`$dim`/`$text` palette), resizable divider, real folder tree for file picking, and the default-accepted `ReviewListView` interaction model all shipped together this session. Not a total visual redesign — same layout skeleton (left dock + chat) — but the biggest sources of "clunky" (typed bulk commands, flat file list, hardcoded dark background, fixed divider) are gone.
-- ✅ done 2026-07-03: background color of the program should be transparent and adapt to terminals colorscheme — `ChatApp.ansi_color = True` + `background: transparent` on `Screen`/`Header`/`Footer`/`RichLog`/`#review-list`; verified live in tmux that zero background escape codes are emitted, so the terminal's own background genuinely shows through
-- ✅ done 2026-07-03: /organize shows a list of all files, rather than a tree of folders and the files within them — new `FileTree` widget (`chatui.py`, subclasses Textual's `Tree`) replaces the flat `ListView` picker with real expandable folder nodes; files as leaves with `☑`/`☐` + `[unorganized]`, toggled via click/Enter/Space; `Ctrl+A`/`Ctrl+R`/`Ctrl+U`/`Ctrl+Enter` bulk keybindings replace the old typed `all`/`none`/`unorganized` Input commands (shown automatically in the footer). No folder-level bulk selection yet — a reasonable v2.
-- ✅ done 2026-07-04: after interactively selecting files, program goes back to uninteractive "generating tag suggestions..." and "scanning for wikilink opportunities..." — the previous entry fixed the serial-review-prompt friction but left the LLM calls themselves opaque; user came back and asked specifically for token-level streaming, "just like how prompts show each token." Added `ChatApp._stream_lines()`: switches Pass 1/2's `coding_llm.invoke()` to `.astream()`, showing raw tokens live in `#review-detail` (the same "watch it type" effect as chat answers) while a growing list in the review panel shows each recognized tag/wikilink line the moment it completes (`✓ Taxonomy.md: taxonomy, classification`, etc.) — both inside the split panel as requested, not the main chat log.
-- ✅ done 2026-07-16: `/wikilinks` should say what it's actually doing instead of generic "thinking…", and should highlight all found candidates directly in the preview rather than a one-at-a-time chat-log walkthrough — `classify.suggest_wikilinks()` is now its own call (no tags/folder computed alongside it), status goes straight to the statusbar (`"searching for wikilinks in X.md…"`). All candidates highlight simultaneously in the preview; existing `[[wikilinks]]` render underlined and clickable (`StreamingText.show_links`/`find_wikilinks`, click navigates via `_open_wikilink_target`); new candidates highlight with a distinct pending style, cycled with Tab, applied in place with Enter (wraps the word inline instead of appending "## See Also"), dismissed with Ctrl+X.
+- ✅ done — resizable split-pane divider, hidden scrollbars (see [[changelog#2026-07-03|changelog]])
+- ✅ done — full front-end refactor: theme, resizable divider, folder tree, default-accepted review model (see [[changelog#2026-07-03|changelog]])
+- ✅ done — transparent/ANSI-adaptive background (see [[changelog#2026-07-03|changelog]])
+- ✅ done — folder tree file picker replacing flat list (see [[changelog#2026-07-03|changelog]])
+- ✅ done — token-level streaming for tag/wikilink suggestion generation (see [[changelog#2026-07-04|changelog]])
+- ✅ done — `/wikilinks` status text + inline preview highlighting instead of chat-log walkthrough (see [[changelog#2026-07-16|changelog]])
 - **Open for next time: refine `/wikilinks` visual feedback** — the pending-vs-committed highlight styles (bold-on-accent vs underline) work but haven't been tuned against the rest of the theme; and there's no in-preview indicator of *how many* candidates are pending or which one is focused beyond the statusbar text. Worth a pass once there's been more real usage to see what's actually confusing.
 
 ## Commands

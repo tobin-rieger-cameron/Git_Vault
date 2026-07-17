@@ -1,5 +1,5 @@
 ---
-summary: Visual/interaction design standards for ChatUI's TUI, distilled from Refactoring UI (Wathan & Schoger), Laws of UX (Yablonski), Don't Make Me Think (Krug), and The Design of Everyday Things (Norman). Companion to style_guide.md (code) and clig_notes.md/clig_further_reading_notes.md (CLI-specific interaction principles). All four planned sources now distilled.
+summary: Visual/interaction design standards for ChatUI's TUI, distilled from Refactoring UI (Wathan & Schoger), Laws of UX (Yablonski), Don't Make Me Think (Krug), The Design of Everyday Things (Norman), and clig.dev (CLI Guidelines) plus its further-reading list. Companion to style_guide.md (code). All planned sources now distilled.
 ---
 
 # UI Style Guide
@@ -306,7 +306,7 @@ tool; the reservoir is personal and situational (some people start more patient 
 day elsewhere lowers everyone's starting level), and a single bad moment can empty it regardless of
 how much good came before. This is the same underlying idea as the Peak–End Rule already in the Laws
 of UX section, from a different angle — worth reading the two together. Two concrete asks that pair
-directly with what's already in `clig_notes.md`'s error-handling guidance: **make it easy to recover
+directly with what's already in the CLI Interaction Guidelines section below: **make it easy to recover
 from errors**, and **when in doubt, apologize** — a message that acknowledges the inconvenience reads
 very differently than a bare failure notice, even when neither can actually fix the underlying problem.
 
@@ -321,7 +321,7 @@ research rather than a transplant from this chapter — flagged as a real gap, n
 
 ## Foundational vocabulary (The Design of Everyday Things — Norman)
 
-This is the book Nielsen's heuristics, Krug's book, and this project's own `clig_further_reading_notes.md`
+This is the book Nielsen's heuristics, Krug's book, and this project's own CLI Further Reading section below
 all cite secondhand — reading it directly turned out to be worth it: it's where the actual
 *vocabulary* for talking about any of this comes from, not just more rules layered on top of the
 same ideas. Chapters 1–5 (the psychology/design-principles core) read in full; 6–7 (design process
@@ -414,7 +414,7 @@ fixes, not the same generic error message.
 requiring it all in the head; use constraints (physical/logical/semantic/cultural) to narrow the field
 of plausible-but-wrong actions; bridge both gulfs — feedforward (what are my options) on the execution
 side, feedback (what just happened) on the evaluation side. Treat "human error" as a signal that the
-design left a gap, not a user failing — the same reframe already present in `clig_notes.md`'s "an
+design left a gap, not a user failing — the same reframe already present in the CLI Interaction Guidelines section's "an
 error is a documentation opportunity" line, from a different source, converging on the same point.
 
 **"Solve the correct problem" (Ch. 6, briefly).** Norman's rule for himself as a consultant: never
@@ -431,6 +431,225 @@ awareness" and "organizational buy-in" chapters skipped at the end of Laws of UX
 Think, this is about team/company-scale practice, not applicable to a solo project with one developer
 and one user. The single idea pulled forward from Ch. 6 ("solve the correct problem," above) is the
 one piece that transfers independent of team size.
+
+## CLI interaction guidelines (clig.dev)
+
+Source: [clig.dev](https://clig.dev/), full text fetched 2026-07-06 — the terminal-specific
+counterpart to the book material above, applied to interaction design instead of visual design.
+
+**Philosophy**
+
+- **Human-first.** Traditional UNIX tools assumed machine-to-machine use. A tool used primarily by a
+  human should be designed for that human first, machine composability second — not the reverse.
+- **Small parts that work together.** Programs become components in larger systems (automation, CI,
+  piping). Composability comes from standard mechanisms: stdin/stdout/stderr, exit codes, structured
+  output (JSON) — not from any one program trying to do everything.
+- **Consistency, deliberately broken when it matters.** Terminal conventions are deeply learned
+  patterns; consistency makes an interface guessable. Deviating from convention is fine, but should be
+  a deliberate choice with a reason, not an accident.
+- **Say just enough.** Silent hangs and debug-log floods are both failures of information design —
+  the same "say enough, no more" balance `style_guide.md` already applies to code comments applies here
+  to program output.
+- **Ease of discovery.** A GUI exposes its own functionality by being visible; a CLI/TUI has to build
+  discovery in deliberately — help text, examples, error-driven suggestions, contextual hints.
+- **Conversation is the native metaphor.** Multi-step CLI use (try something, get corrected, retry) is
+  already dialogue-shaped. Error-correction suggestions, visible intermediate state, and confirmation
+  before destructive actions all follow from taking that metaphor seriously.
+- **Robustness, objective and subjective.** Objective: handles bad input gracefully, idempotent.
+  Subjective: *feels* solid — no scary stack traces, common errors explained, user kept informed.
+  Simplicity is often what buys robustness, not extra defensive code.
+- **Empathy.** A CLI is a creative tool the user chose to pick up; it should feel like it's on their
+  side, not fighting them.
+- **Chaos.** Terminal environments are inconsistent by nature — that inconsistency is also where
+  invention happens. Break a pattern only with real intent (Raskin: "abandon a standard when it is
+  demonstrably harmful to productivity or user satisfaction").
+
+**Concrete guidelines (the parts most relevant to ChatUI)**
+
+Output formatting:
+- Humans first, machines second — detect whether output is going to a human or being piped, and
+  render differently if it matters.
+- Keep success output brief; state-changing operations should announce the result and the new state
+  (their example: `git status` after any operation).
+- Suggest the next likely command in context.
+- Color used intentionally, never load-bearing alone; respect `NO_COLOR` / non-interactive contexts.
+- Suppress debug/internal output by default; no bare `ERR`/`WARN` labels unless verbose mode is on.
+
+Errors:
+- An error is a documentation opportunity — catch the expected ones and rewrite them for a human,
+  as a suggestion toward the fix, not a dump of what broke internally. Their example:
+  *"Can't write to file.txt. You might need to make it writable by running 'chmod +w file.txt'."*
+- Group repeated/similar errors under one explanatory header rather than repeating the same line.
+- Genuinely unexpected errors: show a traceback and how to report it — but to a log file, not
+  the terminal, so it doesn't bury the actionable part.
+
+Interactivity:
+- Prompt only when input is actually interactive (a real terminal on the other end); never make a
+  prompt the *only* path — always provide a flag/argument alternative for scripting.
+- Confirmations should scale with danger: mild changes need none, bulk changes need a yes/no, total
+  deletions should require something harder to do by accident (typing the resource's name back).
+- Escape routes must always work — Ctrl-C should always do something, and do it immediately.
+
+Robustness:
+- Responsiveness matters more than raw speed — get *something* on screen within 100ms even if the
+  real work is still running.
+- Show progress for anything long-running.
+- Design for recovery: hitting up-arrow and re-running after a failure should be able to resume, not
+  restart from zero.
+- On Ctrl-C: exit immediately, say something first, cap cleanup time, and be honest that cleanup may
+  not finish (their phrase: "crash-only software" as a design stance, not just a fallback — see the
+  CLI Further Reading section below).
+
+Naming:
+- Short, memorable, easy to type repeatedly — length should scale with how often the command gets
+  typed, not with how important the feature feels.
+- (Their reasoning here is thin on the main page; the "Poetics of CLI Command Names" piece in the
+  CLI Further Reading section below has the real depth.)
+
+**Where this actually lands on ChatUI**
+
+Most of clig.dev is written for argument/flag/subcommand CLIs (`myapp --foo bar`), which isn't quite
+ChatUI's shape (a persistent TUI session with typed `/commands`, not a program that runs once and
+exits) — so a lot of the flag-naming/exit-code/environment-variable material doesn't transfer
+directly. What does transfer, directly and usefully:
+
+- **Say just enough** → this is the whole reason draft revision went from a full-pane overwrite to
+  an additive diff. Overwriting was saying too little (the old content) and hiding it under new
+  content the user hadn't asked to lose.
+- **Confirmations scale with danger** → `apply_classification()` moves a file and rewrites its
+  frontmatter; that's a "moderate" action per their scale (bulk-ish, reversible via Obsidian/git, but
+  not nothing) — worth an explicit accept step in `app.py`, which the four-verb decisions already
+  call for.
+- **An error is a documentation opportunity** → directly informs how `app.py` should surface
+  `ModelUnavailableError`/`VaultWriteError`/etc. to the user: not a raw exception message, but "here's
+  what happened, here's what to try."
+- **Escape routes must always work** → `/done` ending a draft/review loop, and Ctrl-C always quitting
+  immediately, both already match this.
+- **Progress within 100ms / show progress for long operations** → the whole reason `StreamingText`
+  exists — token-by-token streaming *is* this principle, applied to LLM latency specifically.
+
+## CLI further reading
+
+clig.dev's own "Further Reading" section lists ~20 sources; the five below are the ones that actually
+bear on ChatUI's design (a persistent TUI, not a one-shot flag-driven CLI), researched independently
+rather than just summarized from clig.dev itself. The rest (POSIX Utility Conventions, GNU Coding
+Standards, XDG spec, environment-variable references, analytics/metrics guides) are written for
+exactly the kind of run-once CLI ChatUI isn't, so they're skipped here rather than padded out.
+
+**The Poetics of CLI Command Names (smallstep.com)**
+
+The depth clig.dev's own "Naming" section is missing. Concrete do/don't list:
+
+- **Never use:** `tool`, `kit`, `util`, `easy` — filler words that describe nothing.
+- **Type-ability matters as much as meaning.** Their example: `sha256sum` is awkward to type;
+  `capinfos` flows. Avoid names that force awkward finger travel or shift-key gymnastics.
+- **No version numbers in the name** (`python3.7m` is their cautionary example) — a name that encodes
+  a version is a name you can't cleanly evolve.
+- **Length should scale with frequency of use**, not with how important the feature feels — `cd`/`ls`
+  earn their two letters by being typed constantly; a niche command can afford to be longer and more
+  descriptive.
+- **Don't name a command after a protocol/format.** `openssl` is stuck with a name it can never
+  outgrow because the name *is* the standard it implements.
+- **Don't describe your own implementation in the name** — `cfdisk` broadcasting "this one uses
+  Curses" is information the user never needed.
+- **Don't claim an overly generic verb.** ImageMagick's `convert` collided with the OS's own `convert`
+  utility on Windows and they eventually had to give the name up.
+- **What good looks like:** `curl` — a real verb, globally pronounceable, and it puns on "see URL."
+  `vim` works for similar reasons (visceral, reads as "an improvement").
+- **Closing line, worth keeping in view:** "None of the above matters if your command doesn't
+  actually do something useful."
+
+**For ChatUI:** the four verb command words (`/ask` implicit, `/draft`, `/classify`, `/review`) already
+pass this test — they're plain verbs, no filler words, no protocol/implementation leakage, and their
+length already scales with how often each gets typed (bare Ask needs no prefix at all since it's the
+default action).
+
+**Crash-Only Software (lwn.net, summarizing Candea & Fox)**
+
+The idea clig.dev's "Signal Handling" section gestures at without explaining: a program designed so
+the *only* way to stop it is to crash it, and the *only* way to start it is to recover — no separate,
+special "graceful shutdown" code path at all.
+
+- **Why this is more robust, not less:** if recovery is the *only* start path, it runs on every single
+  startup, in normal operation — so bugs in recovery logic get caught immediately instead of lying
+  dormant until the one real crash that needs them. A graceful-shutdown path that's rarely exercised
+  is exactly the code most likely to be broken when it's actually needed.
+- **Measured, not just theoretical:** their cited benchmark had a crash-recovery cycle *faster* than a
+  normal clean shutdown-and-restart (75s vs. 104s on the systems they measured).
+- **The trap to avoid:** this is not "delete your cleanup code and call it robust." It requires *more*
+  discipline — external, crash-safe state storage, retryable requests with timeouts, components that
+  restart cleanly from whatever state they were left in.
+
+**For ChatUI:** directly relevant to the crash that just happened — a Textual app dying from an
+unhandled exception in a button handler and taking the whole tmux server down with it is the opposite
+failure mode (a crash with no recovery path at all, and blast radius well beyond the process). It also
+bears on `Retriever`'s manifest-based incremental ingest (`retrieval.py`) and `Vault.save_file()`
+writing frontmatter — both already lean toward "state lives in a durable, external place (the
+manifest file, the vault file itself) that a restart can just re-read," which is the right instinct;
+worth keeping in mind once `app.py` needs to handle a mid-draft crash without corrupting a file.
+
+**Writing Helpful Error Messages (Google) + Error-Message Guidelines (NN/g)**
+
+These two cover the same ground from technical-writing and UX-research angles respectively; combined
+notes since they don't conflict.
+
+- Every error should answer exactly two questions: **what went wrong**, and **how do I fix it**. An
+  error that only states the first half is incomplete by definition, not just unfriendly.
+- Bad error messages cluster around five failure modes: unactionable, vague, imprecise, confusing,
+  inaccurate. Useful as a checklist for reviewing any error string before it ships.
+- Write for the actual audience of the message — a stack trace for a developer log is not the same
+  document as a message a session's end user will read.
+- Consistent terminology matters — don't call the same concept a "file" in one message and a
+  "document" in another.
+
+**For ChatUI:** this is the concrete content behind `errors.py`'s existing "provide context in the
+message" rule in `style_guide.md` — it says *what* to say, where the style guide only said to say
+something. Once `app.py` catches `VaultWriteError`/`ModelUnavailableError`/etc. and shows them to the
+user, each surfaced message should pass the two-question test (what happened, what to do about it),
+not just relay the exception's `str()`.
+
+**12-Factor CLI Apps (Jeff Dickey)**
+
+A practical, opinionated checklist — the ones not already covered by clig.dev/style_guide.md:
+
+1. Great help is essential — in-CLI, plus web docs, plus every help-invocation spelling actually works.
+2. Prefer flags to positional args once there's more than one parameter.
+3. Multiple ways to check version, with diagnostic info attached.
+4. **Stdout is for output, stderr is for messaging** — keep them genuinely separate so redirection works.
+5. Errors need a code, a description, a suggested fix, and a docs link — not a bare failure.
+6. Be fancy (color, spinners, progress) but respect `NO_COLOR` and non-tty contexts.
+7. Prompt when you can, but every prompt needs a flag/argument escape hatch for scripts.
+8. Tabular output without decorative borders, so it's still grep/awk-friendly.
+9. Startup under 500ms; show progress for anything slower.
+10. Open, documented, contribution-friendly if it's going to have contributors at all.
+11. Subcommand syntax should be consistent and unambiguous.
+12. Follow the XDG spec for config/data/cache locations.
+
+**For ChatUI:** most directly relevant is #4 (not literally applicable since ChatUI has no piping use
+case as a persistent TUI, but the underlying principle — keep conversational output and system/status
+messaging visually distinct — is exactly what the statusbar-vs-chatlog split in the visual comps
+already does) and #12 (already followed: `config/` lives under the project directory rather than
+scattering dotfiles, though it doesn't yet follow XDG's `~/.config` convention since ChatUI is
+currently a single-vault, run-from-source tool rather than an installed system command).
+
+**The Anti-Mac Interface (Gentner & Nielsen, 1996) — read for contrast, not adoption**
+
+Cited by clig.dev as a counterpoint to "GUI conventions are just correct" — worth reading because it
+argues *against* several defaults, not because ChatUI should adopt all of it.
+
+- Challenges the Mac's core assumptions (desktop metaphor, direct manipulation, strict visual
+  consistency, WYSIWYG) as suited to naive users on simple tasks, not to expert users on large,
+  networked, information-dense workloads.
+- Its proposed alternative leans on **language over pointing** ("language lets us refer to things not
+  immediately present, reason about potential actions, and use conditionals") and **rich metadata
+  enabling automation** over manual direct manipulation of every object.
+- Argues visual **uniformity stops helping past a certain scale** — enough near-identical objects and
+  sameness becomes a navigation cost, not a comfort.
+
+**For ChatUI:** this is closer to a justification for the whole project's shape than a UI-polish tip —
+a typed conversational interface over a large personal knowledge base *is* the "language over
+pointing" and "expert user over naive user" case this piece argues for. It's a reason a TUI/CLI
+interaction model is a legitimate design choice for this specific tool, not just a legacy one.
 
 ## Backlog — not yet distilled
 

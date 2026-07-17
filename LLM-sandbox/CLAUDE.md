@@ -21,8 +21,10 @@ Git_Vault/                    ← git root (branch: llm-sandbox)
     │   │   ├── changelog.md     ← full session history; update after every session
     │   │   ├── commands.md      ← command spec (pending rewrite for the 4-verb surface)
     │   │   ├── style_guide.md   ← coding standards distilled from PEP8/Effective Python/Clean Code
-    │   │   ├── _article-guide.md ← article-formatting guidance referenced by name (see below)
-    │   │   └── _demo_ui.py      ← standalone Textual UI demo/reference
+    │   │   ├── ui_style_guide.md ← TUI design standards, distilled from 4 UX/design books + clig.dev
+    │   │   ├── ideas.md          ← open backlog; done items point to changelog.md instead of recapping
+    │   │   ├── vault-structure-plan.md ← Dewey-based folder taxonomy (status: implemented)
+    │   │   └── _article-guide.md ← article-formatting guidance referenced by name (see below)
     │   └── local_db/         ← ChromaDB vector store (gitignored; wiped and reingested for the rebuild)
     └── Knowledge/            ← vault articles (canonical location)
         ├── conversations/
