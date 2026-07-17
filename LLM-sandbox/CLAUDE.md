@@ -8,10 +8,10 @@ Git_Vault/                    ← git root (branch: llm-sandbox)
     ├── ChatUI/               ← canonical app code
     │   ├── program_files/    ← app package (rebuild in progress — see config/style_guide.md)
     │   │   ├── __main__.py   ← entrypoint: `python -m program_files --vault ../Knowledge`
-    │   │   ├── config.py, models.py, vault.py, retrieval.py, llm.py, web.py,
-    │   │   │   feedback.py, errors.py — domain layer, no Textual dependency
-    │   │   ├── ask.py, draft.py, classify.py, review.py  ← the four verbs
+    │   │   ├── ask.py, draft.py, classify.py, review.py  ← the four verbs, kept at the surface
     │   │   ├── app.py        ← ChatApp(App), thin — delegates to the verb modules
+    │   │   ├── utils/        ← domain layer, no Textual dependency: config.py, models.py,
+    │   │   │   vault.py, retrieval.py, llm.py, web.py, feedback.py, errors.py, debug_log.py
     │   │   ├── ui/           ← Textual-specific widgets (streaming.py, picker.py)
     │   │   ├── tests/        ← unit + integration test suite
     │   │   └── .pytest_cache/, __pycache__/  ← gitignored, live alongside the code they test
@@ -72,7 +72,7 @@ No self-update pipeline in the rebuild — `/update`/`/apply` and the `CHANGE:`/
 - **Comments are for the non-obvious *why*, and are rare.** Never restate what the code does. If a rename or an extracted helper removes the need for the comment, do that instead.
 - **Comments and docstrings stand on their own.** No author/book/methodology/design-doc provenance — no `per Norman`, `(CLIG)`, `matching the artifact`, `see ui_style_guide.md`. State the reasoning inline. A short pointer to an authoritative in-repo spec (`per CLAUDE.md's retrieval table`) is the only allowed reference.
 - **No commented-out code, no banner/section-divider comments, no changelog-in-a-docstring** — git and `config/changelog.md` own that history.
-- **The house style already lives in the domain modules** — match `program_files/ask.py`, `vault.py`, `retrieval.py` (sparse local why-comments, one-line imperative docstrings, bare private helpers), not the pre-cleanup shape `app.py` had.
+- **The house style already lives in the domain modules** — match `program_files/ask.py`, `utils/vault.py`, `utils/retrieval.py` (sparse local why-comments, one-line imperative docstrings, bare private helpers), not the pre-cleanup shape `app.py` had.
 
 ## End-of-session checklist (do this before stopping, unprompted)
 

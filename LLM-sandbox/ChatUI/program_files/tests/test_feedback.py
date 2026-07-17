@@ -1,7 +1,7 @@
 from pathlib import Path
 
-import program_files.feedback as feedback_module
-from program_files.feedback import load_recent_overrides, log_override
+import program_files.utils.feedback as feedback_module
+from program_files.utils.feedback import load_recent_overrides, log_override
 
 
 def _use_scratch_log(monkeypatch, tmp_path: Path) -> Path:

@@ -19,15 +19,15 @@ from textual.suggester import SuggestFromList
 from textual.widgets import Header, Input, Label, RichLog, Static, Tree
 
 from program_files import ask, classify, draft, review
-from program_files.config import Settings
-from program_files.errors import ChatUIError
-from program_files.llm import ModelClient
-from program_files.models import ClassificationSuggestion, File, ReviewQuestion
-from program_files.retrieval import Retriever
+from program_files.utils.config import Settings
+from program_files.utils.errors import ChatUIError
+from program_files.utils.llm import ModelClient
+from program_files.utils.models import ClassificationSuggestion, File, ReviewQuestion
+from program_files.utils.retrieval import Retriever
 from program_files.ui import theme
 from program_files.ui.picker import FilePicker
 from program_files.ui.streaming import StreamingText
-from program_files.vault import Vault, normalize_link_target
+from program_files.utils.vault import Vault, normalize_link_target
 
 _log = logging.getLogger(__name__)
 

@@ -9,10 +9,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
-from program_files.feedback import load_recent_overrides
-from program_files.llm import ModelClient
-from program_files.models import ClassificationSuggestion, File, Override
-from program_files.vault import Vault, extract_wikilinks
+from program_files.utils.feedback import load_recent_overrides
+from program_files.utils.llm import ModelClient
+from program_files.utils.models import ClassificationSuggestion, File, Override
+from program_files.utils.vault import Vault, extract_wikilinks
 
 _log = logging.getLogger(__name__)
 

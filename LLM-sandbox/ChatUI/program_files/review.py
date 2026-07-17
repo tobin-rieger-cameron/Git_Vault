@@ -7,9 +7,9 @@ from dataclasses import replace
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from program_files.llm import ModelClient
-from program_files.models import File, ReviewQuestion
-from program_files.vault import Vault
+from program_files.utils.llm import ModelClient
+from program_files.utils.models import File, ReviewQuestion
+from program_files.utils.vault import Vault
 
 _QUESTION_RE = re.compile(r"Q:\s*(.+?)\s*\n\s*Hint:\s*(.+?)\s*(?:\n|$)", re.MULTILINE)
 

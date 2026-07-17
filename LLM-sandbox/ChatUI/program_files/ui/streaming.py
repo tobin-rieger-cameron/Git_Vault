@@ -9,7 +9,7 @@ from textual import events
 from textual.widgets import Static
 
 from program_files.ui import theme
-from program_files.vault import find_wikilinks
+from program_files.utils.vault import find_wikilinks
 
 
 class StreamingText(Static):

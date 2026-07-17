@@ -9,8 +9,8 @@ import httpx
 import pytest
 
 from program_files.draft import revise_draft, save_draft, start_draft
-from program_files.llm import ModelClient
-from program_files.vault import Vault
+from program_files.utils.llm import ModelClient
+from program_files.utils.vault import Vault
 
 
 def _ollama_available() -> bool:

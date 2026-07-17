@@ -1,5 +1,5 @@
-import program_files.web as web_module
-from program_files.web import WebResult, search_web
+import program_files.utils.web as web_module
+from program_files.utils.web import WebResult, search_web
 
 
 class _FakeDDGS:

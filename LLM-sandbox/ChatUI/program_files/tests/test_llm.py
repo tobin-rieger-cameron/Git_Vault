@@ -3,8 +3,8 @@ from dataclasses import dataclass
 
 import pytest
 
-from program_files.errors import ModelUnavailableError
-from program_files.llm import ModelClient
+from program_files.utils.errors import ModelUnavailableError
+from program_files.utils.llm import ModelClient
 
 
 @dataclass

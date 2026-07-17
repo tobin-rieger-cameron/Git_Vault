@@ -6,11 +6,11 @@ import argparse
 from pathlib import Path
 
 from program_files.app import ChatApp
-from program_files.config import load_settings
-from program_files.debug_log import configure as configure_debug_log
-from program_files.llm import ModelClient
-from program_files.retrieval import Retriever
-from program_files.vault import Vault
+from program_files.utils.config import load_settings
+from program_files.utils.debug_log import configure as configure_debug_log
+from program_files.utils.llm import ModelClient
+from program_files.utils.retrieval import Retriever
+from program_files.utils.vault import Vault
 
 
 def main() -> None:

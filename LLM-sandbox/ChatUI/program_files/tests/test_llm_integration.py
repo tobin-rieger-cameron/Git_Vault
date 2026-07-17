@@ -8,7 +8,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from program_files.llm import ModelClient
+from program_files.utils.llm import ModelClient
 
 
 def _ollama_available() -> bool:

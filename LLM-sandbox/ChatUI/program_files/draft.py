@@ -5,9 +5,9 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import datetime
 
-from program_files.llm import ModelClient
-from program_files.models import File
-from program_files.vault import Vault, extract_wikilinks, normalize_link_target
+from program_files.utils.llm import ModelClient
+from program_files.utils.models import File
+from program_files.utils.vault import Vault, extract_wikilinks, normalize_link_target
 
 
 def start_draft(subject: str, vault: Vault) -> File:

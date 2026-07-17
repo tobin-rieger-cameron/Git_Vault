@@ -6,7 +6,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from program_files.models import Override
+from program_files.utils.models import Override
 
 _FEEDBACK_PATH = Path(__file__).resolve().parent.parent / "config" / "feedback.md"
 

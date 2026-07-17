@@ -3,9 +3,9 @@ from pathlib import Path
 
 import pytest
 
-from program_files.errors import VaultFileNotFoundError
-from program_files.models import File
-from program_files.vault import (
+from program_files.utils.errors import VaultFileNotFoundError
+from program_files.utils.models import File
+from program_files.utils.vault import (
     Vault,
     extract_wikilinks,
     find_wikilinks,

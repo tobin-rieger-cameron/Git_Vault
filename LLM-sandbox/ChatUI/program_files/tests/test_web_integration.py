@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from program_files.web import search_web
+from program_files.utils.web import search_web
 
 
 def test_search_web_returns_real_results_or_skips() -> None:

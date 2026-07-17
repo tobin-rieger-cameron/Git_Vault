@@ -8,8 +8,8 @@ from program_files.ask import (
     is_broad_topic_question,
     source_covers_topic,
 )
-from program_files.models import Chunk, RetrievalPath
-from program_files.vault import Vault
+from program_files.utils.models import Chunk, RetrievalPath
+from program_files.utils.vault import Vault
 
 
 def _chunk(text: str, score: float, source: str = "A.md", tags: list[str] | None = None) -> Chunk:

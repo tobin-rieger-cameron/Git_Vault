@@ -12,10 +12,10 @@ import httpx
 import pytest
 
 from program_files.ask import ask
-from program_files.llm import ModelClient
-from program_files.models import File, RetrievalPath
-from program_files.retrieval import Retriever
-from program_files.vault import Vault
+from program_files.utils.llm import ModelClient
+from program_files.utils.models import File, RetrievalPath
+from program_files.utils.retrieval import Retriever
+from program_files.utils.vault import Vault
 
 
 def _ollama_available() -> bool:

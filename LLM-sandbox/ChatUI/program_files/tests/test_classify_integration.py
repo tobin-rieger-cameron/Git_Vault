@@ -9,9 +9,9 @@ import httpx
 import pytest
 
 from program_files.classify import apply_classification, suggest_classification
-from program_files.llm import ModelClient
-from program_files.models import File
-from program_files.vault import Vault
+from program_files.utils.llm import ModelClient
+from program_files.utils.models import File
+from program_files.utils.vault import Vault
 
 
 def _ollama_available() -> bool:

@@ -4,8 +4,8 @@ from pathlib import Path
 import pytest
 
 from program_files.draft import revise_draft, save_draft, start_draft
-from program_files.models import File
-from program_files.vault import Vault
+from program_files.utils.models import File
+from program_files.utils.vault import Vault
 
 
 def _write(path: Path, content: str) -> None:
