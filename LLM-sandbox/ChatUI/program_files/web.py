@@ -1,4 +1,7 @@
-"""Web search supplement (ddgs)."""
+"""
+chatui/web.py
+Web search supplement using duckduckgosearch.
+"""
 
 from __future__ import annotations
 
@@ -15,7 +18,6 @@ class WebResult:
 
 
 def search_web(query: str, max_results: int) -> list[WebResult]:
-    """Return [] on any failure (network, no results) instead of raising — the supplement is optional."""
     try:
         with DDGS() as ddgs:
             raw_results = list(ddgs.text(query, max_results=max_results))
