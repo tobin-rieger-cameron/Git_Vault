@@ -6,19 +6,23 @@
 Git_Vault/                    ← git root (branch: llm-sandbox)
 └── LLM-sandbox/              ← working directory (git subtree)
     ├── ChatUI/               ← canonical app code
-    │   ├── chatui/           ← app package (rebuild in progress — see config/style_guide.md)
-    │   │   ├── __main__.py   ← entrypoint: `python -m chatui --vault ../Knowledge`
+    │   ├── program_files/    ← app package (rebuild in progress — see config/style_guide.md)
+    │   │   ├── __main__.py   ← entrypoint: `python -m program_files --vault ../Knowledge`
     │   │   ├── config.py, models.py, vault.py, retrieval.py, llm.py, web.py,
     │   │   │   feedback.py, errors.py — domain layer, no Textual dependency
     │   │   ├── ask.py, draft.py, classify.py, review.py  ← the four verbs
     │   │   ├── app.py        ← ChatApp(App), thin — delegates to the verb modules
-    │   │   └── ui/           ← Textual-specific widgets (streaming.py, picker.py)
+    │   │   ├── ui/           ← Textual-specific widgets (streaming.py, picker.py)
+    │   │   ├── tests/        ← unit + integration test suite
+    │   │   └── .pytest_cache/, __pycache__/  ← gitignored, live alongside the code they test
     │   ├── config/
     │   │   ├── settings.md      ← runtime config (YAML frontmatter) + architecture docs
     │   │   ├── models.md        ← model registry + auto-pull list
     │   │   ├── changelog.md     ← full session history; update after every session
     │   │   ├── commands.md      ← command spec (pending rewrite for the 4-verb surface)
-    │   │   └── style_guide.md   ← coding standards distilled from PEP8/Effective Python/Clean Code
+    │   │   ├── style_guide.md   ← coding standards distilled from PEP8/Effective Python/Clean Code
+    │   │   ├── _article-guide.md ← article-formatting guidance referenced by name (see below)
+    │   │   └── _demo_ui.py      ← standalone Textual UI demo/reference
     │   └── local_db/         ← ChromaDB vector store (gitignored; wiped and reingested for the rebuild)
     └── Knowledge/            ← vault articles (canonical location)
         ├── conversations/
@@ -29,7 +33,9 @@ Git_Vault/                    ← git root (branch: llm-sandbox)
 
 The repo root is `Git_Vault/` — always commit from there or use absolute paths. Never treat `LLM-sandbox/` as the git root.
 
-`chatui.py`/`apply_update.py` (the old single-file app) were deliberately wiped (commit `1fb5c9b`) and are being rebuilt as the `chatui/` package above, organized around four verbs — Ask, Draft a paper, Classify inline, Review (see memory `project_chatui_redefinition` / `ChatUI/config/style_guide.md`). The domain modules, the four verbs, `app.py`, and the `ui/` widgets are all implemented, with a passing unit + integration test suite under `ChatUI/tests/`.
+`chatui.py`/`apply_update.py` (the old single-file app) were deliberately wiped (commit `1fb5c9b`) and are being rebuilt as the `program_files/` package above, organized around four verbs — Ask, Draft a paper, Classify inline, Review (see memory `project_chatui_redefinition` / `ChatUI/config/style_guide.md`). The domain modules, the four verbs, `app.py`, and the `ui/` widgets are all implemented, with a passing unit + integration test suite under `ChatUI/program_files/tests/`.
+
+The package directory was renamed `chatui/` → `program_files/`; the import name changed to match (`from program_files.x import y`), and `debug_log.py`'s root logger name was updated to `"program_files"` so `logging.getLogger(__name__)` calls still propagate into the file handler. The TUI's own window-title string (`app.py`, `self.title = f"chatui — ..."`) is a cosmetic display label, left as `"chatui"` on purpose — it's user-facing branding, not a package reference.
 
 `conversations/` moved from `ChatUI/` to `Knowledge/` in commit `eb9a0f5` — always use the `Knowledge/conversations/` path, not `ChatUI/conversations/`.
 
@@ -38,18 +44,18 @@ The repo root is `Git_Vault/` — always commit from there or use absolute paths
 ```bash
 source .venv/bin/activate
 cd ChatUI
-python -m chatui --vault ../Knowledge
+python -m program_files --vault ../Knowledge
 ```
 
-Testing pattern: launch in tmux, wait for the input prompt, send `/ingest`, then test queries. Unit tests run with `python -m pytest tests/ --ignore-glob='*integration*'`; the integration tests need a local Ollama and are skipped when it's unreachable.
+Testing pattern: launch in tmux, wait for the input prompt, send `/ingest`, then test queries. Unit tests run with `python -m pytest program_files/tests/ --ignore-glob='*integration*'`; the integration tests need a local Ollama and are skipped when it's unreachable.
 
 ## Critical constraints
 
 **ChromaDB API (v1.x):** Use `chromadb.PersistentClient(path=...)`. The old `chromadb.Client(persist_directory=...)` is gone — data silently vanishes on restart if you use it.
 
-**No module-level globals in the rebuild.** The old `llm`/`coding_llm`/`VAULT_PATH`/`CONVERSATIONS_DIR` globals are gone. Their replacements — a `Vault`, a `ModelClient`, a `Settings` — are constructed once in `chatui/__main__.py` and owned by `ChatApp` (`self.vault`, `self.model`, `self.settings`); pass them as explicit arguments to verb functions rather than reaching for global state. This is a deliberate style-guide decision (`config/style_guide.md`), not an oversight — don't reintroduce globals to match the old shape.
+**No module-level globals in the rebuild.** The old `llm`/`coding_llm`/`VAULT_PATH`/`CONVERSATIONS_DIR` globals are gone. Their replacements — a `Vault`, a `ModelClient`, a `Settings` — are constructed once in `program_files/__main__.py` and owned by `ChatApp` (`self.vault`, `self.model`, `self.settings`); pass them as explicit arguments to verb functions rather than reaching for global state. This is a deliberate style-guide decision (`config/style_guide.md`), not an oversight — don't reintroduce globals to match the old shape.
 
-**Hardcoded filename** — `_article-guide.md` (`ChatUI/_article-guide.md`) is referenced by name by the article-formatting guidance the old `/distill`/classification logic used. Do not rename it even if renaming other vault files; whatever replaces that logic in `chatui/classify.py`/`draft.py` should keep referencing this same file.
+**Hardcoded filename** — `_article-guide.md` (`ChatUI/config/_article-guide.md`) is referenced by name by the article-formatting guidance the old `/distill`/classification logic used. Do not rename it even if renaming other vault files; whatever replaces that logic in `program_files/classify.py`/`draft.py` should keep referencing this same file.
 
 **Files with spaces** — Knowledge/ files use Title Case with Spaces. When removing untracked files: use `rm -f`, not `git rm` (git rm fails on untracked paths). Always quote paths.
 
@@ -66,7 +72,7 @@ No self-update pipeline in the rebuild — `/update`/`/apply` and the `CHANGE:`/
 - **Comments are for the non-obvious *why*, and are rare.** Never restate what the code does. If a rename or an extracted helper removes the need for the comment, do that instead.
 - **Comments and docstrings stand on their own.** No author/book/methodology/design-doc provenance — no `per Norman`, `(CLIG)`, `matching the artifact`, `see ui_style_guide.md`. State the reasoning inline. A short pointer to an authoritative in-repo spec (`per CLAUDE.md's retrieval table`) is the only allowed reference.
 - **No commented-out code, no banner/section-divider comments, no changelog-in-a-docstring** — git and `config/changelog.md` own that history.
-- **The house style already lives in the domain modules** — match `chatui/ask.py`, `vault.py`, `retrieval.py` (sparse local why-comments, one-line imperative docstrings, bare private helpers), not the pre-cleanup shape `app.py` had.
+- **The house style already lives in the domain modules** — match `program_files/ask.py`, `vault.py`, `retrieval.py` (sparse local why-comments, one-line imperative docstrings, bare private helpers), not the pre-cleanup shape `app.py` had.
 
 ## End-of-session checklist (do this before stopping, unprompted)
 

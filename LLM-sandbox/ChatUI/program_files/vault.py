@@ -9,8 +9,8 @@ from pathlib import Path
 
 import yaml
 
-from chatui.errors import VaultFileNotFoundError, VaultWriteError
-from chatui.models import File
+from program_files.errors import VaultFileNotFoundError, VaultWriteError
+from program_files.models import File
 
 _log = logging.getLogger(__name__)
 

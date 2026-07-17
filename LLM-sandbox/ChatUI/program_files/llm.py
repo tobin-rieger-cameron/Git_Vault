@@ -7,8 +7,8 @@ from typing import Callable
 
 from langchain_ollama import ChatOllama
 
-from chatui.debug_log import truncate
-from chatui.errors import ModelUnavailableError
+from program_files.debug_log import truncate
+from program_files.errors import ModelUnavailableError
 
 _log = logging.getLogger(__name__)
 

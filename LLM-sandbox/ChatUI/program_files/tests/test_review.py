@@ -3,9 +3,9 @@ from pathlib import Path
 
 import pytest
 
-from chatui.models import File
-from chatui.review import files_due_for_review, generate_review_questions, mark_reviewed
-from chatui.vault import Vault
+from program_files.models import File
+from program_files.review import files_due_for_review, generate_review_questions, mark_reviewed
+from program_files.vault import Vault
 
 
 def _file(tmp_path: Path, name: str, last_reviewed: datetime | None) -> File:

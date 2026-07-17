@@ -12,8 +12,8 @@ from langchain_core.documents import Document
 from langchain_ollama import OllamaEmbeddings
 from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
 
-from chatui.errors import IngestError, RetrievalError
-from chatui.models import Chunk, File, IngestStats
+from program_files.errors import IngestError, RetrievalError
+from program_files.models import Chunk, File, IngestStats
 
 _log = logging.getLogger(__name__)
 

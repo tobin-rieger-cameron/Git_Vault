@@ -10,9 +10,9 @@ from textual.fuzzy import Matcher
 from textual.widgets import Tree
 from textual.widgets.tree import TreeNode
 
-from chatui.models import File
-from chatui.ui import theme
-from chatui.vault import Vault
+from program_files.models import File
+from program_files.ui import theme
+from program_files.vault import Vault
 
 
 class FilePicker(Tree[Path]):

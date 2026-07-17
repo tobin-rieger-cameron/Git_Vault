@@ -8,9 +8,9 @@ from pathlib import Path
 import httpx
 import pytest
 
-from chatui.draft import revise_draft, save_draft, start_draft
-from chatui.llm import ModelClient
-from chatui.vault import Vault
+from program_files.draft import revise_draft, save_draft, start_draft
+from program_files.llm import ModelClient
+from program_files.vault import Vault
 
 
 def _ollama_available() -> bool:

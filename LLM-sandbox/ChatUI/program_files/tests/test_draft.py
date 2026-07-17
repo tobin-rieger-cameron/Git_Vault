@@ -3,9 +3,9 @@ from pathlib import Path
 
 import pytest
 
-from chatui.draft import revise_draft, save_draft, start_draft
-from chatui.models import File
-from chatui.vault import Vault
+from program_files.draft import revise_draft, save_draft, start_draft
+from program_files.models import File
+from program_files.vault import Vault
 
 
 def _write(path: Path, content: str) -> None:

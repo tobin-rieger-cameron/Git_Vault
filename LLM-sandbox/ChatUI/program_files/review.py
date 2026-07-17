@@ -7,9 +7,9 @@ from dataclasses import replace
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from chatui.llm import ModelClient
-from chatui.models import File, ReviewQuestion
-from chatui.vault import Vault
+from program_files.llm import ModelClient
+from program_files.models import File, ReviewQuestion
+from program_files.vault import Vault
 
 _QUESTION_RE = re.compile(r"Q:\s*(.+?)\s*\n\s*Hint:\s*(.+?)\s*(?:\n|$)", re.MULTILINE)
 

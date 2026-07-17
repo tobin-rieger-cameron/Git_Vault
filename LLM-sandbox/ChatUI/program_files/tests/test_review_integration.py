@@ -8,9 +8,9 @@ from pathlib import Path
 import httpx
 import pytest
 
-from chatui.llm import ModelClient
-from chatui.models import File
-from chatui.review import generate_review_questions
+from program_files.llm import ModelClient
+from program_files.models import File
+from program_files.review import generate_review_questions
 
 
 def _ollama_available() -> bool:

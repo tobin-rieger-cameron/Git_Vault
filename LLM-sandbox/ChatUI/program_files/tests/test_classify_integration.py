@@ -8,10 +8,10 @@ from pathlib import Path
 import httpx
 import pytest
 
-from chatui.classify import apply_classification, suggest_classification
-from chatui.llm import ModelClient
-from chatui.models import File
-from chatui.vault import Vault
+from program_files.classify import apply_classification, suggest_classification
+from program_files.llm import ModelClient
+from program_files.models import File
+from program_files.vault import Vault
 
 
 def _ollama_available() -> bool:

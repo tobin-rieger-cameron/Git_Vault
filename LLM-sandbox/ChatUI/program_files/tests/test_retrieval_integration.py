@@ -16,8 +16,8 @@ pytest.importorskip("langchain_ollama")
 
 import httpx  # noqa: E402
 
-from chatui.models import File  # noqa: E402
-from chatui.retrieval import Retriever  # noqa: E402
+from program_files.models import File  # noqa: E402
+from program_files.retrieval import Retriever  # noqa: E402
 
 _EMBED_MODEL = "nomic-embed-text"
 

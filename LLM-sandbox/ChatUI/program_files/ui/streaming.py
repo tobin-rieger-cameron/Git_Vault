@@ -8,8 +8,8 @@ from rich.text import Text
 from textual import events
 from textual.widgets import Static
 
-from chatui.ui import theme
-from chatui.vault import find_wikilinks
+from program_files.ui import theme
+from program_files.vault import find_wikilinks
 
 
 class StreamingText(Static):

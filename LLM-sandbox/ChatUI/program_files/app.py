@@ -18,16 +18,16 @@ from textual.screen import ModalScreen, Screen
 from textual.suggester import SuggestFromList
 from textual.widgets import Header, Input, Label, RichLog, Static, Tree
 
-from chatui import ask, classify, draft, review
-from chatui.config import Settings
-from chatui.errors import ChatUIError
-from chatui.llm import ModelClient
-from chatui.models import ClassificationSuggestion, File, ReviewQuestion
-from chatui.retrieval import Retriever
-from chatui.ui import theme
-from chatui.ui.picker import FilePicker
-from chatui.ui.streaming import StreamingText
-from chatui.vault import Vault, normalize_link_target
+from program_files import ask, classify, draft, review
+from program_files.config import Settings
+from program_files.errors import ChatUIError
+from program_files.llm import ModelClient
+from program_files.models import ClassificationSuggestion, File, ReviewQuestion
+from program_files.retrieval import Retriever
+from program_files.ui import theme
+from program_files.ui.picker import FilePicker
+from program_files.ui.streaming import StreamingText
+from program_files.vault import Vault, normalize_link_target
 
 _log = logging.getLogger(__name__)
 
@@ -126,7 +126,7 @@ class SuggestionPopup(ModalScreen[bool]):
 class ChatApp(App):
     """Textual application shell; owns the Vault/Retriever/ModelClient/Settings and delegates to the verb modules."""
 
-    # Every color and size below is a named value from chatui.ui.theme, never a fresh literal,
+    # Every color and size below is a named value from program_files.ui.theme, never a fresh literal,
     # so the palette stays consistent across widgets.
     CSS = (
         """

@@ -1,8 +1,8 @@
 from datetime import datetime
 from pathlib import Path
 
-from chatui.models import Chunk, File
-from chatui.retrieval import _tag_filter, _to_chunk, _to_document, chunk_file
+from program_files.models import Chunk, File
+from program_files.retrieval import _tag_filter, _to_chunk, _to_document, chunk_file
 
 
 def _file(body: str, tags: list[str] | None = None) -> File:

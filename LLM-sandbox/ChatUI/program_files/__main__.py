@@ -1,16 +1,16 @@
-"""Entrypoint: python -m chatui --vault ../Knowledge"""
+"""Entrypoint: python -m program_files --vault ../Knowledge"""
 
 from __future__ import annotations
 
 import argparse
 from pathlib import Path
 
-from chatui.app import ChatApp
-from chatui.config import load_settings
-from chatui.debug_log import configure as configure_debug_log
-from chatui.llm import ModelClient
-from chatui.retrieval import Retriever
-from chatui.vault import Vault
+from program_files.app import ChatApp
+from program_files.config import load_settings
+from program_files.debug_log import configure as configure_debug_log
+from program_files.llm import ModelClient
+from program_files.retrieval import Retriever
+from program_files.vault import Vault
 
 
 def main() -> None:

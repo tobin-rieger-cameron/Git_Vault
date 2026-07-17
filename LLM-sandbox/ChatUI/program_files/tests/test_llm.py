@@ -3,8 +3,8 @@ from dataclasses import dataclass
 
 import pytest
 
-from chatui.errors import ModelUnavailableError
-from chatui.llm import ModelClient
+from program_files.errors import ModelUnavailableError
+from program_files.llm import ModelClient
 
 
 @dataclass

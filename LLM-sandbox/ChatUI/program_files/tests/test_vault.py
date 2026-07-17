@@ -3,9 +3,9 @@ from pathlib import Path
 
 import pytest
 
-from chatui.errors import VaultFileNotFoundError
-from chatui.models import File
-from chatui.vault import (
+from program_files.errors import VaultFileNotFoundError
+from program_files.models import File
+from program_files.vault import (
     Vault,
     extract_wikilinks,
     find_wikilinks,

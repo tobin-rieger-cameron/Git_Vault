@@ -1,5 +1,5 @@
-import chatui.web as web_module
-from chatui.web import WebResult, search_web
+import program_files.web as web_module
+from program_files.web import WebResult, search_web
 
 
 class _FakeDDGS:

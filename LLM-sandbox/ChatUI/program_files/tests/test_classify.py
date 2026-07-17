@@ -3,10 +3,10 @@ from pathlib import Path
 
 import pytest
 
-import chatui.classify as classify_module
-from chatui.classify import apply_classification, apply_wikilink, suggest_classification, suggest_wikilinks
-from chatui.models import ClassificationSuggestion, File
-from chatui.vault import Vault
+import program_files.classify as classify_module
+from program_files.classify import apply_classification, apply_wikilink, suggest_classification, suggest_wikilinks
+from program_files.models import ClassificationSuggestion, File
+from program_files.vault import Vault
 
 
 def _write(path: Path, content: str) -> None:

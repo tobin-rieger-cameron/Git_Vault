@@ -6,11 +6,11 @@ import logging
 import re
 from pathlib import Path
 
-from chatui.llm import ModelClient
-from chatui.models import AskResult, Chunk, RetrievalPath
-from chatui.retrieval import Retriever
-from chatui.vault import Vault
-from chatui.web import search_web
+from program_files.llm import ModelClient
+from program_files.models import AskResult, Chunk, RetrievalPath
+from program_files.retrieval import Retriever
+from program_files.vault import Vault
+from program_files.web import search_web
 
 _log = logging.getLogger(__name__)
 

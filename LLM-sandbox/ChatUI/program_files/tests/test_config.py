@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from chatui.config import load_settings
+from program_files.config import load_settings
 
 
 def _write(path: Path, frontmatter: str, body: str = "# doc\n") -> None:

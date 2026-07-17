@@ -2,14 +2,14 @@ from pathlib import Path
 
 import pytest
 
-from chatui.ask import (
+from program_files.ask import (
     ask,
     choose_retrieval_path,
     is_broad_topic_question,
     source_covers_topic,
 )
-from chatui.models import Chunk, RetrievalPath
-from chatui.vault import Vault
+from program_files.models import Chunk, RetrievalPath
+from program_files.vault import Vault
 
 
 def _chunk(text: str, score: float, source: str = "A.md", tags: list[str] | None = None) -> Chunk:
