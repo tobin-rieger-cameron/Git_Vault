@@ -32,7 +32,7 @@ def test_load_settings_defaults_vault_path_from_config_dir(tmp_path: Path) -> No
 
     settings = load_settings(config_dir)
 
-    assert settings.vault_path == tmp_path / "Knowledge"
+    assert settings.vault_path == tmp_path
 
 
 def test_load_settings_honors_explicit_vault_path(tmp_path: Path) -> None:

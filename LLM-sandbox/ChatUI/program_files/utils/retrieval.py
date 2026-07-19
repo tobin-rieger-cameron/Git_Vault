@@ -38,10 +38,15 @@ class Retriever:
         self._client = chromadb.PersistentClient(path=str(db_path))
         self._db = self._open_collection()
 
-    def search(self, query: str, top_k: int) -> list[Chunk]:
-        """Run a similarity search over the whole vault collection."""
+    def search(self, query: str, top_k: int, exclude_source: Path | None = None) -> list[Chunk]:
+        """Run a similarity search over the whole vault collection, optionally excluding one source file.
+
+        exclude_source matters when the query text comes from a vault file itself (e.g. "find files
+        related to this one") — that file's own chunks are always its closest match and would
+        otherwise fill the entire top_k window, crowding out every other file."""
+        search_filter = _exclude_source_filter(exclude_source)
         try:
-            results = self._db.similarity_search_with_relevance_scores(query, k=top_k)
+            results = self._db.similarity_search_with_relevance_scores(query, k=top_k, filter=search_filter)
         except Exception as exc:
             _log.error("vault search failed for %r: %s", query, exc)
             raise RetrievalError(f"Vault search failed: {exc}") from exc
@@ -169,6 +174,10 @@ def _to_document(chunk: Chunk) -> Document:
 def _to_chunk(doc: Document, score: float) -> Chunk:
     tags = [key[4:] for key, value in doc.metadata.items() if key.startswith("tag_") and value is True]
     return Chunk(text=doc.page_content, source_path=Path(doc.metadata.get("source", "")), tags=tags, score=score)
+
+
+def _exclude_source_filter(exclude_source: Path | None) -> dict | None:
+    return {"source": {"$ne": str(exclude_source)}} if exclude_source else None
 
 
 def _tag_filter(tags: list[str]) -> dict:

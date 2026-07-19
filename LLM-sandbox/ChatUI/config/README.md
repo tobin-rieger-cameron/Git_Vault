@@ -26,10 +26,10 @@ ollama pull nomic-embed-text
 ollama pull llama3.1:8b
 ollama pull qwen2.5-coder:7b
 
-# Run (from LLM-sandbox/)
+# Run (from LLM-sandbox/) — vault defaults to the repo working directory, no --vault needed
 source .venv/bin/activate
 cd ChatUI
-python -m program_files --vault ../Knowledge
+python -m program_files
 # Then /ingest to build the vector database on first launch
 ```
 
@@ -78,9 +78,19 @@ Tag-aware retrieval: if the top chunk has frontmatter tags, a second scoped sear
 
 ## Vault layout
 
+The vault root defaults to the repo working directory (`LLM-sandbox/`) — every `.md` file under it is
+vault content unless excluded. Two exclusion rules apply, neither hardcoded to a folder name:
+
+- hidden (`.venv`, `.git`, `.pytest_cache`, …) and `__`-prefixed (`__pycache__`) directories are always skipped
+- anything matching a pattern in `.vaultignore` (gitignore-lite, one pattern per line) at the vault root —
+  currently `conversations`, `config`, `local_db`
+
 ```
-Knowledge/          ← vault articles (Title Case with Spaces filenames)
-└── *.md            ← YAML frontmatter with tags; [[wikilinks]] to related articles
+Formal Notes/        ← classified vault articles (Title Case with Spaces filenames)
+Study Notes/         ← intake — files land here unclassified, then get shaped up via ChatUI
+└── *.md             ← YAML frontmatter with tags; [[wikilinks]] to related articles
 ```
+
+Pass `--vault <path>` to point at a different root instead (e.g. to work on just one of the two trees above).
 
 Config lives in `ChatUI/config/` — see `settings.md` for architecture documentation and `style_guide.md` for the coding standards the rebuild follows.

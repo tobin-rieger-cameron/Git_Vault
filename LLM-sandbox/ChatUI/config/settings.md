@@ -19,7 +19,7 @@ review_staleness_days: 30
 
 | Key | Default | Description |
 |---|---|---|
-| `vault_path` | _(ChatUI/../Knowledge)_ | Absolute path to the vault root; overrides the computed default |
+| `vault_path` | _(repo working directory, i.e. `ChatUI/..`)_ | Absolute path to the vault root; overrides the computed default. Also overridable per-run via `--vault` |
 | `similarity_threshold` | `0.65` | Minimum score to answer from the vault; below this falls back to the weak-match/model-knowledge path |
 | `top_k` | `5` | Vault chunks retrieved per query |
 | `chunk_size` | `800` | Characters per chunk during ingestion |
@@ -41,7 +41,7 @@ ChatUI is organized around four verbs — Ask, Draft a paper, Classify inline, R
 
 ### 1. Ingestion (`/ingest` → `Retriever.ingest()`)
 
-Reads every `.md` file in the vault via `Vault.list_files()` (skipping `conversations/`, `config/`, and `local_db/`). Each file is split into overlapping chunks by `chunk_file()` (`chunk_size`/`chunk_overlap`), then embedded and written to a persistent ChromaDB database (`local_db/`) via `chromadb.PersistentClient` — the old `chromadb.Client(persist_directory=...)` form is gone and must never be reintroduced (CLAUDE.md hard constraint).
+Reads every `.md` file in the vault via `Vault.list_files()`, skipping hidden/`__`-prefixed directories and anything matching a pattern in the vault root's `.vaultignore` (currently `conversations/`, `config/`, `local_db/` — edit that file, not code, when the tree reshapes). Each file is split into overlapping chunks by `chunk_file()` (`chunk_size`/`chunk_overlap`), then embedded and written to a persistent ChromaDB database (`local_db/`) via `chromadb.PersistentClient` — the old `chromadb.Client(persist_directory=...)` form is gone and must never be reintroduced (CLAUDE.md hard constraint).
 
 YAML frontmatter tags are parsed and stamped onto each chunk's metadata so they can be used to filter searches later.
 
@@ -78,7 +78,7 @@ Toggles a web supplement (via `ddgs`, no API key required) on/off for the Ask pa
 ## Architecture
 
 ```
-ChatUI/                     ← run `python -m chatui --vault ../Knowledge` from here
+ChatUI/                     ← run `python -m program_files` from here (vault defaults to repo root, or pass --vault)
 ├── chatui/
 │   ├── __main__.py     — entrypoint: builds Settings/Vault/Retriever/ModelClient, runs ChatApp
 │   ├── config.py       — Settings dataclass + load_settings()
@@ -103,8 +103,9 @@ ChatUI/                     ← run `python -m chatui --vault ../Knowledge` from
 │   └── commands.md  — command spec for the 4-verb surface
 └── local_db/        — ChromaDB vector store (gitignored)
 
-Knowledge/           ← vault articles (vault_path default)
-└── *.md
+Formal Notes/        ← classified vault articles
+Study Notes/         ← intake — unclassified until shaped up via ChatUI
+└── *.md             (vault_path default is the repo root containing both)
 ```
 
 No module-level globals — `Vault`, `Retriever`, `ModelClient`, `Settings` are constructed once in `__main__.py` and owned by `ChatApp` (`self.vault`, `self.retriever`, `self.model`, `self.settings`), passed as explicit arguments to verb functions.

@@ -2,7 +2,7 @@ from datetime import datetime
 from pathlib import Path
 
 from program_files.utils.models import Chunk, File
-from program_files.utils.retrieval import _tag_filter, _to_chunk, _to_document, chunk_file
+from program_files.utils.retrieval import _exclude_source_filter, _tag_filter, _to_chunk, _to_document, chunk_file
 
 
 def _file(body: str, tags: list[str] | None = None) -> File:
@@ -61,3 +61,11 @@ def test_tag_filter_multiple_tags_uses_or() -> None:
     assert _tag_filter(["ai", "biology"]) == {
         "$or": [{"tag_ai": True}, {"tag_biology": True}]
     }
+
+
+def test_exclude_source_filter_none_when_no_source_given() -> None:
+    assert _exclude_source_filter(None) is None
+
+
+def test_exclude_source_filter_builds_not_equal_clause() -> None:
+    assert _exclude_source_filter(Path("/vault/A.md")) == {"source": {"$ne": "/vault/A.md"}}

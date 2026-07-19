@@ -59,9 +59,7 @@ def load_settings(config_dir: Path) -> Settings:
         merged.update(_read_frontmatter(config_dir / f"{name}.md"))
 
     vault_path = merged.get("vault_path")
-    resolved_vault_path = (
-        Path(vault_path) if vault_path else config_dir.parent.parent / "Knowledge"
-    )
+    resolved_vault_path = Path(vault_path) if vault_path else config_dir.parent.parent
 
     return Settings(
         vault_path=resolved_vault_path,

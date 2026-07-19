@@ -76,9 +76,10 @@ def test_find_wikilinks_returns_spans_covering_the_full_match() -> None:
         assert body[start:end].endswith("]]")
 
 
-def test_vault_list_files_excludes_conversations(tmp_path: Path) -> None:
+def test_vault_list_files_excludes_conversations_via_vaultignore(tmp_path: Path) -> None:
     _write(tmp_path / "000-information" / "Taxonomy.md", '---\ntitle: "Taxonomy"\ntags: [taxonomy]\n---\n\nBody.\n')
     _write(tmp_path / "conversations" / "2026-07-04.md", "excluded\n")
+    (tmp_path / ".vaultignore").write_text("conversations\n", encoding="utf-8")
 
     vault = Vault(tmp_path)
     files = vault.list_files()
@@ -86,6 +87,37 @@ def test_vault_list_files_excludes_conversations(tmp_path: Path) -> None:
     assert len(files) == 1
     assert files[0].title == "Taxonomy"
     assert files[0].tags == ["taxonomy"]
+
+
+def test_vault_list_files_without_vaultignore_excludes_nothing_by_name(tmp_path: Path) -> None:
+    _write(tmp_path / "conversations" / "2026-07-04.md", "not excluded, no .vaultignore present\n")
+
+    vault = Vault(tmp_path)
+
+    assert len(vault.list_files()) == 1
+
+
+def test_vault_list_files_skips_hidden_and_dunder_dirs(tmp_path: Path) -> None:
+    _write(tmp_path / "000-information" / "Taxonomy.md", '---\ntitle: "Taxonomy"\ntags: [taxonomy]\n---\n\nBody.\n')
+    _write(tmp_path / ".venv" / "some_pkg" / "README.md", "stray package doc\n")
+    _write(tmp_path / "__pycache__" / "stale.md", "stale\n")
+
+    vault = Vault(tmp_path)
+    files = vault.list_files()
+
+    assert len(files) == 1
+    assert files[0].title == "Taxonomy"
+
+
+def test_vault_list_files_vaultignore_matches_bare_filename(tmp_path: Path) -> None:
+    _write(tmp_path / "README.md", "not vault content\n")
+    _write(tmp_path / "Taxonomy.md", '---\ntitle: "Taxonomy"\n---\n\nBody.\n')
+    (tmp_path / ".vaultignore").write_text("README.md\n", encoding="utf-8")
+
+    vault = Vault(tmp_path)
+    files = vault.list_files()
+
+    assert [f.title for f in files] == ["Taxonomy"]
 
 
 def test_vault_load_file_missing_raises(tmp_path: Path) -> None:

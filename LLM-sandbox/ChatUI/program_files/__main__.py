@@ -1,4 +1,4 @@
-"""Entrypoint: python -m program_files --vault ../Knowledge"""
+"""Entrypoint: python -m program_files (vault defaults to the repo working directory; pass --vault to override)"""
 
 from __future__ import annotations
 
@@ -15,12 +15,12 @@ from program_files.utils.vault import Vault
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--vault", type=Path, required=True)
+    parser.add_argument("--vault", type=Path, default=None)
     args = parser.parse_args()
 
     configure_debug_log(Path(__file__).parent.parent / "chatui_debug.log")
     settings = load_settings(config_dir=Path(__file__).parent.parent / "config")
-    vault = Vault(root=args.vault)
+    vault = Vault(root=args.vault or settings.vault_path)
     retriever = Retriever(
         db_path=Path(__file__).parent.parent / "local_db",
         embed_model=settings.embed_model,

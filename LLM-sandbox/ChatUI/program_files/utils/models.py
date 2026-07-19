@@ -56,6 +56,16 @@ class ClassificationSuggestion:
 
 
 @dataclass
+class WikilinkSuggestion:
+    """Two mutually-exclusive tiers: inline_new (text match, wrap in place) vs. see_also_new (no text
+    match, strong subject-relation) — mirrors the vault's own "inline unless no text fits" convention."""
+
+    inline_new: list[str]
+    already_linked: list[str]
+    see_also_new: list[str]
+
+
+@dataclass
 class ReviewQuestion:
     file_path: Path
     question: str

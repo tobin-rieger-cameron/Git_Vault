@@ -14,7 +14,7 @@ from textual import events, on
 from textual.app import App, ComposeResult, SystemCommand
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
-from textual.screen import ModalScreen, Screen
+from textual.screen import Screen
 from textual.suggester import SuggestFromList
 from textual.widgets import Header, Input, Label, RichLog, Static, Tree
 
@@ -25,9 +25,10 @@ from program_files.utils.llm import ModelClient
 from program_files.utils.models import ClassificationSuggestion, File, ReviewQuestion
 from program_files.utils.retrieval import Retriever
 from program_files.ui import theme
+from program_files.ui.checklist import SuggestionChecklist
 from program_files.ui.picker import FilePicker
 from program_files.ui.streaming import StreamingText
-from program_files.utils.vault import Vault, normalize_link_target
+from program_files.utils.vault import Vault, find_wikilinks, normalize_link_target, render_frontmatter
 
 _log = logging.getLogger(__name__)
 
@@ -38,9 +39,7 @@ _COMMANDS = [
 
 
 def _diff_highlight(old: str, new: str) -> Text:
-    """Return new with inserted or changed spans styled in the addition color."""
-    # revise_draft returns a full rewrite each call, so a real difflib diff is what tells
-    # changed text from unchanged — there is no delta-only API to lean on.
+    """Return inserted or changed spans styled in color."""
     matcher = difflib.SequenceMatcher(None, old, new, autojunk=False)
     result = Text()
     for opcode, _i1, _i2, j1, j2 in matcher.get_opcodes():
@@ -52,15 +51,14 @@ def _diff_highlight(old: str, new: str) -> Text:
 
 
 def _match_suggestion_kind(text: str) -> str | None:
-    """Return the classify kind named by a "/tags"/"/wikilinks"/"/folder" command or a plain-language mention, else None."""
-    lowered = text.lower()
-    if lowered in ("/tags", "/wikilinks", "/folder"):
-        return lowered[1:]
-    if "wikilink" in lowered:
+    text = text.lower()
+    if text in ("/tags", "/wikilinks", "/folder"):
+        return text[1:]
+    if "wikilink" in text:
         return "wikilinks"
-    if "folder" in lowered:
+    if "folder" in text:
         return "folder"
-    if "tag" in lowered:
+    if "tag" in text:
         return "tags"
     return None
 
@@ -84,43 +82,6 @@ def _write_status(log: RichLog, text: str) -> None:
         log.write(Text(text, style=theme.ACCENT))
         return
     log.write(Text.assemble((label + sep, theme.ACCENT), (detail, theme.ACCENT_MUTED)))
-
-
-class SuggestionPopup(ModalScreen[bool]):
-    """Modal dialog listing suggested tags or a folder, for accept-all or cancel."""
-
-    DEFAULT_CSS = (
-        """
-    SuggestionPopup {
-        align: center middle;
-        background: rgba(20, 17, 13, 0.6);
-    }
-    #dialog {
-        width: 46; height: auto; padding: %(padding)s;
-        border: thick %(accent)s; background: %(surface)s; color: %(text)s;
-    }
-    #dialog Static { margin-bottom: 1; }
-    """
-        % {"padding": theme.PADDING_COMFORTABLE, "accent": theme.ACCENT, "surface": theme.SURFACE, "text": theme.TEXT}
-    )
-
-    def __init__(self, title: str, items: list[str]) -> None:
-        super().__init__()
-        self.title_text = title
-        self.items = items
-
-    def compose(self) -> ComposeResult:
-        with Vertical(id="dialog"):
-            yield Static(f"[b]{self.title_text}[/b]")
-            for item in self.items:
-                yield Static(f"  + {item}")
-            yield Static("[dim]enter: accept all    escape: cancel[/dim]")
-
-    def on_key(self, event: events.Key) -> None:
-        if event.key == "enter":
-            self.dismiss(True)
-        elif event.key == "escape":
-            self.dismiss(False)
 
 
 class ChatApp(App):
@@ -156,6 +117,11 @@ class ChatApp(App):
 
     #chat { width: %(chat_width)s; background: %(bg)s; }
     #log { height: 1fr; scrollbar-size: 0 0; background: %(bg)s; color: %(text)s; }
+    /* Suggestion checklist: docked above the input bar, inline in the chat column rather than a
+       modal overlay — a suggestion is a list to review, not an interruption to dismiss. */
+    SuggestionChecklist { height: auto; max-height: 10; background: %(surface)s; color: %(text)s;
+        border-top: solid %(border)s; scrollbar-size: 0 0; }
+    SuggestionChecklist > .option-list--option-highlighted { background: %(accent)s; color: %(accent_dark)s; }
     /* Surface color rather than a border-top, for the same reason as #file-search above. */
     #inputbar { height: %(input_bar_height)s; padding: 0 0 %(breathing_row)s 0; background: %(surface)s; }
     #caret { width: %(caret_width)s; color: %(accent)s; text-style: bold; }
@@ -192,7 +158,6 @@ class ChatApp(App):
         Binding("f2", "toggle_sidebar", "Toggle explorer"),
         Binding("ctrl+f", "focus_search", "Find file"),
         Binding("tab", "accept_suggestion_or_focus_next", "Accept suggestion", priority=True, show=False),
-        Binding("ctrl+x", "dismiss_focused_wikilink", "Dismiss wikilink", show=False),
     ]
 
     def get_system_commands(self, screen: Screen) -> Iterable[SystemCommand]:
@@ -213,8 +178,9 @@ class ChatApp(App):
         self._history: list[tuple[str, str]] = []
         self._web_enabled = False
         self._classification: ClassificationSuggestion | None = None
-        self._pending_titles: list[str] = []  # wikilink candidates not yet applied or dismissed
-        self._pending_focus = -1
+        self._checklist: SuggestionChecklist | None = None
+        self._checklist_kind: str | None = None  # "tags" | "folder" | "wikilinks"
+        self._checklist_wikilink_kind: dict[str, str] = {}  # title -> "inline" | "see_also"
         self._review_queue: list[ReviewQuestion] = []
         self._review_index = 0
 
@@ -247,6 +213,10 @@ class ChatApp(App):
         self.query_one("#cmd", Input).focus()
         self.query_one(StreamingText).on_link_click = self._open_wikilink_target
         self._update_statusbar()
+        # Retriever.ingest() already diffs against local_db/manifest.json and only re-embeds
+        # new/changed files (and prunes removed ones) — running it on every launch keeps the
+        # index in sync with on-disk edits automatically, without a full re-embed each time.
+        self.run_worker(self._handle_ingest())
 
     def _update_statusbar(self) -> None:
         n = len(self.vault.list_files())
@@ -265,21 +235,14 @@ class ChatApp(App):
         self.query_one("#file-search", Input).focus()
 
     def action_accept_suggestion_or_focus_next(self) -> None:
-        # Tab cycles pending wikilink candidates first, since that's the more common intent
-        # while a /wikilinks pass is live; otherwise it does what Right-arrow does here — accept
-        # the pending suggestion. cmd._suggestion is private, but Input exposes no public
+        # Does what Right-arrow does here — accept the pending autocomplete suggestion — or
+        # else cycles focus. cmd._suggestion is private, but Input exposes no public
         # "is a suggestion pending" accessor.
-        if self._pending_titles:
-            self._cycle_pending_wikilink()
-            return
         cmd = self.query_one("#cmd", Input)
         if self.focused is cmd and cmd._suggestion:
             cmd.action_cursor_right()
         else:
             self.screen.focus_next()
-
-    def action_dismiss_focused_wikilink(self) -> None:
-        self._dismiss_focused_wikilink()
 
     def on_tree_node_selected(self, event: Tree.NodeSelected) -> None:
         picker = self.query_one(FilePicker)
@@ -305,9 +268,12 @@ class ChatApp(App):
         self._active_file = file
         self._classification = None
         self._drafting = False
-        self._pending_titles = []
-        self._pending_focus = -1
         self._review_queue = []
+        if self._checklist is not None:
+            self._checklist.remove()  # belonged to the file we're leaving — discard, don't apply
+            self._checklist = None
+            self._checklist_kind = None
+            self._checklist_wikilink_kind = {}
         self.query_one("#cmd", Input).placeholder = "_"
         self._refresh_preview()
         self.query_one("#preview-scroll", VerticalScroll).scroll_to(y=0, animate=False)
@@ -317,13 +283,39 @@ class ChatApp(App):
     def _refresh_preview(self) -> None:
         if self._active_file is None:
             return
-        body = self._active_file.body
-        spans = []
-        for title in self._pending_titles:
-            start = body.lower().find(title.lower())
-            if start != -1:
-                spans.append((title, start, start + len(title)))
-        self.query_one(StreamingText).show_links(body, spans, self._pending_focus)
+        text, spans = self._preview_content()
+        self.query_one(StreamingText).show_links(text, spans, -1 if not spans else 0)
+
+    def _preview_content(self) -> tuple[str, list[tuple[str, int, int]]]:
+        """Text + pending-highlight spans for the preview pane, reflecting an open checklist's
+        currently-checked items — nothing here is written to disk until /done."""
+        file = self._active_file
+        if self._checklist is None or self._checklist_kind is None:
+            return file.body, []
+        checked = self._checklist.checked_items()
+        if not checked:
+            return file.body, []
+
+        if self._checklist_kind == "wikilinks":
+            inline = [t for t in checked if self._checklist_wikilink_kind.get(t) == "inline"]
+            see_also = [t for t in checked if self._checklist_wikilink_kind.get(t) == "see_also"]
+            preview_body = classify.preview_with_wikilinks(file.body, inline, see_also)
+            # Every [[wikilink]] not already saved in the file is part of this pending preview.
+            spans = [
+                (target, start, end)
+                for start, end, target in find_wikilinks(preview_body)
+                if target not in file.links
+            ]
+            return preview_body, spans
+
+        if self._checklist_kind == "tags":
+            meta = {"title": file.title, "tags": list(dict.fromkeys([*file.tags, *checked]))}
+            if file.last_reviewed is not None:
+                meta["last_reviewed"] = file.last_reviewed
+            preview_text = render_frontmatter(meta, file.body)
+            return preview_text, [("frontmatter", 0, len(preview_text) - len(file.body))]
+
+        return file.body, []  # "folder": no body location to preview into
 
     @on(Input.Changed, "#file-search")
     def on_search_changed(self, event: Input.Changed) -> None:
@@ -350,14 +342,10 @@ class ChatApp(App):
             self.query_one(FilePicker).filter_files("")
             self.query_one("#cmd", Input).focus()
             event.stop()
-
-    def _scroll_preview_to(self, text: str, offset: int) -> None:
-        """Scroll #preview-scroll so the character at offset (wrap-aware) is centered in view."""
-        preview = self.query_one(StreamingText)
-        scroll = self.query_one("#preview-scroll", VerticalScroll)
-        width = max(1, preview.size.width - 4)  # #preview-body's padding eats 4 cols
-        row = len(Text(text[:offset]).wrap(self.console, width)) - 1
-        scroll.scroll_to(y=max(0, row - scroll.size.height // 2), animate=True)
+            return
+        if event.key == "escape" and self._checklist is not None and self.focused is self._checklist:
+            event.stop()
+            await self._dismiss_checklist("cancelled")
 
     # --- Ask -----------------------------------------------------------------------------
 
@@ -423,7 +411,7 @@ class ChatApp(App):
             _write_status(log, f'"{self._active_file.title}": saved')
         self._refresh_preview()
 
-    # --- Classify: tags / folder (popup) ----------------------------------------------------
+    # --- Classify: tags / folder / wikilinks (all share one checklist) -----------------------
 
     async def _ensure_classification(self) -> ClassificationSuggestion | None:
         if self._active_file is None:
@@ -442,9 +430,7 @@ class ChatApp(App):
             _log.info("classification for %s: %s", self._active_file.path, self._classification)
         return self._classification
 
-    # push_screen_wait raises NoActiveWorker unless it runs inside a worker, so this method
-    # must always be reached via self.run_worker(...), never awaited directly.
-    async def _show_suggestion_popup(self, kind: str) -> None:
+    async def _show_suggestion_checklist(self, kind: str) -> None:
         log = self.query_one("#log", RichLog)
         if self._active_file is None:
             _write_status(log, f"nothing to suggest {kind} for: click a file or search for one first")
@@ -459,102 +445,103 @@ class ChatApp(App):
         if not items:
             _write_status(log, f"no {kind} suggested")
             return
-        accepted = await self.push_screen_wait(SuggestionPopup(f"Suggested {kind}", items))
-        if not accepted:
-            _write_status(log, f"{kind}: cancelled")
-            return
-        partial = ClassificationSuggestion(
-            file_path=self._active_file.path,
-            suggested_folder=suggestion.suggested_folder if kind == "folder" else None,
-            suggested_tags=suggestion.suggested_tags if kind == "tags" else [],
-        )
-        updated = classify.apply_classification(self._active_file, partial, self.vault)
-        self._active_file = updated
-        self.query_one(FilePicker).reload()
-        try:
-            self.retriever.reingest_one(updated)
-        except ChatUIError as exc:
-            _log.warning("best-effort reindex failed for %s: %s", updated.path, exc)
-        self._refresh_preview()
-        _write_status(log, f"{kind}: applied")
-
-    # --- Classify: wikilinks (highlighted in the preview, not the chat log) ------------------
+        await self._open_checklist(kind, items)
 
     async def _start_wikilink_walkthrough(self) -> None:
-        """Suggest new wikilinks and highlight them (plus any existing ones) directly in the preview."""
-        # No chat-log messages and no popup: candidates are highlighted in place in the preview,
-        # cycled with tab, applied with enter, dismissed with ctrl+x — status lives in the
-        # statusbar only. A dedicated suggest call, not _ensure_classification: wikilinks don't
-        # need tags/folder computed alongside them.
+        """Suggest wikilinks: inline (text match) and see-also (vector-similar, no text match)
+        candidates share one checklist — checking either kind previews it live (wrapped in place,
+        or appended as a "## See also" bullet) until /done writes it for real."""
         if self._active_file is None:
             self._flash_status("nothing to link: click a file or search for one first")
             return
         self._flash_status(f"searching for wikilinks in {self._active_file.path.name}…")
         try:
-            links, already_linked = await classify.suggest_wikilinks(self._active_file, self.vault, self.model)
+            suggestion = await classify.suggest_wikilinks(
+                self._active_file, self.vault, self.retriever,
+                top_k=self.settings.top_k, similarity_threshold=self.settings.similarity_threshold,
+            )
         except ChatUIError as exc:
             _log.error("wikilink suggestion failed for %s: %s", self._active_file.path, exc)
             self._flash_status(f"couldn't get suggestions: {exc}")
             return
-        # Already-linked candidates need no action: they're real [[wikilinks]] already, so the
-        # preview's normal committed-link styling covers them — only new ones go into the queue.
-        self._pending_titles = links
-        self._pending_focus = 0 if links else -1
+
+        if not suggestion.inline_new and not suggestion.see_also_new:
+            self._flash_status(
+                f"already linked: {', '.join(suggestion.already_linked)}"
+                if suggestion.already_linked else "no wikilinks suggested"
+            )
+            return
+
+        self._checklist_wikilink_kind = {t: "inline" for t in suggestion.inline_new}
+        self._checklist_wikilink_kind.update({t: "see_also" for t in suggestion.see_also_new})
+        await self._open_checklist("wikilinks", suggestion.inline_new + suggestion.see_also_new)
+
+    async def _open_checklist(self, kind: str, items: list[str]) -> None:
+        if self._checklist is not None:
+            await self._checklist.remove()
+        self._checklist_kind = kind
+        checklist = SuggestionChecklist(items, id="checklist")
+        self._checklist = checklist
+        await self.query_one("#chat", Vertical).mount(checklist, before="#inputbar")
+        checklist.focus()
         self._refresh_preview()
-        if not links and not already_linked:
-            self._flash_status("no wikilinks suggested")
+        _write_status(
+            self.query_one("#log", RichLog),
+            f"{kind}: space/enter/click to toggle, /done to apply, escape to cancel",
+        )
+
+    def on_suggestion_checklist_toggled(self, _event: SuggestionChecklist.Toggled) -> None:
+        self._refresh_preview()
+
+    async def _close_checklist(self) -> None:
+        if self._checklist is not None:
+            await self._checklist.remove()
+        self._checklist = None
+        self._checklist_kind = None
+        self._checklist_wikilink_kind = {}
+        self._refresh_preview()
+        self.query_one("#cmd", Input).focus()
+
+    async def _dismiss_checklist(self, reason: str) -> None:
+        kind = self._checklist_kind
+        await self._close_checklist()
+        _write_status(self.query_one("#log", RichLog), f"{kind}: {reason}")
+
+    async def _apply_checklist(self) -> None:
+        kind = self._checklist_kind
+        checked = self._checklist.checked_items()
+        log = self.query_one("#log", RichLog)
+        await self._close_checklist()
+
+        if not checked:
+            _write_status(log, f"{kind}: nothing checked, no changes made")
+            return
+
+        if kind == "wikilinks":
+            inline = [t for t in checked if self._checklist_wikilink_kind.get(t) == "inline"]
+            see_also = [t for t in checked if self._checklist_wikilink_kind.get(t) == "see_also"]
+            for title in inline:
+                self._active_file = classify.apply_wikilink(self._active_file, title, self.vault)
+            if see_also:
+                self._active_file = classify.apply_see_also(self._active_file, see_also, self.vault)
         else:
-            self._update_wikilink_status()
+            partial = ClassificationSuggestion(
+                file_path=self._active_file.path,
+                suggested_folder=checked[0] if kind == "folder" else None,
+                suggested_tags=checked if kind == "tags" else [],
+            )
+            self._active_file = classify.apply_classification(self._active_file, partial, self.vault)
+            self.query_one(FilePicker).reload()
 
-    def _cycle_pending_wikilink(self) -> None:
-        if not self._pending_titles:
-            return
-        self._pending_focus = (self._pending_focus + 1) % len(self._pending_titles)
-        self._refresh_preview()
-        body = self._active_file.body
-        start = body.lower().find(self._pending_titles[self._pending_focus].lower())
-        if start != -1:
-            self._scroll_preview_to(body, start)
-        self._update_wikilink_status()
-
-    def _apply_focused_wikilink(self) -> None:
-        if not self._pending_titles or self._pending_focus < 0:
-            return
-        title = self._pending_titles[self._pending_focus]
-        updated = classify.apply_wikilink(self._active_file, title, self.vault)
-        self._active_file = updated
         try:
-            self.retriever.reingest_one(updated)
-        except ChatUIError:
-            pass
-        del self._pending_titles[self._pending_focus]
-        self._pending_focus = self._pending_focus % len(self._pending_titles) if self._pending_titles else -1
+            self.retriever.reingest_one(self._active_file)
+        except ChatUIError as exc:
+            _log.warning("best-effort reindex failed for %s: %s", self._active_file.path, exc)
         self._refresh_preview()
-        self._update_wikilink_status()
-
-    def _dismiss_focused_wikilink(self) -> None:
-        if not self._pending_titles or self._pending_focus < 0:
-            return
-        del self._pending_titles[self._pending_focus]
-        self._pending_focus = self._pending_focus % len(self._pending_titles) if self._pending_titles else -1
-        self._refresh_preview()
-        self._update_wikilink_status()
+        _write_status(log, f"{kind}: applied")
 
     def _flash_status(self, text: str) -> None:
         self.query_one("#statusbar", Static).update(Text(text, style=theme.ACCENT))
-
-    def _update_wikilink_status(self) -> None:
-        if not self._pending_titles:
-            self._update_statusbar()
-            return
-        focused = self._pending_titles[self._pending_focus]
-        bar = self.query_one("#statusbar", Static)
-        bar.update(
-            Text.assemble(
-                (f"{len(self._pending_titles)} pending wikilink(s)", theme.ACCENT),
-                (f' — "{focused}" focused — tab: next  enter: apply  ctrl+x: dismiss', theme.ACCENT_MUTED),
-            )
-        )
 
     # --- Review ------------------------------------------------------------------------------
 
@@ -644,8 +631,14 @@ class ChatApp(App):
         event.input.value = ""
         log = self.query_one("#log", RichLog)
 
-        if self._pending_titles and not text:
-            self._apply_focused_wikilink()
+        if self._checklist is not None:
+            if text == "/done":
+                await self._apply_checklist()
+            elif text in ("/cancel", "/dismiss"):
+                await self._dismiss_checklist("cancelled")
+            elif text:
+                _write_you(log, text)
+                _write_status(log, f"{self._checklist_kind}: /done to apply, /cancel to discard")
             return
 
         if self._review_queue:
@@ -690,10 +683,10 @@ class ChatApp(App):
 
         kind = _match_suggestion_kind(text)
         if kind == "wikilinks":
-            await self._start_wikilink_walkthrough()
+            self.run_worker(self._start_wikilink_walkthrough())
             return
         if kind in ("tags", "folder"):
-            self.run_worker(self._show_suggestion_popup(kind))
+            self.run_worker(self._show_suggestion_checklist(kind))
             return
 
         if self._drafting:

@@ -1,0 +1,5 @@
+# Patterns without a "/" match this directory or file name at any depth.
+# Patterns with a "/" match the full path relative to this file, gitignore-lite (fnmatch, no **).
+conversations
+config
+local_db
