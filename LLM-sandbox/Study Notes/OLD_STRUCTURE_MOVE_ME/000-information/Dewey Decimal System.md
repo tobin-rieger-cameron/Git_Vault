@@ -55,8 +55,4 @@ Compared to ontology-based systems, DDC is a **hierarchical classification** (on
 
 ## See Also
 
-- [[Taxonomy]]
-- [[Taxonomy Hierarchy Differences]]
-- [[Folksonomy Differences]]
-- [[Disciplines and Hierarchies]]
-- [[Library of Congress Classification System]]
+here link to external websites and pdf's where I can do further research on the subject

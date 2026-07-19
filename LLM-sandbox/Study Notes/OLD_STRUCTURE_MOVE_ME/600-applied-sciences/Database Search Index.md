@@ -34,6 +34,6 @@ Indexing offers significant performance gains by reducing the time complexity of
 
 ## See Also
 
-*   [[INDEX]]: The process of building a search index.
+*   [[Study Notes/OLD_STRUCTURE_MOVE_ME/conversations/INDEX]]: The process of building a search index.
 *   [[Vector Databases for Search]]: A type of database optimized for vector-based queries.
 *   [[Polyhierarchy]]: A hierarchical classification system used in some indexing methods.

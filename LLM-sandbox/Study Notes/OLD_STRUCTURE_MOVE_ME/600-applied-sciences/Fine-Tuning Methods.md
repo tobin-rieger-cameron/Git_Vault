@@ -39,4 +39,4 @@ Experimenting with different hyperparameters, such as learning rate, batch size,
 
 *   [[Large Language Models](../../large-language-models)]
 *   [[Machine Learning](machine-learning.md)]
-*   [[Taxonomy](taxonomy.md)]
+*   [[Taxonomy](Taxonomy.md)]
