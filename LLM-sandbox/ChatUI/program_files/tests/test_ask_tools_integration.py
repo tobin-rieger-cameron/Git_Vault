@@ -11,7 +11,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from program_files.ask import ask
+from program_files.utils.tools.ask_tools import answer_question
 from program_files.utils.llm import ModelClient
 from program_files.utils.models import File, RetrievalPath
 from program_files.utils.retrieval import Retriever
@@ -52,7 +52,7 @@ async def test_ask_answers_from_vault_when_ingested(tmp_path: Path) -> None:
     ]
     retriever.ingest(files)
 
-    result = await ask(
+    result = await answer_question(
         "What is photosynthesis?", vault, retriever, model, history=[], web_enabled=False,
         similarity_threshold=0.5,
     )
@@ -67,7 +67,7 @@ async def test_ask_answers_from_model_knowledge_when_vault_empty(tmp_path: Path)
     retriever = Retriever(db_path=tmp_path / "db", embed_model="nomic-embed-text")
     model = ModelClient(chat_model="llama3.2:3b", coding_model="qwen2.5-coder:7b")
 
-    result = await ask("What is the capital of France?", vault, retriever, model, history=[], web_enabled=False)
+    result = await answer_question("What is the capital of France?", vault, retriever, model, history=[], web_enabled=False)
 
     assert result.path is RetrievalPath.MODEL_KNOWLEDGE
     assert result.sources == []

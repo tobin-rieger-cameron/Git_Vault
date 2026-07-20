@@ -2,11 +2,11 @@
 
 ## Status: functional
 
-The rebuild described below is implemented and running: `program_files/app.py` wires a real Textual UI (fuzzy file search, command autocomplete, a live-diff draft view, in-preview wikilink highlighting with click-to-navigate) to the four real verb modules. Verified against actual Ollama models and a real ChromaDB instance, plus the full unit test suite. The `chatui.py` single-file predecessor was deliberately wiped as part of this rebuild; its full history is still in git if anything from it is ever needed.
+The rebuild described below is implemented and running: `program_files/app.py` wires a real Textual UI (fuzzy file search, command autocomplete, a live-diff draft view, in-preview wikilink highlighting with click-to-navigate) to a registry of tools under `program_files/utils/tools/`. Verified against actual Ollama models and a real ChromaDB instance, plus the full unit test suite. The `chatui.py` single-file predecessor was deliberately wiped as part of this rebuild; its full history is still in git if anything from it is ever needed.
 
 ## Overview
 
-ChatUI is a local-first tool for building and maintaining a growing library of living, stylized papers on subjects you're studying. It runs entirely on-device via Ollama, stores vectors in ChromaDB, and provides a terminal UI via Textual. It's organized around four verbs:
+ChatUI is a local-first tool for building and maintaining a growing library of living, stylized papers on subjects you're studying. It runs entirely on-device via Ollama, stores vectors in ChromaDB, and provides a terminal UI via Textual. Every capability is a tool in one registry (see `settings.md`'s "How It Works" for the architecture); from the command line it presents as four commands:
 
 1. **Ask** — vault-first RAG: retrieve from your notes, fall back to grounded/model knowledge, optionally supplement with a web search.
 2. **Draft a paper** — back-and-forth authoring of a long-form, living document on a subject, not one-shot generation.
@@ -59,7 +59,7 @@ Click a file in the tree, or fuzzy-search for one (`ctrl+f`), to make it the *ac
 | `/tags`, `/wikilinks`, `/folder` (or just mentioning one) | Classify: suggest tags / wikilinks / folder for the active file |
 | `/review` | Generate recall questions for the active file, or list papers due for review if none is active |
 | `/ingest` | Rebuild the vector database from vault files |
-| `/web` | Toggle web-search supplement on/off |
+| `/web` | Toggle whether Ask can reach for the web_search tool |
 | `/model [name]` | Show or switch the active chat model |
 | `/explorer` (or `f2`) | Toggle the file tree |
 | `/palette` (or `ctrl+p`) | Open the command palette |
@@ -68,11 +68,7 @@ The old app's much larger command list (`/organize`, `/distill`, `/harvest`, `/u
 
 ## Retrieval pipeline
 
-Questions are answered from the best available source, tried in order:
-
-1. **Vault notes** — top similarity score ≥ 0.65 against ChromaDB
-2. **Model knowledge + vault context** — score < 0.65; vault chunks included only if on-topic
-3. **Web search** — supplement when `/web` is on and vault retrieval didn't produce chunks (or, for broad-topic questions, when the vault hit doesn't actually cover the topic asked)
+An initial vault search picks the starting prompt framing (see `CLAUDE.md`'s retrieval table for the exact thresholds), then the model runs its own agentic loop — calling `search_vault`/`read_vault_file` (and `web_search`, if `/web` is on) as many times as it needs before answering, rather than being limited to one pre-fetched batch of chunks.
 
 Tag-aware retrieval: if the top chunk has frontmatter tags, a second scoped search runs filtered to those tags. If it scores within 10% of the baseline, its results replace the unfiltered ones.
 

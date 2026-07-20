@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from program_files.utils.models import File
-from program_files.review import files_due_for_review, generate_review_questions, mark_reviewed
+from program_files.utils.tools.review_tools import files_due_for_review, generate_review_questions, mark_reviewed
 from program_files.utils.vault import Vault
 
 

@@ -1,4 +1,5 @@
-"""Verb 2 — Draft a paper: back-and-forth authoring of a long-form, living document."""
+"""draft_note — back-and-forth authoring of a formatted article. No retrieval loop: the model works
+directly from the draft in hand, revising it per instruction."""
 
 from __future__ import annotations
 
@@ -7,15 +8,43 @@ from datetime import datetime
 
 from program_files.utils.llm import ModelClient
 from program_files.utils.models import File
+from program_files.utils.tools import ToolSpec
 from program_files.utils.vault import Vault, extract_wikilinks, normalize_link_target
 
 
-def start_draft(subject: str, vault: Vault) -> File:
-    """Resume an existing file whose title matches subject, or start a new unsaved one."""
+def build_draft_tools(vault: Vault, model: ModelClient) -> list[ToolSpec]:
+    """Build the draft_note command tool, closing over the app's Vault/ModelClient."""
+
+    async def _draft_note(args: dict) -> File:
+        subject = args.get("subject")
+        if subject is not None:
+            return edit_draft(subject, vault)
+        return await revise_draft(args["file"], args["instruction"], model)
+
+    return [
+        ToolSpec(
+            name="draft_note",
+            description="Start or resume drafting a note: pass subject to open/create one, or file+instruction to revise it.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "subject": {"type": "string"},
+                    "file": {"type": "object"},
+                    "instruction": {"type": "string"},
+                },
+            },
+            handler=_draft_note,
+        )
+    ]
+
+
+def edit_draft(subject: str, vault: Vault) -> File:
+    """Load the vault file matching subject for editing, or create a new empty one if none exists."""
     title = subject.strip()
-    normalized = normalize_link_target(title)
+    link = normalize_link_target(title)
+
     for file in vault.list_files():
-        if normalize_link_target(file.title) == normalized:
+        if normalize_link_target(file.title) == link:
             return file
 
     now = datetime.now()

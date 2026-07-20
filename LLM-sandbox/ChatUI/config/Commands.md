@@ -8,7 +8,7 @@ This document defines every command that can be used in the ChatUI program:
 | `/classify`         | Suggest location, tags, and wikilinks for a file |
 | `/review [subject]` | Guided study session on a given topic            |
 | `/ingest`           | Rebuild the vector database from the vault       |
-| `/web`              | Toggle the web-search supplement                 |
+| `/web`              | Toggle whether a plain question can reach for web search |
 | `/model [name]`     | Show or switch the active chat model             |
 
 ## Notes

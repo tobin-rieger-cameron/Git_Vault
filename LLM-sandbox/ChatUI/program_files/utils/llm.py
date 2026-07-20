@@ -5,12 +5,16 @@ from __future__ import annotations
 import logging
 from typing import Callable
 
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_ollama import ChatOllama
 
 from program_files.utils.debug_log import truncate
 from program_files.utils.errors import ModelUnavailableError
+from program_files.utils.tools import ToolSpec
 
 _log = logging.getLogger(__name__)
+
+_MAX_TOOL_ITERATIONS = 4
 
 
 class ModelClient:
@@ -69,6 +73,49 @@ class ModelClient:
         _log.debug("coding response: %s", truncate(response))
         return response
 
+    async def stream_with_tools(
+        self,
+        prompt: str,
+        tools: list[ToolSpec],
+        on_token: Callable[[str], None] | None = None,
+        on_tool_call: Callable[[str, dict], None] | None = None,
+    ) -> str:
+        """Run prompt through a tool-calling loop (model decides when to call a tool) and return the final answer."""
+        if not tools:
+            return await self.stream(prompt, on_token)
+
+        tool_by_name = {tool.name: tool for tool in tools}
+        bound = self._chat.bind_tools([_to_tool_schema(tool) for tool in tools])
+        messages: list = [HumanMessage(content=prompt)]
+
+        for _ in range(_MAX_TOOL_ITERATIONS):
+            response = await self._invoke(bound, messages)
+            if not response.tool_calls:
+                return self._finish(response.content, on_token)
+            messages.append(response)
+            for call in response.tool_calls:
+                if on_tool_call is not None:
+                    on_tool_call(call["name"], call["args"])
+                spec = tool_by_name.get(call["name"])
+                result = await spec.handler(call["args"]) if spec else f"Unknown tool: {call['name']}"
+                messages.append(ToolMessage(content=result, tool_call_id=call["id"]))
+
+        messages.append(HumanMessage(content="Answer now, using what you've found so far."))
+        response = await self._invoke(self._chat, messages)
+        return self._finish(response.content, on_token)
+
+    async def _invoke(self, model, messages: list) -> AIMessage:
+        try:
+            return await model.ainvoke(messages)
+        except Exception as exc:
+            _log.error("tool-calling call failed: %s", exc)
+            raise ModelUnavailableError(f"Chat model unavailable: {exc}") from exc
+
+    def _finish(self, text: str, on_token: Callable[[str], None] | None) -> str:
+        if on_token is not None:
+            on_token(text)
+        return text
+
     async def ask_coding(self, prompt: str) -> str:
         """Make a single non-streaming call to the coding model and return the stripped response text."""
         _log.debug("coding prompt (%s): %s", self.coding_model_name, truncate(prompt))
@@ -80,3 +127,7 @@ class ModelClient:
         text = response.content.strip()
         _log.debug("coding response: %s", truncate(text))
         return text
+
+
+def _to_tool_schema(spec: ToolSpec) -> dict:
+    return {"type": "function", "function": {"name": spec.name, "description": spec.description, "parameters": spec.parameters}}

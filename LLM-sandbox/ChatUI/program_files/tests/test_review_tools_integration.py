@@ -10,7 +10,7 @@ import pytest
 
 from program_files.utils.llm import ModelClient
 from program_files.utils.models import File
-from program_files.review import generate_review_questions
+from program_files.utils.tools.review_tools import generate_review_questions
 
 
 def _ollama_available() -> bool:

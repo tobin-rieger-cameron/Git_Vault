@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
-import program_files.classify as classify_module
-from program_files.classify import (
+from program_files.utils.tools import classify_tools
+from program_files.utils.tools.classify_tools import (
     apply_classification,
     apply_folder_tags,
     apply_see_also,
@@ -41,7 +41,7 @@ class _FakeModel:
 
 
 class _FakeRetriever:
-    """Stands in for Retriever.search — synchronous, like the real thing (classify.py backgrounds it)."""
+    """Stands in for Retriever.search — synchronous, like the real thing (classify_tools backgrounds it)."""
 
     def __init__(self, hits: list[Chunk]) -> None:
         self._hits = hits
@@ -53,7 +53,7 @@ class _FakeRetriever:
 
 
 def test_load_tag_folder_map_parses_real_structure_plan() -> None:
-    mapping = classify_module._load_tag_folder_map(classify_module._read_structure_plan())
+    mapping = classify_tools._load_tag_folder_map(classify_tools._read_structure_plan())
 
     assert mapping["ai"] == "300-formal-applied-sciences"
     assert mapping["taxonomy"] == "000-information-theory"

@@ -1,5 +1,5 @@
-# LLM-sandbox/ChatUI/program_files/classify.py
-"""Verb 3 — Classify inline: suggest a file's folder/tags/links right after it's drafted, one at a time."""
+"""classify_note / sync_folder_tags / suggest_wikilinks — no retrieval loop: each works directly off
+the one file (and, for wikilinks, the vault's existing embeddings) already in hand."""
 
 from __future__ import annotations
 
@@ -21,13 +21,42 @@ from program_files.utils.models import (
     WikilinkSuggestion,
 )
 from program_files.utils.retrieval import Retriever
+from program_files.utils.tools import ToolSpec
 from program_files.utils.vault import Vault, extract_wikilinks
 
 _log = logging.getLogger(__name__)
 
-_STRUCTURE_PLAN_PATH = Path(__file__).resolve().parent.parent / "config" / "vault-structure-plan.md"
+_STRUCTURE_PLAN_PATH = Path(__file__).resolve().parent.parent.parent.parent / "config" / "vault-structure-plan.md"
 
 _TABLE_ROW_RE = re.compile(r"^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*$", re.MULTILINE)
+
+
+def build_classify_tools(vault: Vault, model: ModelClient, retriever: Retriever) -> list[ToolSpec]:
+    """Build classify_note and suggest_wikilinks command tools, closing over the app's Vault/ModelClient/Retriever."""
+
+    async def _classify_note(args: dict) -> ClassificationSuggestion:
+        return await suggest_classification(args["file"], vault, model)
+
+    async def _suggest_wikilinks(args: dict) -> WikilinkSuggestion:
+        return await suggest_wikilinks(
+            args["file"], vault, retriever, top_k=args.get("top_k", 5),
+            similarity_threshold=args.get("similarity_threshold", 0.65),
+        )
+
+    return [
+        ToolSpec(
+            name="classify_note",
+            description="Suggest a folder and tags for a note.",
+            parameters={"type": "object", "properties": {"file": {"type": "object"}}, "required": ["file"]},
+            handler=_classify_note,
+        ),
+        ToolSpec(
+            name="suggest_wikilinks",
+            description="Suggest inline and see-also wikilinks for a note.",
+            parameters={"type": "object", "properties": {"file": {"type": "object"}}, "required": ["file"]},
+            handler=_suggest_wikilinks,
+        ),
+    ]
 
 
 async def suggest_classification(
@@ -36,7 +65,7 @@ async def suggest_classification(
     """Suggest tags and a folder for review."""
     status = on_status or (lambda _text: None)
     status("suggesting tags…")
-    tags = await _suggest_tags(file, vault, model) #TODO: print tags individually as they are "found"
+    tags = await _suggest_tags(file, vault, model)
     status("choosing a folder…")
     folder = await _suggest_folder(tags or file.tags, file, model)
     return ClassificationSuggestion(file_path=file.path, suggested_folder=folder, suggested_tags=tags)
@@ -87,12 +116,12 @@ async def suggest_wikilinks(
     similarity_threshold: float,
     on_status: Callable[[str], None] | None = None,
 ) -> WikilinkSuggestion:
-    """ scan through vault for possible files to link; presents inline and appended link suggestions """
+    """Scan the vault for possible files to link: inline (text match) and see-also (embedding-similar) tiers."""
     status = on_status or (lambda _text: None)
     status(f"searching for wikilinks in {file.path.name}…")
-    return await _suggest_wikilinks(file, vault, retriever, top_k, similarity_threshold) #TODO: print wikilinks as they are found
+    return await _suggest_wikilinks(file, vault, retriever, top_k, similarity_threshold)
 
-#TODO: consider squishing apply_wikilink and apply_see_also into this one function
+
 def apply_classification(file: File, suggestion: ClassificationSuggestion, vault: Vault) -> File:
     """Move the file if a folder was suggested and merge in new tags — links are applied separately, see apply_wikilink."""
     new_path = file.path
@@ -131,8 +160,7 @@ def apply_see_also(file: File, titles: list[str], vault: Vault) -> File:
 def preview_with_wikilinks(body: str, inline_titles: list[str], see_also_titles: list[str]) -> str:
     """Body as it would read with inline_titles wrapped and see_also_titles appended — pure, no
     save; shares the exact wrap/insert logic apply_wikilink/apply_see_also use, so a preview built
-    from this always matches what /done would actually write.""" # this is an example of a verbose docstring, does not follow my intended format, check the dockstrings above, also check their history in the git repo to see how I changed them myself to get a better sense of my tone
-    # docstring should be a litteral description of what the function takes as input and returns as output
+    from this always matches what /done would actually write."""
     for title in inline_titles:
         body = _wrap_occurrence(body, title)
     if see_also_titles:
@@ -165,7 +193,6 @@ async def _suggest_folder(tags: list[str], file: File, model: ModelClient) -> st
 
     folders = sorted(set(tag_map.values()) | {"misc"})
     feedback = _format_feedback(load_recent_overrides("placement"))
-    #TODO: use current tags to help with folder consideration
     prompt = (
         (f"{feedback}\n\n" if feedback else "")
         + "You are classifying an article into a folder.\n\n"
@@ -186,16 +213,9 @@ async def _suggest_folder(tags: list[str], file: File, model: ModelClient) -> st
 async def _suggest_wikilinks(
     file: File, vault: Vault, retriever: Retriever, top_k: int, similarity_threshold: float
 ) -> WikilinkSuggestion:
-    """ 
-    provides a list of wikilinks to files that are mentioned in the file body
-    also recommends a list of "See-also" for files that relate to the subject but aren't directly mentioned
-    """ # < this is the intended usecase for this function
-    """Inline tier: word-boundary text match against every other vault title (deterministic, no model
-    call — this is the same check apply_wikilink relies on to find what it's wrapping). See-also tier:
-    a vector-similarity search against the vault's existing embeddings (the same ones /ask retrieves
-    against), for notes that are topically related without ever mentioning each other's exact title."""
-    #TODO: clean up this docstring and consider how to define a "good" docstring
-
+    """Inline tier: word-boundary text match against every other vault title. See-also tier: a
+    vector-similarity search against the vault's existing embeddings, for notes that are topically
+    related without mentioning each other's exact title."""
     existing_links = set(file.links)
     other_files = [f for f in vault.list_files() if f.path != file.path]
     candidates = sorted({f.title for f in other_files} - {file.title})

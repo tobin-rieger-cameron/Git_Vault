@@ -1,10 +1,11 @@
 import asyncio
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import pytest
 
 from program_files.utils.errors import ModelUnavailableError
 from program_files.utils.llm import ModelClient
+from program_files.utils.tools import ToolSpec
 
 
 @dataclass
@@ -38,6 +39,43 @@ def _client_with_fakes(chat_text: str = "", coding_text: str = "", error: Except
     client._chat = _FakeStreamingModel(chat_text, error=error)
     client._coding = _FakeStreamingModel(coding_text, error=error)
     return client
+
+
+@dataclass
+class _FakeToolResponse:
+    """Mimics an AIMessage: .content is the text, .tool_calls is empty once the model is done."""
+
+    content: str
+    tool_calls: list[dict] = field(default_factory=list)
+
+
+class _FakeBoundModel:
+    """Mimics the object bind_tools() returns: scripted responses, one per .ainvoke() call."""
+
+    def __init__(self, responses: list[_FakeToolResponse]) -> None:
+        self._responses = list(responses)
+        self.calls: list[list] = []
+
+    async def ainvoke(self, messages: list):
+        self.calls.append(list(messages))
+        return self._responses.pop(0)
+
+
+class _FakeToolCallingModel(_FakeStreamingModel):
+    """Adds bind_tools() on top of _FakeStreamingModel, for stream_with_tools tests."""
+
+    def __init__(self, bound_responses: list[_FakeToolResponse], final_text: str = "forced final answer") -> None:
+        super().__init__(final_text)
+        self.bound_responses = bound_responses
+        self.bind_tools_calls: list[list[dict]] = []
+
+    def bind_tools(self, schemas: list[dict]) -> _FakeBoundModel:
+        self.bind_tools_calls.append(schemas)
+        return _FakeBoundModel(self.bound_responses)
+
+
+def _tool(name: str, handler) -> ToolSpec:
+    return ToolSpec(name=name, description=f"{name} tool", parameters={"type": "object", "properties": {}}, handler=handler)
 
 
 @pytest.mark.asyncio
@@ -117,3 +155,77 @@ def test_switch_chat_model_updates_name() -> None:
     client.switch_chat_model("llama3.2:3b")
 
     assert client.chat_model_name == "llama3.2:3b"
+
+
+@pytest.mark.asyncio
+async def test_stream_with_tools_empty_toolbox_delegates_to_stream() -> None:
+    client = _client_with_fakes(chat_text="plain answer")
+
+    result = await client.stream_with_tools("prompt", tools=[])
+
+    assert result == "plain answer"
+
+
+@pytest.mark.asyncio
+async def test_stream_with_tools_runs_a_tool_then_returns_final_answer() -> None:
+    calls: list[dict] = []
+
+    async def handler(args: dict) -> str:
+        calls.append(args)
+        return "3 matching notes"
+
+    tool = _tool("search_vault", handler)
+    fake = _FakeToolCallingModel(
+        bound_responses=[
+            _FakeToolResponse(content="", tool_calls=[{"name": "search_vault", "args": {"query": "x"}, "id": "1"}]),
+            _FakeToolResponse(content="Here's the answer."),
+        ]
+    )
+    client = ModelClient(chat_model="unused", coding_model="unused")
+    client._chat = fake
+
+    seen: list[tuple[str, dict]] = []
+    result = await client.stream_with_tools("prompt", [tool], on_tool_call=lambda n, a: seen.append((n, a)))
+
+    assert result == "Here's the answer."
+    assert calls == [{"query": "x"}]
+    assert seen == [("search_vault", {"query": "x"})]
+
+
+@pytest.mark.asyncio
+async def test_stream_with_tools_unknown_tool_name_is_reported_not_raised() -> None:
+    fake = _FakeToolCallingModel(
+        bound_responses=[
+            _FakeToolResponse(content="", tool_calls=[{"name": "no_such_tool", "args": {}, "id": "1"}]),
+            _FakeToolResponse(content="done anyway"),
+        ]
+    )
+    client = ModelClient(chat_model="unused", coding_model="unused")
+    client._chat = fake
+
+    result = await client.stream_with_tools("prompt", [_tool("search_vault", lambda args: "x")])
+
+    assert result == "done anyway"
+
+
+@pytest.mark.asyncio
+async def test_stream_with_tools_forces_a_final_answer_after_max_iterations() -> None:
+    async def handler(_args: dict) -> str:
+        return "still searching"
+
+    tool = _tool("search_vault", handler)
+    # Every scripted round keeps calling the tool — never a final no-tool-calls response — so the
+    # loop should hit its iteration cap and force a plain answer via the unbound model instead.
+    fake = _FakeToolCallingModel(
+        bound_responses=[
+            _FakeToolResponse(content="", tool_calls=[{"name": "search_vault", "args": {}, "id": str(i)}])
+            for i in range(4)
+        ],
+        final_text="forced final answer",
+    )
+    client = ModelClient(chat_model="unused", coding_model="unused")
+    client._chat = fake
+
+    result = await client.stream_with_tools("prompt", [tool])
+
+    assert result == "forced final answer"

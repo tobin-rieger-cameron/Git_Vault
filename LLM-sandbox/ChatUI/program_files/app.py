@@ -19,12 +19,13 @@ from textual.screen import Screen
 from textual.suggester import SuggestFromList
 from textual.widgets import Header, Input, Label, RichLog, Static, Tree
 
-from program_files import ask, classify, draft, review
 from program_files.utils.config import Settings
 from program_files.utils.errors import ChatUIError
 from program_files.utils.llm import ModelClient
 from program_files.utils.models import ClassificationSuggestion, File, FolderTagChange, ReviewQuestion
 from program_files.utils.retrieval import Retriever
+from program_files.utils.tools import build_registry
+from program_files.utils.tools import classify_tools, draft_tools, review_tools
 from program_files.ui import theme
 from program_files.ui.checklist import SuggestionChecklist
 from program_files.ui.picker import FilePicker
@@ -92,6 +93,12 @@ def _write_status(log: RichLog, text: str) -> None:
         log.write(Text(text, style=theme.ACCENT))
         return
     log.write(Text.assemble((label + sep, theme.ACCENT), (detail, theme.ACCENT_MUTED)))
+
+
+def _format_tool_args(args: dict) -> str:
+    """Render a tool call's arguments compactly for a status line, e.g. query='taxonomy'."""
+    rendered = ", ".join(f"{key}={_truncate(repr(value), 60)}" for key, value in args.items())
+    return _truncate(rendered, 120)
 
 
 class ChatApp(App):
@@ -195,6 +202,7 @@ class ChatApp(App):
         self.retriever = retriever
         self.model = model
         self.settings = settings
+        self.tools = build_registry(vault, retriever, model, settings)
         self._active_file: File | None = None
         self._selected_folder: Path | None = None
         self._folder_tag_plan: list[tuple[Path, FolderTagChange]] = []
@@ -340,7 +348,7 @@ class ChatApp(App):
         if self._checklist_kind == "wikilinks":
             inline = [t for t in checked if self._checklist_wikilink_kind.get(t) == "inline"]
             see_also = [t for t in checked if self._checklist_wikilink_kind.get(t) == "see_also"]
-            preview_body = classify.preview_with_wikilinks(file.body, inline, see_also)
+            preview_body = classify_tools.preview_with_wikilinks(file.body, inline, see_also)
             # Every [[wikilink]] not already saved in the file is part of this pending preview.
             spans = [
                 (target, start, end)
@@ -393,12 +401,16 @@ class ChatApp(App):
     async def _ask(self, question: str) -> None:
         log = self.query_one("#log", RichLog)
         _write_status(log, "thinking…")
+
+        def on_tool_call(name: str, args: dict) -> None:
+            _write_status(log, f"tool: {name}({_format_tool_args(args)})")
+
         try:
-            result = await ask.ask(
-                question, self.vault, self.retriever, self.model, self._history, self._web_enabled,
-                top_k=self.settings.top_k, similarity_threshold=self.settings.similarity_threshold,
-                history_window=self.settings.history_window, web_search_results=self.settings.web_search_results,
-            )
+            result = await self.tools.get("answer_question").handler({
+                "question": question, "history": self._history, "web_enabled": self._web_enabled,
+                "top_k": self.settings.top_k, "similarity_threshold": self.settings.similarity_threshold,
+                "history_window": self.settings.history_window, "on_tool_call": on_tool_call,
+            })
         except ChatUIError as exc:
             _log.error("ask failed for %r: %s", question, exc)
             _write_status(log, f"couldn't answer: {exc}")
@@ -407,15 +419,13 @@ class ChatApp(App):
         _write_answer(log, result.answer)
         if result.sources:
             _write_status(log, "source: " + ", ".join(str(p) for p in result.sources))
-        if result.web_supplement:
-            _write_answer(log, result.web_supplement)
 
     # --- Draft -----------------------------------------------------------------------------
 
     async def _start_or_continue_draft(self, subject: str | None) -> None:
         log = self.query_one("#log", RichLog)
         if subject is not None:
-            self._set_active_file(draft.edit_draft(subject, self.vault))
+            self._set_active_file(draft_tools.edit_draft(subject, self.vault))
         elif self._active_file is None:
             _write_status(log, "nothing to draft: click a file, search for one, or /draft <subject> to start new")
             return
@@ -426,7 +436,7 @@ class ChatApp(App):
         log = self.query_one("#log", RichLog)
         old_body = self._active_file.body
         try:
-            revised = await draft.revise_draft(self._active_file, instruction, self.model)
+            revised = await draft_tools.revise_draft(self._active_file, instruction, self.model)
         except ChatUIError as exc:
             _log.error("draft revision failed for %r: %s", self._active_file.path, exc)
             _write_status(log, f"revision failed: {exc}")
@@ -440,7 +450,7 @@ class ChatApp(App):
         if not self._drafting or self._active_file is None:
             _write_status(log, "nothing being drafted")
             return
-        draft.save_draft(self._active_file, self.vault)
+        draft_tools.save_draft(self._active_file, self.vault)
         self._drafting = False
         try:
             self.retriever.reingest_one(self._active_file)
@@ -460,7 +470,7 @@ class ChatApp(App):
         if self._classification is None or self._classification.file_path != self._active_file.path:
             log = self.query_one("#log", RichLog)
             try:
-                self._classification = await classify.suggest_classification(
+                self._classification = await classify_tools.suggest_classification(
                     self._active_file, self.vault, self.model,
                     on_status=lambda text: _write_status(log, text),
                 )
@@ -497,7 +507,7 @@ class ChatApp(App):
             return
         self._flash_status(f"searching for wikilinks in {self._active_file.path.name}…")
         try:
-            suggestion = await classify.suggest_wikilinks(
+            suggestion = await classify_tools.suggest_wikilinks(
                 self._active_file, self.vault, self.retriever,
                 top_k=self.settings.top_k, similarity_threshold=self.settings.similarity_threshold,
             )
@@ -524,7 +534,7 @@ class ChatApp(App):
         for review."""
         log = self.query_one("#log", RichLog)
         folder = self._selected_folder
-        plan = classify.suggest_folder_tags(folder, self.vault)
+        plan = classify_tools.suggest_folder_tags(folder, self.vault)
         if not plan:
             _write_status(log, f"{folder.relative_to(self.vault.root)}: every file's tags already match the folder structure")
             return
@@ -609,12 +619,12 @@ class ChatApp(App):
             inline = [t for t in checked if wikilink_kind.get(t) == "inline"]
             see_also = [t for t in checked if wikilink_kind.get(t) == "see_also"]
             for title in inline:
-                self._active_file = classify.apply_wikilink(self._active_file, title, self.vault)
+                self._active_file = classify_tools.apply_wikilink(self._active_file, title, self.vault)
             if see_also:
-                self._active_file = classify.apply_see_also(self._active_file, see_also, self.vault)
+                self._active_file = classify_tools.apply_see_also(self._active_file, see_also, self.vault)
         elif kind == "folder-tags":
             plan = dict(folder_tag_plan[i] for i in checked_indices)
-            updated = classify.apply_folder_tags(plan, self.vault)
+            updated = classify_tools.apply_folder_tags(plan, self.vault)
             self._selected_folder = None
             for file in updated:
                 try:
@@ -633,7 +643,7 @@ class ChatApp(App):
                 suggested_folder=checked[0] if kind == "folder" else None,
                 suggested_tags=checked if kind == "tags" else [],
             )
-            self._active_file = classify.apply_classification(self._active_file, partial, self.vault)
+            self._active_file = classify_tools.apply_classification(self._active_file, partial, self.vault)
 
         try:
             self.retriever.reingest_one(self._active_file)
@@ -651,7 +661,7 @@ class ChatApp(App):
     async def _start_review(self) -> None:
         log = self.query_one("#log", RichLog)
         if self._active_file is None:
-            due = review.files_due_for_review(
+            due = review_tools.files_due_for_review(
                 self.vault, timedelta(days=self.settings.review_staleness_days)
             )
             if not due:
@@ -662,7 +672,7 @@ class ChatApp(App):
             return
         _write_status(log, "thinking…")
         try:
-            questions = await review.generate_review_questions(self._active_file, self.model)
+            questions = await review_tools.generate_review_questions(self._active_file, self.model)
         except ChatUIError as exc:
             _write_status(log, f"couldn't generate questions: {exc}")
             return
@@ -693,7 +703,7 @@ class ChatApp(App):
             return
         self._review_index += 1
         if self._review_index >= len(self._review_queue):
-            self._active_file = review.mark_reviewed(self._active_file, self.vault)
+            self._active_file = review_tools.mark_reviewed(self._active_file, self.vault)
             _write_status(log, "review: done — marked reviewed")
             self._review_queue = []
             cmd.placeholder = "_"

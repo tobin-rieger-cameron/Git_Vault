@@ -1,20 +1,22 @@
-"""Verb 1 — Ask: vault-first RAG, falling back to weak-match/model-knowledge, with optional web supplement."""
+"""answer_question — the ask command: agentic retrieval over the vault via search_vault/read_vault_file/web_search."""
 
 from __future__ import annotations
 
 import logging
 import re
 from pathlib import Path
+from typing import Callable
 
+from program_files.utils import agent
 from program_files.utils.llm import ModelClient
 from program_files.utils.models import AskResult, Chunk, RetrievalPath
 from program_files.utils.retrieval import Retriever
+from program_files.utils.tools import ToolSpec
+from program_files.utils.tools.vault_tools import build_vault_tools
+from program_files.utils.tools.web_tools import build_web_tools
 from program_files.utils.vault import Vault
-from program_files.utils.web import search_web
 
 _log = logging.getLogger(__name__)
-
-_UNCERTAIN_PREFIX = "i'm not certain"
 
 _TOPIC_RE = re.compile(
     r"^\s*(?:what\s+(?:is|are|was|were)|explain(?:\s+to\s+me)?|describe|"
@@ -23,10 +25,44 @@ _TOPIC_RE = re.compile(
     re.IGNORECASE,
 )
 
-_STOP_WORDS = {"the", "a", "an", "of", "in", "is", "are", "and", "to", "for"}
+
+def build_ask_tools(vault: Vault, retriever: Retriever, model: ModelClient, web_search_results: int) -> list[ToolSpec]:
+    """Build the answer_question command tool, closing over the app's Vault/Retriever/ModelClient."""
+
+    async def _answer_question(args: dict) -> AskResult:
+        return await answer_question(
+            args["question"],
+            vault,
+            retriever,
+            model,
+            args.get("history", []),
+            args.get("web_enabled", False),
+            top_k=args.get("top_k", 5),
+            similarity_threshold=args.get("similarity_threshold", 0.65),
+            history_window=args.get("history_window", 2),
+            web_search_results=web_search_results,
+            on_tool_call=args.get("on_tool_call"),
+        )
+
+    return [
+        ToolSpec(
+            name="answer_question",
+            description="Answer a question using the vault as primary context, agentically searching/reading/web-searching as needed.",
+            parameters={
+                "type": "object",
+                "properties": {
+                    "question": {"type": "string"},
+                    "history": {"type": "array"},
+                    "web_enabled": {"type": "boolean"},
+                },
+                "required": ["question"],
+            },
+            handler=_answer_question,
+        )
+    ]
 
 
-async def ask(
+async def answer_question(
     question: str,
     vault: Vault,
     retriever: Retriever,
@@ -38,8 +74,9 @@ async def ask(
     similarity_threshold: float = 0.65,
     history_window: int = 2,
     web_search_results: int = 3,
+    on_tool_call: Callable[[str, dict], None] | None = None,
 ) -> AskResult:
-    """Route the question through VAULT/WEAK_MATCH/MODEL_KNOWLEDGE per CLAUDE.md's retrieval table."""
+    """Route the question through VAULT/WEAK_MATCH/MODEL_KNOWLEDGE per CLAUDE.md's retrieval table, agentically."""
     chunks = retriever.search(question, top_k)
     if chunks:
         top_tags = chunks[0].tags
@@ -57,25 +94,24 @@ async def ask(
         path.name, [round(c.score, 3) for c in chunks], similarity_threshold, question,
     )
     history_text = _format_history(history, history_window)
-    sources = sorted({_relative_to_vault(c.source_path, vault) for c in chunks}, key=str)
-
     topic = _extract_topic(question)
     depth = _depth_hint(topic) if topic else ""
 
-    web_supplement: str | None = None
+    touched_sources: list[Path] = [c.source_path for c in chunks]
+    toolbox = build_vault_tools(vault, retriever, touched_sources)
+    if web_enabled:
+        toolbox += build_web_tools(web_search_results)
 
     if path is RetrievalPath.VAULT:
-        answer = await model.stream(_build_vault_prompt(question, chunks, history_text, depth))
-        if web_enabled and topic and not source_covers_topic(sources, topic):
-            web_supplement = await _web_supplement(model, question, web_search_results, history_text)
+        prompt = _build_vault_prompt(question, chunks, history_text, depth, web_enabled)
     elif path is RetrievalPath.WEAK_MATCH:
-        answer = await model.stream(_build_weak_match_prompt(question, chunks, history_text, depth))
+        prompt = _build_weak_match_prompt(question, chunks, history_text, depth, web_enabled)
     else:
-        answer = await model.stream(_build_knowledge_prompt(question, history_text, depth))
-        if web_enabled:
-            web_supplement = await _web_supplement(model, question, web_search_results, history_text)
+        prompt = _build_knowledge_prompt(question, history_text, depth, web_enabled)
 
-    return AskResult(answer=answer, path=path, sources=sources, web_supplement=web_supplement)
+    result = await agent.run(model, prompt, toolbox, touched_sources, on_tool_call=on_tool_call)
+    sources = sorted({_relative_to_vault(p, vault) for p in result.sources}, key=str)
+    return AskResult(answer=result.answer, path=path, sources=sources)
 
 
 def choose_retrieval_path(chunks: list[Chunk], threshold: float) -> RetrievalPath:
@@ -89,18 +125,6 @@ def choose_retrieval_path(chunks: list[Chunk], threshold: float) -> RetrievalPat
 def is_broad_topic_question(question: str) -> bool:
     """Return True for phrasing like "what is X"/"explain X" that _TOPIC_RE recognizes as topic-shaped."""
     return _extract_topic(question) is not None
-
-
-def source_covers_topic(sources: list[Path], topic: str) -> bool:
-    """Return True if any source filename shares a non-stopword with the topic phrase (a heuristic, not exact matching)."""
-    topic_words = {w for w in re.findall(r"\w+", topic.lower()) if w not in _STOP_WORDS and len(w) > 2}
-    if not topic_words:
-        return False
-    for source in sources:
-        stem_words = set(re.findall(r"\w+", source.stem.lower()))
-        if topic_words & stem_words:
-            return True
-    return False
 
 
 def _extract_topic(question: str) -> str | None:
@@ -140,13 +164,32 @@ def _depth_hint(topic: str) -> str:
     )
 
 
-def _build_vault_prompt(question: str, chunks: list[Chunk], history_text: str, depth: str = "") -> str:
+def _tool_usage_note(path: RetrievalPath, web_enabled: bool) -> str:
+    lines = []
+    if path is RetrievalPath.VAULT:
+        lines.append("You have search_vault and read_vault_file available if the context above isn't enough.")
+    elif path is RetrievalPath.WEAK_MATCH:
+        lines.append("The notes above only weakly match — try search_vault with different phrasing, or "
+                      "read_vault_file for full detail, before falling back to your own knowledge.")
+    else:
+        lines.append("No matching notes were found by the initial search — use search_vault to double-check "
+                      "before concluding there's nothing relevant.")
+    if web_enabled:
+        lines.append("web_search is also available for current information not in your training data or the vault.")
+    return " ".join(lines)
+
+
+def _build_vault_prompt(
+    question: str, chunks: list[Chunk], history_text: str, depth: str = "", web_enabled: bool = False
+) -> str:
     parts = [
         "You are a helpful assistant with access to the user's personal notes.",
         "Use the context to answer the question as specifically as possible.",
         "If the context does not contain enough information, supplement it with "
         "your own knowledge and say which parts came from your training rather "
         "than the notes.",
+        "",
+        _tool_usage_note(RetrievalPath.VAULT, web_enabled),
     ]
     if depth:
         parts += ["", depth]
@@ -164,12 +207,16 @@ def _build_vault_prompt(question: str, chunks: list[Chunk], history_text: str, d
     return "\n".join(parts)
 
 
-def _build_weak_match_prompt(question: str, chunks: list[Chunk], history_text: str, depth: str = "") -> str:
+def _build_weak_match_prompt(
+    question: str, chunks: list[Chunk], history_text: str, depth: str = "", web_enabled: bool = False
+) -> str:
     parts = [
         "You are a helpful assistant. Answer the question fully using your own training knowledge.",
         "The following notes from the user's vault may add useful context — incorporate "
         "them only if they directly address the question. Do not let off-topic notes "
         "distort your answer.",
+        "",
+        _tool_usage_note(RetrievalPath.WEAK_MATCH, web_enabled),
     ]
     if depth:
         parts += ["", depth]
@@ -187,10 +234,11 @@ def _build_weak_match_prompt(question: str, chunks: list[Chunk], history_text: s
     return "\n".join(parts)
 
 
-def _build_knowledge_prompt(question: str, history_text: str, depth: str = "") -> str:
+def _build_knowledge_prompt(question: str, history_text: str, depth: str = "", web_enabled: bool = False) -> str:
     parts = [
-        "Answer the following question using your own knowledge.",
-        f'If you are not confident, start with: "{_UNCERTAIN_PREFIX.capitalize()}, but"',
+        "Answer the following question, using your own knowledge.",
+        "",
+        _tool_usage_note(RetrievalPath.MODEL_KNOWLEDGE, web_enabled),
     ]
     if depth:
         parts += ["", depth]
@@ -199,30 +247,3 @@ def _build_knowledge_prompt(question: str, history_text: str, depth: str = "") -
         parts += ["--- CONVERSATION HISTORY ---", history_text, "--- END HISTORY ---", ""]
     parts += [f"Question: {question}", "Answer:"]
     return "\n".join(parts)
-
-
-def _build_web_prompt(question: str, web_context: str, history_text: str) -> str:
-    parts = [
-        "Answer the following question using the web search results below.",
-        "Summarise the relevant information clearly and cite sources where helpful.",
-        "",
-    ]
-    if history_text:
-        parts += ["--- CONVERSATION HISTORY ---", history_text, "--- END HISTORY ---", ""]
-    parts += [
-        "--- WEB SEARCH RESULTS ---",
-        web_context,
-        "--- END RESULTS ---",
-        "",
-        f"Question: {question}",
-        "Answer:",
-    ]
-    return "\n".join(parts)
-
-
-async def _web_supplement(model: ModelClient, question: str, max_results: int, history_text: str) -> str | None:
-    results = search_web(question, max_results)
-    if not results:
-        return None
-    web_context = "\n\n---\n\n".join(f"Source: {r.url}\nTitle: {r.title}\n{r.snippet}" for r in results)
-    return await model.stream(_build_web_prompt(question, web_context, history_text))

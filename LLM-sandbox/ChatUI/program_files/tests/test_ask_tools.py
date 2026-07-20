@@ -2,11 +2,10 @@ from pathlib import Path
 
 import pytest
 
-from program_files.ask import (
-    ask,
+from program_files.utils.tools.ask_tools import (
+    answer_question,
     choose_retrieval_path,
     is_broad_topic_question,
-    source_covers_topic,
 )
 from program_files.utils.models import Chunk, RetrievalPath
 from program_files.utils.vault import Vault
@@ -54,20 +53,6 @@ def test_is_broad_topic_question_false_for_narrow_questions(question: str) -> No
     assert is_broad_topic_question(question) is False
 
 
-def test_source_covers_topic_matches_shared_keyword() -> None:
-    sources = [Path("Fine Tuning Methods.md"), Path("Cupcakes.md")]
-    assert source_covers_topic(sources, "fine-tuning methods") is True
-
-
-def test_source_covers_topic_false_when_no_overlap() -> None:
-    sources = [Path("Cupcakes.md")]
-    assert source_covers_topic(sources, "reinforcement learning from human feedback") is False
-
-
-def test_source_covers_topic_false_for_empty_sources() -> None:
-    assert source_covers_topic([], "taxonomy") is False
-
-
 class _FakeRetriever:
     def __init__(self, chunks: list[Chunk], scoped_chunks: list[Chunk] | None = None) -> None:
         self._chunks = chunks
@@ -88,8 +73,9 @@ class _FakeModel:
     def __init__(self, answer: str = "an answer") -> None:
         self.answer = answer
         self.prompts: list[str] = []
+        self.tool_calls_made: list[tuple[str, dict]] = []
 
-    async def stream(self, prompt: str, on_token=None) -> str:
+    async def stream_with_tools(self, prompt: str, tools, on_token=None, on_tool_call=None) -> str:
         self.prompts.append(prompt)
         return self.answer
 
@@ -101,7 +87,7 @@ async def test_ask_vault_path_no_web_when_disabled(tmp_path: Path) -> None:
     retriever = _FakeRetriever(chunks)
     model = _FakeModel("Taxonomy is the science of classification.")
 
-    result = await ask(
+    result = await answer_question(
         "What is taxonomy?", vault, retriever, model, history=[], web_enabled=False,
         similarity_threshold=0.65,
     )
@@ -109,7 +95,6 @@ async def test_ask_vault_path_no_web_when_disabled(tmp_path: Path) -> None:
     assert result.path is RetrievalPath.VAULT
     assert result.answer == "Taxonomy is the science of classification."
     assert result.sources == [Path("Taxonomy.md")]
-    assert result.web_supplement is None
     assert len(model.prompts) == 1
 
 
@@ -119,7 +104,7 @@ async def test_ask_model_knowledge_path_when_no_chunks(tmp_path: Path) -> None:
     retriever = _FakeRetriever(chunks=[])
     model = _FakeModel("Some answer from training knowledge.")
 
-    result = await ask("Random question", vault, retriever, model, history=[], web_enabled=False)
+    result = await answer_question("Random question", vault, retriever, model, history=[], web_enabled=False)
 
     assert result.path is RetrievalPath.MODEL_KNOWLEDGE
     assert result.sources == []
@@ -132,14 +117,12 @@ async def test_ask_weak_match_path_below_threshold(tmp_path: Path) -> None:
     retriever = _FakeRetriever(chunks)
     model = _FakeModel("An answer mostly from training knowledge.")
 
-    result = await ask(
+    result = await answer_question(
         "What is quantum computing?", vault, retriever, model, history=[], web_enabled=True,
         similarity_threshold=0.65,
     )
 
     assert result.path is RetrievalPath.WEAK_MATCH
-    # weak-match path never adds a web supplement, even with web enabled
-    assert result.web_supplement is None
 
 
 @pytest.mark.asyncio
@@ -148,7 +131,7 @@ async def test_ask_passes_history_into_prompt(tmp_path: Path) -> None:
     retriever = _FakeRetriever(chunks=[])
     model = _FakeModel("answer")
 
-    await ask(
+    await answer_question(
         "Follow-up question", vault, retriever, model,
         history=[("Earlier question", "Earlier answer")], web_enabled=False,
     )
@@ -165,7 +148,30 @@ async def test_ask_tag_rescope_used_when_close_to_top_score(tmp_path: Path) -> N
     retriever = _FakeRetriever(initial, scoped_chunks=scoped)
     model = _FakeModel("answer")
 
-    result = await ask("What is AI?", vault, retriever, model, history=[], web_enabled=False)
+    result = await answer_question("What is AI?", vault, retriever, model, history=[], web_enabled=False)
 
     assert retriever.scoped_calls, "expected a tag-scoped second search to have run"
     assert result.sources == [Path("Scoped.md")]
+
+
+@pytest.mark.asyncio
+async def test_ask_forwards_on_tool_call(tmp_path: Path) -> None:
+    """The on_tool_call hook set on the fake model (simulating an actual tool round) reaches the caller."""
+    vault = Vault(tmp_path)
+    retriever = _FakeRetriever(chunks=[])
+    seen: list[tuple[str, dict]] = []
+
+    class _ToolCallingModel(_FakeModel):
+        async def stream_with_tools(self, prompt, tools, on_token=None, on_tool_call=None) -> str:
+            if on_tool_call is not None:
+                on_tool_call("search_vault", {"query": "taxonomy"})
+            return await super().stream_with_tools(prompt, tools, on_token, on_tool_call)
+
+    model = _ToolCallingModel("answer")
+
+    await answer_question(
+        "Random question", vault, retriever, model, history=[], web_enabled=False,
+        on_tool_call=lambda name, args: seen.append((name, args)),
+    )
+
+    assert seen == [("search_vault", {"query": "taxonomy"})]

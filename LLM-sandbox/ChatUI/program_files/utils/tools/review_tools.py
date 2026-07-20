@@ -1,4 +1,5 @@
-"""Verb 4 — Review: lightweight recall questions and a due-for-review signal, not a spaced-repetition engine."""
+"""generate_review_questions / mark_reviewed — spaced-repetition study sessions. No retrieval loop:
+questions are generated directly from the one file in hand."""
 
 from __future__ import annotations
 
@@ -9,9 +10,30 @@ from pathlib import Path
 
 from program_files.utils.llm import ModelClient
 from program_files.utils.models import File, ReviewQuestion
+from program_files.utils.tools import ToolSpec
 from program_files.utils.vault import Vault
 
 _QUESTION_RE = re.compile(r"Q:\s*(.+?)\s*\n\s*Hint:\s*(.+?)\s*(?:\n|$)", re.MULTILINE)
+
+
+def build_review_tools(model: ModelClient) -> list[ToolSpec]:
+    """Build the review_note command tool, closing over the app's ModelClient."""
+
+    async def _review_note(args: dict) -> list[ReviewQuestion]:
+        return await generate_review_questions(args["file"], model, count=args.get("count", 3))
+
+    return [
+        ToolSpec(
+            name="review_note",
+            description="Generate short recall questions with hints, testing understanding of a note.",
+            parameters={
+                "type": "object",
+                "properties": {"file": {"type": "object"}, "count": {"type": "integer"}},
+                "required": ["file"],
+            },
+            handler=_review_note,
+        )
+    ]
 
 
 async def generate_review_questions(file: File, model: ModelClient, count: int = 3) -> list[ReviewQuestion]:

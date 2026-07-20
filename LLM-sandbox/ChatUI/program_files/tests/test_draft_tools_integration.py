@@ -8,7 +8,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from program_files.draft import revise_draft, save_draft, start_draft
+from program_files.utils.tools.draft_tools import edit_draft, revise_draft, save_draft
 from program_files.utils.llm import ModelClient
 from program_files.utils.vault import Vault
 
@@ -31,7 +31,7 @@ async def test_draft_full_loop_writes_then_saves(tmp_path: Path) -> None:
     vault = Vault(tmp_path)
     model = ModelClient(chat_model="llama3.2:3b", coding_model="qwen2.5-coder:7b")
 
-    file = start_draft("Photosynthesis", vault)
+    file = edit_draft("Photosynthesis", vault)
     assert file.body == ""
 
     revised = await revise_draft(file, "Write one short paragraph explaining what photosynthesis is.", model)

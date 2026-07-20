@@ -43,7 +43,6 @@ class AskResult:
     answer: str
     path: RetrievalPath
     sources: list[Path]
-    web_supplement: str | None
 
 
 @dataclass

@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from program_files.draft import revise_draft, save_draft, start_draft
+from program_files.utils.tools.draft_tools import edit_draft, revise_draft, save_draft
 from program_files.utils.models import File
 from program_files.utils.vault import Vault
 
@@ -23,21 +23,21 @@ class _FakeModel:
         return self.response
 
 
-def test_start_draft_loads_existing_file_by_title(tmp_path: Path) -> None:
+def test_edit_draft_loads_existing_file_by_title(tmp_path: Path) -> None:
     _write(tmp_path / "600-applied-sciences" / "Fine Tuning Methods.md", '---\ntitle: "Fine Tuning Methods"\n---\n\nExisting body.\n')
     vault = Vault(tmp_path)
 
-    file = start_draft("fine-tuning methods", vault)
+    file = edit_draft("fine-tuning methods", vault)
 
     assert file.title == "Fine Tuning Methods"
     assert file.body == "Existing body.\n"
     assert file.path == tmp_path / "600-applied-sciences" / "Fine Tuning Methods.md"
 
 
-def test_start_draft_creates_new_file_when_no_match(tmp_path: Path) -> None:
+def test_edit_draft_creates_new_file_when_no_match(tmp_path: Path) -> None:
     vault = Vault(tmp_path)
 
-    file = start_draft("Quantum Computing", vault)
+    file = edit_draft("Quantum Computing", vault)
 
     assert file.title == "Quantum Computing"
     assert file.body == ""
@@ -45,10 +45,10 @@ def test_start_draft_creates_new_file_when_no_match(tmp_path: Path) -> None:
     assert file.path == tmp_path / "Quantum Computing.md"
 
 
-def test_start_draft_sanitizes_slash_in_subject(tmp_path: Path) -> None:
+def test_edit_draft_sanitizes_slash_in_subject(tmp_path: Path) -> None:
     vault = Vault(tmp_path)
 
-    file = start_draft("Risk/Reward", vault)
+    file = edit_draft("Risk/Reward", vault)
 
     assert file.path == tmp_path / "Risk-Reward.md"
 
