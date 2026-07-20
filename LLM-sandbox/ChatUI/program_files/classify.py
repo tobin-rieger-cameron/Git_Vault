@@ -1,3 +1,4 @@
+# LLM-sandbox/ChatUI/program_files/classify.py
 """Verb 3 — Classify inline: suggest a file's folder/tags/links right after it's drafted, one at a time."""
 
 from __future__ import annotations
@@ -12,7 +13,13 @@ from typing import Callable
 
 from program_files.utils.feedback import load_recent_overrides
 from program_files.utils.llm import ModelClient
-from program_files.utils.models import ClassificationSuggestion, File, Override, WikilinkSuggestion
+from program_files.utils.models import (
+    ClassificationSuggestion,
+    File,
+    FolderTagChange,
+    Override,
+    WikilinkSuggestion,
+)
 from program_files.utils.retrieval import Retriever
 from program_files.utils.vault import Vault, extract_wikilinks
 
@@ -24,15 +31,52 @@ _TABLE_ROW_RE = re.compile(r"^\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*$", re.MULTIL
 
 
 async def suggest_classification(
-    file: File, model: ModelClient, on_status: Callable[[str], None] | None = None
+    file: File, vault: Vault, model: ModelClient, on_status: Callable[[str], None] | None = None
 ) -> ClassificationSuggestion:
-    """Suggest tags, then a folder (tag-map first, LLM fallback) — nothing is applied yet."""
+    """Suggest tags and a folder for review."""
     status = on_status or (lambda _text: None)
     status("suggesting tags…")
-    tags = await _suggest_tags(file, model)
+    tags = await _suggest_tags(file, vault, model) #TODO: print tags individually as they are "found"
     status("choosing a folder…")
     folder = await _suggest_folder(tags or file.tags, file, model)
     return ClassificationSuggestion(file_path=file.path, suggested_folder=folder, suggested_tags=tags)
+
+
+def suggest_folder_tags(directory: Path, vault: Vault) -> dict[Path, FolderTagChange]:
+    """Map every file under directory to the folder-tag changes (see Vault.folder_tags) that keep
+    it in sync with the current folder structure: add whatever's missing, and remove any tag that
+    used to name a real vault folder but isn't one of this file's current ancestors anymore (e.g.
+    the folder itself got moved). Deterministic, no model call — the batch counterpart to /tags's
+    per-file LLM pass, which only ever adds."""
+    vocabulary = vault.folder_tag_vocabulary()
+    plan: dict[Path, FolderTagChange] = {}
+    for file in vault.list_files():
+        if directory not in file.path.parents:
+            continue
+        current = set(vault.folder_tags(file.path.parent))
+        existing_lower = {t.lower(): t for t in file.tags}
+        to_add = [tag for tag in vault.folder_tags(file.path.parent) if tag not in existing_lower]
+        to_remove = [
+            original
+            for lower, original in existing_lower.items()
+            if lower in vocabulary and lower not in current
+        ]
+        if to_add or to_remove:
+            plan[file.path] = FolderTagChange(add=to_add, remove=to_remove)
+    return plan
+
+
+def apply_folder_tags(plan: dict[Path, FolderTagChange], vault: Vault) -> list[File]:
+    """Apply each path's planned tag add/remove and persist; returns the updated files."""
+    updated_files = []
+    for path, change in plan.items():
+        file = vault.load_file(path)
+        remove_lower = {t.lower() for t in change.remove}
+        kept = [t for t in file.tags if t.lower() not in remove_lower]
+        updated = replace(file, tags=list(dict.fromkeys([*kept, *change.add])), updated=datetime.now())
+        vault.save_file(updated)
+        updated_files.append(updated)
+    return updated_files
 
 
 async def suggest_wikilinks(
@@ -43,14 +87,12 @@ async def suggest_wikilinks(
     similarity_threshold: float,
     on_status: Callable[[str], None] | None = None,
 ) -> WikilinkSuggestion:
-    """Return inline vs. see-also candidates — nothing is applied yet. No model call: substring match
-    for inline (mirrors the vault's own "link at the first textual instance" rule), vector search
-    over the same embeddings /ask uses for see-also (mirrors "See also only when no inline text fits")."""
+    """ scan through vault for possible files to link; presents inline and appended link suggestions """
     status = on_status or (lambda _text: None)
     status(f"searching for wikilinks in {file.path.name}…")
-    return await _suggest_wikilinks(file, vault, retriever, top_k, similarity_threshold)
+    return await _suggest_wikilinks(file, vault, retriever, top_k, similarity_threshold) #TODO: print wikilinks as they are found
 
-
+#TODO: consider squishing apply_wikilink and apply_see_also into this one function
 def apply_classification(file: File, suggestion: ClassificationSuggestion, vault: Vault) -> File:
     """Move the file if a folder was suggested and merge in new tags — links are applied separately, see apply_wikilink."""
     new_path = file.path
@@ -89,7 +131,8 @@ def apply_see_also(file: File, titles: list[str], vault: Vault) -> File:
 def preview_with_wikilinks(body: str, inline_titles: list[str], see_also_titles: list[str]) -> str:
     """Body as it would read with inline_titles wrapped and see_also_titles appended — pure, no
     save; shares the exact wrap/insert logic apply_wikilink/apply_see_also use, so a preview built
-    from this always matches what /done would actually write."""
+    from this always matches what /done would actually write.""" # this is an example of a verbose docstring, does not follow my intended format, check the dockstrings above, also check their history in the git repo to see how I changed them myself to get a better sense of my tone
+    # docstring should be a litteral description of what the function takes as input and returns as output
     for title in inline_titles:
         body = _wrap_occurrence(body, title)
     if see_also_titles:
@@ -97,7 +140,9 @@ def preview_with_wikilinks(body: str, inline_titles: list[str], see_also_titles:
     return body
 
 
-async def _suggest_tags(file: File, model: ModelClient) -> list[str]:
+async def _suggest_tags(file: File, vault: Vault, model: ModelClient) -> list[str]:
+    existing = {t.lower() for t in file.tags}
+    folder_tags = [tag for tag in vault.folder_tags(file.path.parent) if tag not in existing]
     feedback = _format_feedback(load_recent_overrides("tags"))
     prompt = (
         (f"{feedback}\n\n" if feedback else "")
@@ -107,7 +152,8 @@ async def _suggest_tags(file: File, model: ModelClient) -> list[str]:
         f"Content:\n{file.body[:1000]}\n"
     )
     raw = await model.ask_coding(prompt)
-    return [t.strip().lower() for t in raw.split(",") if t.strip()]
+    llm_tags = [t.strip().lower() for t in raw.split(",") if t.strip()]
+    return list(dict.fromkeys([*folder_tags, *llm_tags]))
 
 
 async def _suggest_folder(tags: list[str], file: File, model: ModelClient) -> str | None:
@@ -119,14 +165,16 @@ async def _suggest_folder(tags: list[str], file: File, model: ModelClient) -> st
 
     folders = sorted(set(tag_map.values()) | {"misc"})
     feedback = _format_feedback(load_recent_overrides("placement"))
+    #TODO: use current tags to help with folder consideration
     prompt = (
         (f"{feedback}\n\n" if feedback else "")
-        + "You are classifying a knowledge vault article into a folder.\n\n"
+        + "You are classifying an article into a folder.\n\n"
+        "The folder should fit the subject class of the article"
         f"Available folders:\n{', '.join(folders)}\n\n"
         f"Folder descriptions (from vault-structure-plan.md):\n{_read_structure_plan()[:1200]}\n\n"
-        f"Article content (first 400 chars):\n{file.body[:400]}\n\n"
+        f"Article summary (all text before the first # heading):\n{file.body[:800]}\n\n"
         f"Reply with ONLY one folder name from this list: {', '.join(folders)}\n"
-        "If uncategorisable, reply: misc\n\nFolder:"
+        "If the article does not fit cleanly in one place, provide a list of possible folders"
     )
     raw = (await model.ask_coding(prompt)).strip().lower()
     for folder in folders:
@@ -138,10 +186,16 @@ async def _suggest_folder(tags: list[str], file: File, model: ModelClient) -> st
 async def _suggest_wikilinks(
     file: File, vault: Vault, retriever: Retriever, top_k: int, similarity_threshold: float
 ) -> WikilinkSuggestion:
+    """ 
+    provides a list of wikilinks to files that are mentioned in the file body
+    also recommends a list of "See-also" for files that relate to the subject but aren't directly mentioned
+    """ # < this is the intended usecase for this function
     """Inline tier: word-boundary text match against every other vault title (deterministic, no model
     call — this is the same check apply_wikilink relies on to find what it's wrapping). See-also tier:
     a vector-similarity search against the vault's existing embeddings (the same ones /ask retrieves
     against), for notes that are topically related without ever mentioning each other's exact title."""
+    #TODO: clean up this docstring and consider how to define a "good" docstring
+
     existing_links = set(file.links)
     other_files = [f for f in vault.list_files() if f.path != file.path]
     candidates = sorted({f.title for f in other_files} - {file.title})

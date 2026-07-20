@@ -116,6 +116,11 @@ class Retriever:
         _log.info("ingest force=%s -> %s", force, stats)
         return stats
 
+    def ingested_paths(self) -> set[Path]:
+        """Every path the manifest currently records as embedded — a cheap disk read, no chromadb
+        query, so it's safe to call on every FilePicker refresh to color new/stale files."""
+        return {Path(p) for p in _load_manifest(self._db_path)}
+
     def reingest_one(self, file: File) -> None:
         """Re-embed a single file immediately, bypassing the batch ingest() diff."""
         path = str(file.path)

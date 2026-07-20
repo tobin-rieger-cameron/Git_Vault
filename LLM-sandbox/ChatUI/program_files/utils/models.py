@@ -56,6 +56,15 @@ class ClassificationSuggestion:
 
 
 @dataclass
+class FolderTagChange:
+    """One file's folder-tag sync plan: tags to add (missing current-ancestor tags) and tags to
+    remove (stale ones matching a folder this file no longer sits under)."""
+
+    add: list[str]
+    remove: list[str]
+
+
+@dataclass
 class WikilinkSuggestion:
     """Two mutually-exclusive tiers: inline_new (text match, wrap in place) vs. see_also_new (no text
     match, strong subject-relation) — mirrors the vault's own "inline unless no text fits" convention."""

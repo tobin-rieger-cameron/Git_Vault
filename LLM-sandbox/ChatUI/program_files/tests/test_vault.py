@@ -160,6 +160,20 @@ def test_vault_save_file_then_load_file_roundtrips(tmp_path: Path) -> None:
     assert loaded.body == "Some content.\n"
 
 
+def test_vault_save_file_never_writes_title(tmp_path: Path) -> None:
+    # File.title always falls back to path.stem when frontmatter has none, so a custom title:
+    # field would just silently reappear on the next save unless save_file omits it outright.
+    path = tmp_path / "Original Name.md"
+    _write(path, "---\ntitle: A Stale Custom Title\ntags: [ai]\n---\n\nBody.\n")
+    vault = Vault(path.parent)
+    file = vault.load_file(path)
+
+    vault.save_file(file)
+
+    assert "title:" not in path.read_text(encoding="utf-8")
+    assert vault.load_file(path).title == "Original Name"  # falls back to the filename
+
+
 def test_vault_find_by_tag(tmp_path: Path) -> None:
     _write(tmp_path / "A.md", "---\ntitle: A\ntags: [ai]\n---\n\nBody.\n")
     _write(tmp_path / "B.md", "---\ntitle: B\ntags: [biology]\n---\n\nBody.\n")
@@ -167,6 +181,37 @@ def test_vault_find_by_tag(tmp_path: Path) -> None:
     vault = Vault(tmp_path)
 
     assert [f.title for f in vault.find_by_tag("ai")] == ["A"]
+
+
+def test_vault_folder_tags_strips_dewey_prefix_and_slugifies(tmp_path: Path) -> None:
+    vault = Vault(tmp_path)
+
+    tags = vault.folder_tags(tmp_path / "000 - Information Science")
+
+    assert tags == ["information-science"]
+
+
+def test_vault_folder_tags_walks_nested_ancestors_nearest_first(tmp_path: Path) -> None:
+    vault = Vault(tmp_path)
+
+    tags = vault.folder_tags(tmp_path / "000 - Information Science" / "Ontology")
+
+    assert tags == ["ontology", "information-science"]
+
+
+def test_vault_folder_tags_at_root_is_empty(tmp_path: Path) -> None:
+    vault = Vault(tmp_path)
+
+    assert vault.folder_tags(tmp_path) == []
+
+
+def test_vault_folder_tag_vocabulary_covers_every_files_ancestry(tmp_path: Path) -> None:
+    _write(tmp_path / "000 - Information Science" / "Ontology.md", "Body.\n")
+    _write(tmp_path / "600-fine-arts" / "Music.md", "Body.\n")
+
+    vault = Vault(tmp_path)
+
+    assert vault.folder_tag_vocabulary() == {"information-science", "fine-arts"}
 
 
 def test_vault_needs_placement_root_and_misc(tmp_path: Path) -> None:

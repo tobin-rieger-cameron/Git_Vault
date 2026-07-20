@@ -6,12 +6,14 @@ import pytest
 import program_files.classify as classify_module
 from program_files.classify import (
     apply_classification,
+    apply_folder_tags,
     apply_see_also,
     apply_wikilink,
     suggest_classification,
+    suggest_folder_tags,
     suggest_wikilinks,
 )
-from program_files.utils.models import ClassificationSuggestion, Chunk, File
+from program_files.utils.models import ClassificationSuggestion, Chunk, File, FolderTagChange
 from program_files.utils.vault import Vault
 
 
@@ -63,13 +65,14 @@ def test_load_tag_folder_map_parses_real_structure_plan() -> None:
 async def test_suggest_classification_uses_tag_map_before_llm_fallback(tmp_path: Path) -> None:
     file = _file(tmp_path, body="A note about machine learning models.")
     model = _FakeModel({"Suggest 1-4": "ai, machinelearning"})
+    vault = Vault(tmp_path)
 
-    suggestion = await suggest_classification(file, model)
+    suggestion = await suggest_classification(file, vault, model)
 
     assert suggestion.suggested_tags == ["ai", "machinelearning"]
     assert suggestion.suggested_folder == "300-formal-applied-sciences"
     # folder came from the tag map, not the LLM fallback prompt
-    assert not any("classifying a knowledge vault article" in p for p in model.prompts)
+    assert not any("classifying an article into a folder" in p for p in model.prompts)
 
 
 @pytest.mark.asyncio
@@ -77,10 +80,11 @@ async def test_suggest_classification_falls_back_to_llm_when_tags_unmapped(tmp_p
     file = _file(tmp_path, body="A note about something obscure.")
     model = _FakeModel({
         "Suggest 1-4": "general",
-        "classifying a knowledge vault article": "400-social-natural-sciences",
+        "classifying an article into a folder": "400-social-natural-sciences",
     })
+    vault = Vault(tmp_path)
 
-    suggestion = await suggest_classification(file, model)
+    suggestion = await suggest_classification(file, vault, model)
 
     assert suggestion.suggested_folder == "400-social-natural-sciences"
 
@@ -89,11 +93,35 @@ async def test_suggest_classification_falls_back_to_llm_when_tags_unmapped(tmp_p
 async def test_suggest_classification_reports_status_for_each_phase(tmp_path: Path) -> None:
     file = _file(tmp_path, body="A note about machine learning models.")
     model = _FakeModel({"Suggest 1-4": "ai, machinelearning"})
+    vault = Vault(tmp_path)
     statuses: list[str] = []
 
-    await suggest_classification(file, model, on_status=statuses.append)
+    await suggest_classification(file, vault, model, on_status=statuses.append)
 
     assert statuses == ["suggesting tags…", "choosing a folder…"]
+
+
+@pytest.mark.asyncio
+async def test_suggest_classification_merges_folder_derived_tags_with_llm_tags(tmp_path: Path) -> None:
+    file = _file(tmp_path / "000 - Information Science", body="A note about ontologies.")
+    model = _FakeModel({"Suggest 1-4": "ontology"})
+    vault = Vault(tmp_path)
+
+    suggestion = await suggest_classification(file, vault, model)
+
+    # folder tag comes first, deterministically, alongside whatever the LLM proposed for content.
+    assert suggestion.suggested_tags == ["information-science", "ontology"]
+
+
+@pytest.mark.asyncio
+async def test_suggest_classification_skips_folder_tag_already_on_file(tmp_path: Path) -> None:
+    file = _file(tmp_path / "000 - Information Science", body="More.", tags=["Information-Science"])
+    model = _FakeModel({"Suggest 1-4": "ontology"})
+    vault = Vault(tmp_path)
+
+    suggestion = await suggest_classification(file, vault, model)
+
+    assert suggestion.suggested_tags == ["ontology"]
 
 
 @pytest.mark.asyncio
@@ -279,6 +307,80 @@ def test_apply_see_also_no_new_titles_leaves_file_unchanged(tmp_path: Path) -> N
     updated = apply_see_also(file, ["Ontology"], vault)
 
     assert updated is file
+
+
+def test_suggest_folder_tags_walks_nested_ancestors(tmp_path: Path) -> None:
+    vault = Vault(tmp_path)
+    vault.save_file(_file(tmp_path / "000 - Information Science" / "Ontology", name="Ontology.md"))
+    vault.save_file(_file(tmp_path / "000 - Information Science", name="Taxonomy.md", tags=["information-science"]))
+
+    plan = suggest_folder_tags(tmp_path / "000 - Information Science", vault)
+
+    nested = tmp_path / "000 - Information Science" / "Ontology" / "Ontology.md"
+    direct = tmp_path / "000 - Information Science" / "Taxonomy.md"
+    assert plan[nested].add == ["ontology", "information-science"]
+    assert plan[nested].remove == []
+    assert direct not in plan  # already carries the only tag it's missing, nothing to remove either
+
+
+def test_suggest_folder_tags_matches_existing_tag_case_insensitively(tmp_path: Path) -> None:
+    vault = Vault(tmp_path)
+    vault.save_file(_file(tmp_path / "000 - Information Science", name="Taxonomy.md", tags=["Information-Science"]))
+
+    plan = suggest_folder_tags(tmp_path / "000 - Information Science", vault)
+
+    assert tmp_path / "000 - Information Science" / "Taxonomy.md" not in plan
+
+
+def test_suggest_folder_tags_ignores_files_outside_the_folder(tmp_path: Path) -> None:
+    vault = Vault(tmp_path)
+    vault.save_file(_file(tmp_path / "600-fine-arts", name="Music.md"))
+
+    plan = suggest_folder_tags(tmp_path / "000 - Information Science", vault)
+
+    assert plan == {}
+
+
+def test_suggest_folder_tags_removes_stale_tag_from_a_moved_folder(tmp_path: Path) -> None:
+    # A file that used to sit under a "Study Notes" folder (so it picked up a "study-notes" tag)
+    # has since been moved to a differently-named folder elsewhere in the vault; "study-notes" is
+    # still a real folder name somewhere in the vault, so it must be swept up as stale rather than
+    # kept as if it were a genuine cross-referencing topic tag.
+    vault = Vault(tmp_path)
+    vault.save_file(_file(tmp_path / "Study Notes" / "Other", name="Keep.md"))
+    vault.save_file(
+        _file(tmp_path / "OLD_STRUCTURE", name="Moved.md", tags=["study-notes", "own-thoughts"])
+    )
+
+    plan = suggest_folder_tags(tmp_path / "OLD_STRUCTURE", vault)
+
+    moved = tmp_path / "OLD_STRUCTURE" / "Moved.md"
+    assert plan[moved].add == ["old-structure"]
+    assert plan[moved].remove == ["study-notes"]  # "own-thoughts" isn't a real folder name anywhere, kept
+
+
+def test_suggest_folder_tags_keeps_topic_tag_that_never_matched_a_folder(tmp_path: Path) -> None:
+    vault = Vault(tmp_path)
+    vault.save_file(_file(tmp_path / "000 - Information Science", name="Note.md", tags=["philosophy"]))
+
+    plan = suggest_folder_tags(tmp_path / "000 - Information Science", vault)
+
+    note = tmp_path / "000 - Information Science" / "Note.md"
+    assert plan[note].add == ["information-science"]
+    assert plan[note].remove == []  # "philosophy" never named a folder anywhere in this vault
+
+
+def test_apply_folder_tags_adds_and_removes_then_persists(tmp_path: Path) -> None:
+    vault = Vault(tmp_path)
+    file = _file(tmp_path / "000 - Information Science", name="Ontology.md", tags=["existing", "stale"])
+    vault.save_file(file)
+
+    updated = apply_folder_tags(
+        {file.path: FolderTagChange(add=["information-science"], remove=["stale"])}, vault
+    )
+
+    assert updated[0].tags == ["existing", "information-science"]
+    assert vault.load_file(file.path).tags == ["existing", "information-science"]
 
 
 def test_apply_classification_moves_file_and_merges_tags(tmp_path: Path) -> None:

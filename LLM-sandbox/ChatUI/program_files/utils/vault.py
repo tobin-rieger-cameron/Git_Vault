@@ -18,6 +18,8 @@ _log = logging.getLogger(__name__)
 _FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?\n)---\s*\n?", re.DOTALL)
 _WIKILINK_RE = re.compile(r"\[\[([^\]]+)\]\]")
 _NORMALIZE_RE = re.compile(r"[-\s_]+")
+_LEADING_NUMBER_RE = re.compile(r"^\d+\s*[-–]*\s*")
+_NON_SLUG_RE = re.compile(r"[^\w\s-]")
 
 _IGNORE_FILE_NAME = ".vaultignore"
 
@@ -82,8 +84,10 @@ class Vault:
         return _file_from_parts(path, meta, body)
 
     def save_file(self, file: File) -> None:
-        """Write title/tags/last_reviewed back into frontmatter and persist the body."""
-        meta = {"title": file.title, "tags": file.tags}
+        """Write tags/last_reviewed back into frontmatter and persist the body — title is never
+        written; it's derived from the filename on load (see _file_from_parts), so the file's
+        actual name is always the one source of truth instead of two fields that can drift apart."""
+        meta = {"tags": file.tags}
         if file.last_reviewed is not None:
             meta["last_reviewed"] = file.last_reviewed
         content = render_frontmatter(meta, file.body)
@@ -97,6 +101,28 @@ class Vault:
 
     def find_by_tag(self, tag: str) -> list[File]:
         return [f for f in self.list_files() if tag in f.tags]
+
+    def folder_tags(self, directory: Path) -> list[str]:
+        """Slugified tag for each ancestor folder from directory up to (not including) vault root,
+        nearest first — e.g. ".../000 - Information Science/Ontology" -> ["ontology", "information-science"]."""
+        tags = []
+        current = directory
+        while current != self.root and current != current.parent:
+            tag = _slugify_folder_name(current.name)
+            if tag:
+                tags.append(tag)
+            current = current.parent
+        return tags
+
+    def folder_tag_vocabulary(self) -> set[str]:
+        """Every tag some file's current folder ancestry could produce, vault-wide — lets a stale
+        folder tag (named after a folder a file used to sit under, e.g. before that folder was
+        moved) be told apart from a genuine cross-referencing topic tag that just happens not to
+        match this file's own folder."""
+        vocabulary: set[str] = set()
+        for file in self.list_files():
+            vocabulary.update(self.folder_tags(file.path.parent))
+        return vocabulary
 
     def needs_placement(self, path: Path) -> bool:
         """Return True if path still awaits classification (sits at vault root or in "misc")."""
@@ -157,6 +183,13 @@ def find_wikilinks(body: str) -> list[tuple[int, int, str]]:
 def normalize_link_target(name: str) -> str:
     """Collapse hyphens/underscores/whitespace to single spaces and lowercase, for title matching."""
     return _NORMALIZE_RE.sub(" ", name).strip().lower()
+
+
+def _slugify_folder_name(name: str) -> str:
+    """Strip a leading Dewey-style number, then lowercase/hyphenate — "000 - Information Science" -> "information-science"."""
+    name = _LEADING_NUMBER_RE.sub("", name)
+    name = _NON_SLUG_RE.sub("", name)
+    return _NORMALIZE_RE.sub("-", name).strip("-").lower()
 
 
 def _file_from_parts(path: Path, meta: dict, body: str) -> File:
