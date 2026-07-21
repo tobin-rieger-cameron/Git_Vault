@@ -49,7 +49,7 @@ Debug logging: every run writes `ChatUI/program_files/chatui_debug.log` (gitigno
 
 ## Command surface
 
-Click a file in the tree, or fuzzy-search for one (`ctrl+f`), to make it the *active file* — every per-file command below acts on whichever one is currently active, so there's no separate lookup step and no way to accidentally target something other than what's on screen. Autocomplete (Tab or →) completes any command below as you type it.
+Click a file in the tree, or fuzzy-search for one (`ctrl+f`), to make it the *active file* — every per-file command below acts on whichever one is currently active, so there's no separate lookup step and no way to accidentally target something other than what's on screen. Click a folder instead of a file to select it for the folder-scoped commands below. Autocomplete (Tab or →) completes any command below as you type it.
 
 | Input | Verb |
 |---|---|
@@ -57,12 +57,15 @@ Click a file in the tree, or fuzzy-search for one (`ctrl+f`), to make it the *ac
 | `/draft` | Revise the active file — write an instruction next, `/done` saves |
 | `/draft <subject>` | Start a brand-new paper titled subject, then revise as above |
 | `/tags`, `/wikilinks`, `/folder` (or just mentioning one) | Classify: suggest tags / wikilinks / folder for the active file |
+| `/tags` with a folder selected | Sync every file in that folder to the current folder structure: add missing folder-derived tags, remove stale ones left over from before the folder was moved |
 | `/review` | Generate recall questions for the active file, or list papers due for review if none is active |
 | `/ingest` | Rebuild the vector database from vault files |
 | `/web` | Toggle whether Ask can reach for the web_search tool |
 | `/model [name]` | Show or switch the active chat model |
 | `/explorer` (or `f2`) | Toggle the file tree |
 | `/palette` (or `ctrl+p`) | Open the command palette |
+
+The file tree polls the vault every couple of seconds and always reflects what's actually on disk, whether or not `/ingest` has run: a new file shows up on its own, colored green until it's embedded; a path still in the ingest index with no file on disk anymore shows in red as a `[stale index]` entry.
 
 The old app's much larger command list (`/organize`, `/distill`, `/harvest`, `/update`/`/apply`, `/export`, etc.) was not carried forward as-is — `/organize`'s batch-classification model is replaced by inline, per-file classification (`/tags`/`/wikilinks`/`/folder` above), and the `/update`/`/apply` self-modifying-code pipeline was dropped entirely (didn't serve the app's actual purpose).
 

@@ -1,3 +1,7 @@
+---
+title: Forcing Microsoft Fonts in Obsidian - Linux Electron
+tags: [how-to, Obsidian, CSS, Linux, study-notes]
+---
 
 Microsoft fonts like Georgia or <span style=font-family:"TimesNewRoman";>Times New Roman</span> default to Liberation alternatives on Linux. In a sandboxed space (i.e. apps running through Electron,) it becomes difficult to force the use of non-linux fonts.
 
