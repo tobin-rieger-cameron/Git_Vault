@@ -80,7 +80,12 @@ class ModelClient:
         on_token: Callable[[str], None] | None = None,
         on_tool_call: Callable[[str, dict], None] | None = None,
     ) -> str:
-        """Run prompt through a tool-calling loop (model decides when to call a tool) and return the final answer."""
+        """Run prompt through a tool-calling loop (model decides when to call a tool) and return the final answer.
+
+        Every round streams (tool-call rounds carry no content in practice, so on_token only ever
+        fires real text during the final answer) — the caller sees tokens as they're predicted
+        instead of waiting for the whole response.
+        """
         if not tools:
             return await self.stream(prompt, on_token)
 
@@ -89,9 +94,9 @@ class ModelClient:
         messages: list = [HumanMessage(content=prompt)]
 
         for _ in range(_MAX_TOOL_ITERATIONS):
-            response = await self._invoke(bound, messages)
+            response = await self._stream_round(bound, messages, on_token)
             if not response.tool_calls:
-                return self._finish(response.content, on_token)
+                return response.content
             messages.append(response)
             for call in response.tool_calls:
                 if on_tool_call is not None:
@@ -101,20 +106,21 @@ class ModelClient:
                 messages.append(ToolMessage(content=result, tool_call_id=call["id"]))
 
         messages.append(HumanMessage(content="Answer now, using what you've found so far."))
-        response = await self._invoke(self._chat, messages)
-        return self._finish(response.content, on_token)
+        response = await self._stream_round(self._chat, messages, on_token)
+        return response.content
 
-    async def _invoke(self, model, messages: list) -> AIMessage:
+    async def _stream_round(self, model, messages: list, on_token: Callable[[str], None] | None) -> AIMessage:
+        """Stream one model turn, merging chunks (langchain accumulates tool_call_chunks into .tool_calls)."""
+        full: AIMessage | None = None
         try:
-            return await model.ainvoke(messages)
+            async for chunk in model.astream(messages):
+                full = chunk if full is None else full + chunk
+                if chunk.content and on_token is not None:
+                    on_token(chunk.content)
         except Exception as exc:
             _log.error("tool-calling call failed: %s", exc)
             raise ModelUnavailableError(f"Chat model unavailable: {exc}") from exc
-
-    def _finish(self, text: str, on_token: Callable[[str], None] | None) -> str:
-        if on_token is not None:
-            on_token(text)
-        return text
+        return full
 
     async def ask_coding(self, prompt: str) -> str:
         """Make a single non-streaming call to the coding model and return the stripped response text."""

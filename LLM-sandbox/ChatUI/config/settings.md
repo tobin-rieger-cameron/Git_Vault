@@ -55,7 +55,7 @@ YAML frontmatter tags are parsed and stamped onto each chunk's metadata so they 
 | `WEAK_MATCH` | chunks exist but below `similarity_threshold` | Answer primarily from the model's own training knowledge; use vault notes only if directly relevant; tools available to try a different search |
 | `MODEL_KNOWLEDGE` | no chunks retrieved at all | Own knowledge, but nudged to double-check with `search_vault` first |
 
-All prompts include the last `history_window` exchanges. `ModelClient.stream_with_tools()` drives the tool-calling loop (max 4 rounds before a forced final answer).
+All prompts include the last `history_window` exchanges. `ModelClient.stream_with_tools()` drives the tool-calling loop (max 4 rounds before a forced final answer) and streams every round — tool-call rounds carry no content in practice, so `on_token` only ever fires real text during the final answer, token by token as it's predicted.
 
 ### 3. Draft a paper (`/draft <subject>`)
 

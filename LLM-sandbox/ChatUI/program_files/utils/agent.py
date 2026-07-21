@@ -26,11 +26,13 @@ async def run(
     tools: list[ToolSpec],
     touched_sources: list[Path],
     on_tool_call: Callable[[str, dict], None] | None = None,
+    on_token: Callable[[str], None] | None = None,
 ) -> AgentResult:
     """Run instructions through model's tool-calling loop, then package the result with what it touched.
 
     touched_sources is populated by the tool handlers themselves as they run (see vault_tools.py) —
     the caller passes the same list it built the toolbox with, so this just reads it back afterward.
+    on_token fires with real predicted tokens as they arrive during the final answer.
     """
     transcript: list[tuple[str, dict]] = []
 
@@ -39,6 +41,6 @@ async def run(
         if on_tool_call is not None:
             on_tool_call(name, args)
 
-    answer = await model.stream_with_tools(instructions, tools, on_tool_call=record_call)
+    answer = await model.stream_with_tools(instructions, tools, on_token=on_token, on_tool_call=record_call)
     sources = sorted(set(touched_sources), key=str)
     return AgentResult(answer=answer, sources=sources, transcript=transcript)

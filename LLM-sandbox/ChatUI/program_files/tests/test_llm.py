@@ -12,6 +12,9 @@ from program_files.utils.tools import ToolSpec
 class _FakeChunk:
     content: str
 
+    def __add__(self, other: "_FakeChunk") -> "_FakeChunk":
+        return _FakeChunk(content=self.content + other.content)
+
 
 class _FakeStreamingModel:
     """Mimics ChatOllama's .astream() interface: yields chunks with a .content
@@ -43,22 +46,25 @@ def _client_with_fakes(chat_text: str = "", coding_text: str = "", error: Except
 
 @dataclass
 class _FakeToolResponse:
-    """Mimics an AIMessage: .content is the text, .tool_calls is empty once the model is done."""
+    """Mimics an AIMessageChunk: .content is the text, .tool_calls is empty once the model is done."""
 
     content: str
     tool_calls: list[dict] = field(default_factory=list)
 
+    def __add__(self, other: "_FakeToolResponse") -> "_FakeToolResponse":
+        return _FakeToolResponse(content=self.content + other.content, tool_calls=other.tool_calls or self.tool_calls)
+
 
 class _FakeBoundModel:
-    """Mimics the object bind_tools() returns: scripted responses, one per .ainvoke() call."""
+    """Mimics the object bind_tools() returns: scripted responses, one per .astream() call (single chunk each)."""
 
     def __init__(self, responses: list[_FakeToolResponse]) -> None:
         self._responses = list(responses)
         self.calls: list[list] = []
 
-    async def ainvoke(self, messages: list):
+    async def astream(self, messages: list):
         self.calls.append(list(messages))
-        return self._responses.pop(0)
+        yield self._responses.pop(0)
 
 
 class _FakeToolCallingModel(_FakeStreamingModel):

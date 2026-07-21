@@ -405,16 +405,28 @@ class ChatApp(App):
         def on_tool_call(name: str, args: dict) -> None:
             _write_status(log, f"tool: {name}({_format_tool_args(args)})")
 
+        live = Static(id="ask-live")
+        chat = self.query_one("#chat", Vertical)
+        await chat.mount(live, before="#inputbar")
+        tokens: list[str] = []
+
+        def on_token(token: str) -> None:
+            tokens.append(token)
+            live.update(Text("".join(tokens), style=theme.BRIGHT))
+
         try:
             result = await self.tools.get("answer_question").handler({
                 "question": question, "history": self._history, "web_enabled": self._web_enabled,
                 "top_k": self.settings.top_k, "similarity_threshold": self.settings.similarity_threshold,
                 "history_window": self.settings.history_window, "on_tool_call": on_tool_call,
+                "on_token": on_token,
             })
         except ChatUIError as exc:
+            await live.remove()
             _log.error("ask failed for %r: %s", question, exc)
             _write_status(log, f"couldn't answer: {exc}")
             return
+        await live.remove()
         self._history.append((question, result.answer))
         _write_answer(log, result.answer)
         if result.sources:

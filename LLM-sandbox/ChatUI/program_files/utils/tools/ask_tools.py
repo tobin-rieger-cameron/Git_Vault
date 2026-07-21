@@ -42,6 +42,7 @@ def build_ask_tools(vault: Vault, retriever: Retriever, model: ModelClient, web_
             history_window=args.get("history_window", 2),
             web_search_results=web_search_results,
             on_tool_call=args.get("on_tool_call"),
+            on_token=args.get("on_token"),
         )
 
     return [
@@ -75,6 +76,7 @@ async def answer_question(
     history_window: int = 2,
     web_search_results: int = 3,
     on_tool_call: Callable[[str, dict], None] | None = None,
+    on_token: Callable[[str], None] | None = None,
 ) -> AskResult:
     """Route the question through VAULT/WEAK_MATCH/MODEL_KNOWLEDGE per CLAUDE.md's retrieval table, agentically."""
     chunks = retriever.search(question, top_k)
@@ -109,7 +111,7 @@ async def answer_question(
     else:
         prompt = _build_knowledge_prompt(question, history_text, depth, web_enabled)
 
-    result = await agent.run(model, prompt, toolbox, touched_sources, on_tool_call=on_tool_call)
+    result = await agent.run(model, prompt, toolbox, touched_sources, on_tool_call=on_tool_call, on_token=on_token)
     sources = sorted({_relative_to_vault(p, vault) for p in result.sources}, key=str)
     return AskResult(answer=result.answer, path=path, sources=sources)
 
