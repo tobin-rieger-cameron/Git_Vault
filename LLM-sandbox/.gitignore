@@ -2,6 +2,7 @@ local_db/
 .chatui_sync
 .chatui.pid
 chatui_debug.log
+conversations/transcripts/
 __pycache__/
 *.pyc
 .obsidian/

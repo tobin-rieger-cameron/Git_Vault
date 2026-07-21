@@ -43,6 +43,7 @@ def build_ask_tools(vault: Vault, retriever: Retriever, model: ModelClient, web_
             web_search_results=web_search_results,
             on_tool_call=args.get("on_tool_call"),
             on_token=args.get("on_token"),
+            on_status=args.get("on_status"),
         )
 
     return [
@@ -77,8 +78,11 @@ async def answer_question(
     web_search_results: int = 3,
     on_tool_call: Callable[[str, dict], None] | None = None,
     on_token: Callable[[str], None] | None = None,
+    on_status: Callable[[str], None] | None = None,
 ) -> AskResult:
     """Route the question through VAULT/WEAK_MATCH/MODEL_KNOWLEDGE per CLAUDE.md's retrieval table, agentically."""
+    if on_status is not None:
+        on_status("searching vault…")
     chunks = retriever.search(question, top_k)
     if chunks:
         top_tags = chunks[0].tags
@@ -95,6 +99,8 @@ async def answer_question(
         "path=%s scores=%s threshold=%s question=%r",
         path.name, [round(c.score, 3) for c in chunks], similarity_threshold, question,
     )
+    if on_status is not None:
+        on_status(_status_for_path(path, chunks))
     history_text = _format_history(history, history_window)
     topic = _extract_topic(question)
     depth = _depth_hint(topic) if topic else ""
@@ -111,9 +117,20 @@ async def answer_question(
     else:
         prompt = _build_knowledge_prompt(question, history_text, depth, web_enabled)
 
+    if on_status is not None:
+        on_status(f"asking {model.chat_model_name}…")
     result = await agent.run(model, prompt, toolbox, touched_sources, on_tool_call=on_tool_call, on_token=on_token)
     sources = sorted({_relative_to_vault(p, vault) for p in result.sources}, key=str)
     return AskResult(answer=result.answer, path=path, sources=sources)
+
+
+def _status_for_path(path: RetrievalPath, chunks: list[Chunk]) -> str:
+    """Phase-status line for the retrieval path just chosen, for UI display while the model runs."""
+    if path is RetrievalPath.VAULT:
+        return f"found {len(chunks)} relevant note(s), top score {chunks[0].score:.2f}"
+    if path is RetrievalPath.WEAK_MATCH:
+        return "weak vault match — answering mostly from training knowledge"
+    return "no relevant notes — answering from training knowledge"
 
 
 def choose_retrieval_path(chunks: list[Chunk], threshold: float) -> RetrievalPath:

@@ -10,6 +10,7 @@ from program_files.utils.config import load_settings
 from program_files.utils.debug_log import configure as configure_debug_log
 from program_files.utils.llm import ModelClient
 from program_files.utils.retrieval import Retriever
+from program_files.utils.transcript import TranscriptWriter
 from program_files.utils.vault import Vault
 
 
@@ -28,8 +29,11 @@ def main() -> None:
         chunk_overlap=settings.chunk_overlap,
     )
     model = ModelClient(chat_model=settings.chat_model, coding_model=settings.coding_model)
+    transcript = TranscriptWriter(
+        log_dir=Path(__file__).parent.parent.parent / "conversations" / "transcripts", vault_name=vault.root.name
+    )
 
-    ChatApp(vault=vault, retriever=retriever, model=model, settings=settings).run()
+    ChatApp(vault=vault, retriever=retriever, model=model, settings=settings, transcript=transcript).run()
 
 
 if __name__ == "__main__":

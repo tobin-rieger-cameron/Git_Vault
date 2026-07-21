@@ -17,7 +17,7 @@ from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
 from textual.suggester import SuggestFromList
-from textual.widgets import Header, Input, Label, RichLog, Static, Tree
+from textual.widgets import Header, Input, Label, Static, Tree
 
 from program_files.utils.config import Settings
 from program_files.utils.errors import ChatUIError
@@ -26,7 +26,9 @@ from program_files.utils.models import ClassificationSuggestion, File, FolderTag
 from program_files.utils.retrieval import Retriever
 from program_files.utils.tools import build_registry
 from program_files.utils.tools import classify_tools, draft_tools, review_tools
+from program_files.utils.transcript import TranscriptWriter
 from program_files.ui import theme
+from program_files.ui.chatlog import ChatLog
 from program_files.ui.checklist import SuggestionChecklist
 from program_files.ui.picker import FilePicker
 from program_files.ui.streaming import StreamingText
@@ -74,25 +76,24 @@ def _match_suggestion_kind(text: str) -> str | None:
     return None
 
 
-def _write_hint(log: RichLog, text: str) -> None:
-    log.write(Text(text, style=theme.MUTED))
+def _write_hint(app: "ChatApp", text: str) -> None:
+    app.query_one("#log", ChatLog).write_hint(text)
+    app.transcript.write_hint(text)
 
 
-def _write_you(log: RichLog, text: str) -> None:
-    log.write(Text.assemble(("› ", f"bold {theme.ACCENT}"), (text, theme.MUTED)))
+def _write_you(app: "ChatApp", text: str) -> None:
+    app.query_one("#log", ChatLog).write_you(text)
+    app.transcript.write_you(text)
 
 
-def _write_answer(log: RichLog, text: str) -> None:
-    log.write(Text(text, style=theme.BRIGHT))
+def _write_answer(app: "ChatApp", text: str) -> None:
+    app.query_one("#log", ChatLog).write_answer(text)
+    app.transcript.write_answer(text)
 
 
-def _write_status(log: RichLog, text: str) -> None:
-    """Write stylized text."""
-    label, sep, detail = text.partition(":")
-    if not sep:
-        log.write(Text(text, style=theme.ACCENT))
-        return
-    log.write(Text.assemble((label + sep, theme.ACCENT), (detail, theme.ACCENT_MUTED)))
+def _write_status(app: "ChatApp", text: str) -> None:
+    app.query_one("#log", ChatLog).write_status(text)
+    app.transcript.write_status(text)
 
 
 def _format_tool_args(args: dict) -> str:
@@ -196,12 +197,15 @@ class ChatApp(App):
                 yield command
 
     #TODO: why is init all the way down here?
-    def __init__(self, vault: Vault, retriever: Retriever, model: ModelClient, settings: Settings) -> None:
+    def __init__(
+        self, vault: Vault, retriever: Retriever, model: ModelClient, settings: Settings, transcript: TranscriptWriter
+    ) -> None:
         super().__init__()
         self.vault = vault
         self.retriever = retriever
         self.model = model
         self.settings = settings
+        self.transcript = transcript
         self.tools = build_registry(vault, retriever, model, settings)
         self._active_file: File | None = None
         self._selected_folder: Path | None = None
@@ -227,10 +231,7 @@ class ChatApp(App):
                 with VerticalScroll(id="preview-scroll"):
                     yield StreamingText(id="preview-body")
             with Vertical(id="chat"):
-                # min_width defaults to 78, so RichLog lays out assuming ≥78 columns even in
-                # this ~70-wide pane; the overflow then scrolls off horizontally (invisibly,
-                # scrollbars are hidden) instead of wrapping. min_width=1 wraps to the real width.
-                yield RichLog(id="log", wrap=True, min_width=1, markup=False)
+                yield ChatLog(id="log")
                 with Horizontal(id="inputbar"):
                     yield Label("›", id="caret")
                     yield Input(id="cmd", placeholder="_", suggester=SuggestFromList(_COMMANDS, case_sensitive=False))
@@ -238,11 +239,10 @@ class ChatApp(App):
 
     def on_mount(self) -> None:
         self.title = f"chatui — {self.vault.root.name}/"
-        log = self.query_one("#log", RichLog)
-        _write_hint(log, "/explorer or f2 toggles the file tree. ctrl+f or click search to find a file.")
-        _write_hint(log, "Click a file (or jump to one), then /draft to start revising it — write an")
-        _write_hint(log, "instruction, /done saves. /tags, /wikilinks, /folder, /review, /ingest,")
-        _write_hint(log, "/model, /web, /palette also work.")
+        _write_hint(self, "/explorer or f2 toggles the file tree. ctrl+f or click search to find a file.")
+        _write_hint(self, "Click a file (or jump to one), then /draft to start revising it — write an")
+        _write_hint(self, "instruction, /done saves. /tags, /wikilinks, /folder, /review, /ingest,")
+        _write_hint(self, "/model, /web, /palette also work.")
         self.query_one("#cmd", Input).focus()
         self.query_one(StreamingText).on_link_click = self._open_wikilink_target
         self._update_statusbar()
@@ -310,9 +310,8 @@ class ChatApp(App):
                 return
 
     def _set_active_file(self, file: File) -> None:
-        log = self.query_one("#log", RichLog)
         if self._drafting and self._active_file is not None:
-            _write_status(log, f'"{self._active_file.title}": left with unsaved changes (switched away)')
+            _write_status(self, f'"{self._active_file.title}": left with unsaved changes (switched away)')
         self._active_file = file
         self._selected_folder = None
         self._classification = None
@@ -399,68 +398,65 @@ class ChatApp(App):
     # --- Ask -----------------------------------------------------------------------------
 
     async def _ask(self, question: str) -> None:
-        log = self.query_one("#log", RichLog)
-        _write_status(log, "thinking…")
+        def on_status(text: str) -> None:
+            _write_status(self, text)
 
         def on_tool_call(name: str, args: dict) -> None:
-            _write_status(log, f"tool: {name}({_format_tool_args(args)})")
+            _write_status(self, f"tool: {name}({_format_tool_args(args)})")
 
-        live = Static(id="ask-live")
-        chat = self.query_one("#chat", Vertical)
-        await chat.mount(live, before="#inputbar")
+        # Streamed into its own resting widget from the first token, so the finished answer
+        # never has to jump from a scratch location into the log — it's the same widget throughout.
+        stream = self.query_one("#log", ChatLog).begin_streaming()
         tokens: list[str] = []
 
         def on_token(token: str) -> None:
             tokens.append(token)
-            live.update(Text("".join(tokens), style=theme.BRIGHT))
+            stream.update("".join(tokens))
 
         try:
             result = await self.tools.get("answer_question").handler({
                 "question": question, "history": self._history, "web_enabled": self._web_enabled,
                 "top_k": self.settings.top_k, "similarity_threshold": self.settings.similarity_threshold,
                 "history_window": self.settings.history_window, "on_tool_call": on_tool_call,
-                "on_token": on_token,
+                "on_token": on_token, "on_status": on_status,
             })
         except ChatUIError as exc:
-            await live.remove()
+            stream.remove()
             _log.error("ask failed for %r: %s", question, exc)
-            _write_status(log, f"couldn't answer: {exc}")
+            _write_status(self, f"couldn't answer: {exc}")
             return
-        await live.remove()
+        stream.update(result.answer)  # guarantee the resting text matches the returned answer exactly
+        self.transcript.write_answer(result.answer)
         self._history.append((question, result.answer))
-        _write_answer(log, result.answer)
         if result.sources:
-            _write_status(log, "source: " + ", ".join(str(p) for p in result.sources))
+            _write_status(self, "source: " + ", ".join(str(p) for p in result.sources))
 
     # --- Draft -----------------------------------------------------------------------------
 
     async def _start_or_continue_draft(self, subject: str | None) -> None:
-        log = self.query_one("#log", RichLog)
         if subject is not None:
             self._set_active_file(draft_tools.edit_draft(subject, self.vault))
         elif self._active_file is None:
-            _write_status(log, "nothing to draft: click a file, search for one, or /draft <subject> to start new")
+            _write_status(self, "nothing to draft: click a file, search for one, or /draft <subject> to start new")
             return
         self._drafting = True
-        _write_status(log, f'drafting "{self._active_file.title}"... (write an instruction, /done to save and stop)')
+        _write_status(self, f'drafting "{self._active_file.title}"... (write an instruction, /done to save and stop)')
 
     async def _revise_active_draft(self, instruction: str) -> None:
-        log = self.query_one("#log", RichLog)
         old_body = self._active_file.body
         try:
             revised = await draft_tools.revise_draft(self._active_file, instruction, self.model)
         except ChatUIError as exc:
             _log.error("draft revision failed for %r: %s", self._active_file.path, exc)
-            _write_status(log, f"revision failed: {exc}")
+            _write_status(self, f"revision failed: {exc}")
             return
         self._active_file = revised
         self.query_one(StreamingText).update(_diff_highlight(old_body, revised.body))
-        _write_status(log, "revised — another instruction, or /done to save and stop")
+        _write_status(self, "revised — another instruction, or /done to save and stop")
 
     async def _finish_draft(self) -> None:
-        log = self.query_one("#log", RichLog)
         if not self._drafting or self._active_file is None:
-            _write_status(log, "nothing being drafted")
+            _write_status(self, "nothing being drafted")
             return
         draft_tools.save_draft(self._active_file, self.vault)
         self._drafting = False
@@ -468,9 +464,9 @@ class ChatApp(App):
             self.retriever.reingest_one(self._active_file)
         except ChatUIError as exc:
             _log.error("reindex failed for %s: %s", self._active_file.path, exc)
-            _write_status(log, f"saved, but re-indexing failed: {exc}")
+            _write_status(self, f"saved, but re-indexing failed: {exc}")
         else:
-            _write_status(log, f'"{self._active_file.title}": saved')
+            _write_status(self, f'"{self._active_file.title}": saved')
         self.query_one(FilePicker).reload(self.retriever.ingested_paths())
         self._refresh_preview()
 
@@ -480,23 +476,21 @@ class ChatApp(App):
         if self._active_file is None:
             return None
         if self._classification is None or self._classification.file_path != self._active_file.path:
-            log = self.query_one("#log", RichLog)
             try:
                 self._classification = await classify_tools.suggest_classification(
                     self._active_file, self.vault, self.model,
-                    on_status=lambda text: _write_status(log, text),
+                    on_status=lambda text: _write_status(self, text),
                 )
             except ChatUIError as exc:
                 _log.error("classification failed for %s: %s", self._active_file.path, exc)
-                _write_status(log, f"couldn't get suggestions: {exc}")
+                _write_status(self, f"couldn't get suggestions: {exc}")
                 return None
             _log.info("classification for %s: %s", self._active_file.path, self._classification)
         return self._classification
 
     async def _show_suggestion_checklist(self, kind: str) -> None:
-        log = self.query_one("#log", RichLog)
         if self._active_file is None:
-            _write_status(log, f"nothing to suggest {kind} for: click a file or search for one first")
+            _write_status(self, f"nothing to suggest {kind} for: click a file or search for one first")
             return
         suggestion = await self._ensure_classification()
         if suggestion is None:
@@ -506,7 +500,7 @@ class ChatApp(App):
         else:
             items = [suggestion.suggested_folder] if suggestion.suggested_folder else []
         if not items:
-            _write_status(log, f"no {kind} suggested")
+            _write_status(self, f"no {kind} suggested")
             return
         await self._open_checklist(kind, items)
 
@@ -544,11 +538,10 @@ class ChatApp(App):
         to the current folder structure — adds missing folder-derived tags (Vault.folder_tags) and
         strips stale ones left over from a folder that was since moved/renamed — all pre-checked
         for review."""
-        log = self.query_one("#log", RichLog)
         folder = self._selected_folder
         plan = classify_tools.suggest_folder_tags(folder, self.vault)
         if not plan:
-            _write_status(log, f"{folder.relative_to(self.vault.root)}: every file's tags already match the folder structure")
+            _write_status(self, f"{folder.relative_to(self.vault.root)}: every file's tags already match the folder structure")
             return
         self._folder_tag_plan = list(plan.items())
         items = [
@@ -589,10 +582,7 @@ class ChatApp(App):
         await self.query_one("#chat", Vertical).mount(checklist, before="#inputbar")
         checklist.focus()
         self._refresh_preview()
-        _write_status(
-            self.query_one("#log", RichLog),
-            f"{kind}: space/enter/click to toggle, /done to apply, escape to cancel",
-        )
+        _write_status(self, f"{kind}: space/enter/click to toggle, /done to apply, escape to cancel")
 
     def on_suggestion_checklist_toggled(self, _event: SuggestionChecklist.Toggled) -> None:
         self._refresh_preview()
@@ -610,7 +600,7 @@ class ChatApp(App):
     async def _dismiss_checklist(self, reason: str) -> None:
         kind = self._checklist_kind
         await self._close_checklist()
-        _write_status(self.query_one("#log", RichLog), f"{kind}: {reason}")
+        _write_status(self, f"{kind}: {reason}")
 
     async def _apply_checklist(self) -> None:
         kind = self._checklist_kind
@@ -620,11 +610,10 @@ class ChatApp(App):
         # both, and reading them afterward would silently see nothing checked as "applied".
         wikilink_kind = dict(self._checklist_wikilink_kind)
         folder_tag_plan = list(self._folder_tag_plan)
-        log = self.query_one("#log", RichLog)
         await self._close_checklist()
 
         if not checked:
-            _write_status(log, f"{kind}: nothing checked, no changes made")
+            _write_status(self, f"{kind}: nothing checked, no changes made")
             return
 
         if kind == "wikilinks":
@@ -647,7 +636,7 @@ class ChatApp(App):
             if self._active_file is not None and self._active_file.path in plan:
                 self._active_file = self.vault.load_file(self._active_file.path)
             self._refresh_preview()
-            _write_status(log, f"folder-tags: applied to {len(updated)} file(s)")
+            _write_status(self, f"folder-tags: applied to {len(updated)} file(s)")
             return
         else:
             partial = ClassificationSuggestion(
@@ -663,7 +652,7 @@ class ChatApp(App):
             _log.warning("best-effort reindex failed for %s: %s", self._active_file.path, exc)
         self.query_one(FilePicker).reload(self.retriever.ingested_paths())
         self._refresh_preview()
-        _write_status(log, f"{kind}: applied")
+        _write_status(self, f"{kind}: applied")
 
     def _flash_status(self, text: str) -> None:
         self.query_one("#statusbar", Static).update(Text(text, style=theme.ACCENT))
@@ -671,52 +660,49 @@ class ChatApp(App):
     # --- Review ------------------------------------------------------------------------------
 
     async def _start_review(self) -> None:
-        log = self.query_one("#log", RichLog)
         if self._active_file is None:
             due = review_tools.files_due_for_review(
                 self.vault, timedelta(days=self.settings.review_staleness_days)
             )
             if not due:
-                _write_status(log, "nothing due for review")
+                _write_status(self, "nothing due for review")
                 return
             titles = ", ".join(f.title for f in due[:5])
-            _write_status(log, f"due for review: {titles} — click one, or search for one, first")
+            _write_status(self, f"due for review: {titles} — click one, or search for one, first")
             return
-        _write_status(log, "thinking…")
+        _write_status(self, "thinking…")
         try:
             questions = await review_tools.generate_review_questions(self._active_file, self.model)
         except ChatUIError as exc:
-            _write_status(log, f"couldn't generate questions: {exc}")
+            _write_status(self, f"couldn't generate questions: {exc}")
             return
         if not questions:
-            _write_status(log, "no questions generated")
+            _write_status(self, "no questions generated")
             return
         self._review_queue = questions
         self._review_index = 0
         self._ask_review_question()
 
     def _ask_review_question(self) -> None:
-        log = self.query_one("#log", RichLog)
         cmd = self.query_one("#cmd", Input)
         position = f"{self._review_index + 1}/{len(self._review_queue)}"
-        _write_status(log, f"review {position}: {self._review_queue[self._review_index].question}")
+        _write_status(self, f"review {position}: {self._review_queue[self._review_index].question}")
         cmd.placeholder = "your answer, or /hint, or /done"
 
     def _resolve_review(self, answer: str) -> None:
-        log = self.query_one("#log", RichLog)
         cmd = self.query_one("#cmd", Input)
         if answer == "/hint":
-            _write_status(log, f"hint: {self._review_queue[self._review_index].answer_hint}")
+            _write_status(self, f"hint: {self._review_queue[self._review_index].answer_hint}")
             return
         if answer == "/done":
-            _write_status(log, "review: stopped early")
+            _write_status(self, "review: stopped early")
             self._review_queue = []
             cmd.placeholder = "_"
             return
         self._review_index += 1
         if self._review_index >= len(self._review_queue):
             self._active_file = review_tools.mark_reviewed(self._active_file, self.vault)
-            _write_status(log, "review: done — marked reviewed")
+            _write_status(self, "review: done — marked reviewed")
             self._review_queue = []
             cmd.placeholder = "_"
             return
@@ -725,28 +711,26 @@ class ChatApp(App):
     # --- Support commands ----------------------------------------------------------------
 
     async def _handle_ingest(self) -> None:
-        log = self.query_one("#log", RichLog)
-        _write_status(log, "ingesting…")
+        _write_status(self, "ingesting…")
         try:
             # Retriever.ingest() is synchronous (chromadb/langchain, no async), so run it in a
             # thread to keep embedding from stalling the UI.
             stats = await asyncio.to_thread(self.retriever.ingest, self.vault.list_files())
         except ChatUIError as exc:
             _log.error("ingest failed: %s", exc)
-            _write_status(log, f"ingest failed: {exc}")
+            _write_status(self, f"ingest failed: {exc}")
             return
-        _write_status(log, f"ingest: {stats.new} new, {stats.updated} updated, {stats.removed} removed, {stats.unchanged} unchanged")
+        _write_status(self, f"ingest: {stats.new} new, {stats.updated} updated, {stats.removed} removed, {stats.unchanged} unchanged")
         self.query_one(FilePicker).reload(self.retriever.ingested_paths())
         self._update_statusbar()
 
     def _handle_model_command(self, text: str) -> None:
-        log = self.query_one("#log", RichLog)
         name = text[len("/model"):].strip()
         if not name:
-            _write_status(log, f"model: {self.model.chat_model_name}")
+            _write_status(self, f"model: {self.model.chat_model_name}")
             return
         self.model.switch_chat_model(name)
-        _write_status(log, f"model: switched to {name}")
+        _write_status(self, f"model: switched to {name}")
         self._update_statusbar()
 
     # --- Dispatch ----------------------------------------------------------------------------
@@ -755,7 +739,6 @@ class ChatApp(App):
     async def on_cmd_submitted(self, event: Input.Submitted) -> None:
         text = event.value.strip()
         event.input.value = ""
-        log = self.query_one("#log", RichLog)
 
         if self._checklist is not None:
             if text == "/done":
@@ -763,18 +746,18 @@ class ChatApp(App):
             elif text in ("/cancel", "/dismiss"):
                 await self._dismiss_checklist("cancelled")
             elif text:
-                _write_you(log, text)
-                _write_status(log, f"{self._checklist_kind}: /done to apply, /cancel to discard")
+                _write_you(self, text)
+                _write_status(self, f"{self._checklist_kind}: /done to apply, /cancel to discard")
             return
 
         if self._review_queue:
-            _write_you(log, text or "(next)")
+            _write_you(self, text or "(next)")
             self._resolve_review(text)
             return
 
         if not text:
             return
-        _write_you(log, text)
+        _write_you(self, text)
         _log.debug("dispatch: %r (active_file=%s)", text, self._active_file.path if self._active_file else None)
 
         if text == "/done":
@@ -788,7 +771,7 @@ class ChatApp(App):
             return
         if text == "/web":
             self._web_enabled = not self._web_enabled
-            _write_status(log, f"web search: {'on' if self._web_enabled else 'off'}")
+            _write_status(self, f"web search: {'on' if self._web_enabled else 'off'}")
             self._update_statusbar()
             return
         if text == "/model" or text.startswith("/model "):
