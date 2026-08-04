@@ -1,5 +1,7 @@
-"""draft_note — back-and-forth authoring of a formatted article. No retrieval loop: the model works
-directly from the draft in hand, revising it per instruction."""
+"""
+    draft_note — back-and-forth authoring of a formatted article.
+    the model works directly from the draft in hand, revising it per instruction.
+"""
 
 from __future__ import annotations
 
@@ -54,6 +56,9 @@ def edit_draft(subject: str, vault: Vault) -> File:
 
 async def revise_draft(file: File, instruction: str, model: ModelClient) -> File:
     """Ask the model to rewrite the full draft per instruction; the caller still needs to save_draft()."""
+
+    #TODO: a model should never rewrite a full file, it should only sugest pieces.
+
     prompt = _build_revision_prompt(file, instruction)
     new_body = await model.stream(prompt)
     new_body = new_body.strip() + "\n"

@@ -24,8 +24,7 @@ from program_files.utils.errors import ChatUIError
 from program_files.utils.llm import ModelClient
 from program_files.utils.models import ClassificationSuggestion, File, FolderTagChange, ReviewQuestion
 from program_files.utils.retrieval import Retriever
-from program_files.utils.tools import build_registry
-from program_files.utils.tools import classify_tools, draft_tools, review_tools
+from program_files.utils.tools import classify_tools, draft_tools, review_tools, build_registry
 from program_files.utils.transcript import TranscriptWriter
 from program_files.ui import theme
 from program_files.ui.chatlog import ChatLog
@@ -34,20 +33,13 @@ from program_files.ui.picker import FilePicker
 from program_files.ui.streaming import StreamingText
 from program_files.utils.vault import Vault, find_wikilinks, normalize_link_target, render_frontmatter
 
+
 _log = logging.getLogger(__name__)
-
-_COMMANDS = [
-    "/draft", "/done", "/tags", "/wikilinks", "/folder", "/review",
-    "/ingest", "/web", "/model", "/explorer", "/palette",
-]
-
-_FILE_TREE_POLL_SECONDS = 2.0  # how often the sidebar re-scans disk for files added/removed
-                               # outside the app; list_files() re-parses every file, so this
-                               # trades a little steady background cost for near-live updates
+_COMMANDS = [ "/draft", "/done", "/tags", "/wikilinks", "/folder", "/review", "/ingest", "/web", "/model", "/explorer", "/palette", ]
+_FILE_TREE_POLL_SECONDS = 2.0
 
 
 def _diff_highlight(old: str, new: str) -> Text:
-    """Return inserted or changed spans styled in color."""
     matcher = difflib.SequenceMatcher(None, old, new, autojunk=False)
     result = Text()
     for opcode, _i1, _i2, j1, j2 in matcher.get_opcodes():
@@ -59,7 +51,6 @@ def _diff_highlight(old: str, new: str) -> Text:
 
 
 def _truncate(text: str, limit: int) -> str:
-    """Cut text to limit chars, appending "..." (so the visible result can run 3 chars longer)."""
     return text if len(text) <= limit else f"{text[:limit]}..."
 
 
@@ -97,7 +88,6 @@ def _write_status(app: "ChatApp", text: str) -> None:
 
 
 def _format_tool_args(args: dict) -> str:
-    """Render a tool call's arguments compactly for a status line, e.g. query='taxonomy'."""
     rendered = ", ".join(f"{key}={_truncate(repr(value), 60)}" for key, value in args.items())
     return _truncate(rendered, 120)
 
@@ -105,6 +95,28 @@ def _format_tool_args(args: dict) -> str:
 class ChatApp(App):
     """Textual application shell."""
 
+    def __init__(
+        self, vault: Vault, retriever: Retriever, model: ModelClient, settings: Settings, transcript: TranscriptWriter
+    ) -> None:
+        super().__init__()
+        self.vault = vault
+        self.retriever = retriever
+        self.model = model
+        self.settings = settings
+        self.transcript = transcript
+        self.tools = build_registry(vault, retriever, model, settings)
+        self._active_file: File | None = None
+        self._selected_folder: Path | None = None
+        self._folder_tag_plan: list[tuple[Path, FolderTagChange]] = []
+        self._drafting = False
+        self._history: list[tuple[str, str]] = []
+        self._web_enabled = False
+        self._classification: ClassificationSuggestion | None = None
+        self._checklist: SuggestionChecklist | None = None
+        self._checklist_kind: str | None = None
+        self._checklist_wikilink_kind: dict[str, str] = {}
+        self._review_queue: list[ReviewQuestion] = []
+        self._review_index = 0
     # Every color and size below is a named value from program_files.ui.theme
     CSS = (
         """
@@ -117,14 +129,9 @@ class ChatApp(App):
 
     #sidebar { width: %(sidebar_width)s; border-right: solid %(border)s; background: %(bg)s; }
     #sidebar.collapsed { width: 0; border-right: none; display: none; }
-    /* No border-bottom here: Textual draws each widget's border independently with no shared
-       corner glyph, so a border-right meeting a border-bottom renders as a broken │ beside a
-       ─ instead of a ┬. The surface color groups these strips instead. */
     #file-search { height: %(sidebar_head_height)s; background: %(surface)s; color: %(text)s; border: none; padding: 0 1; }
     #file-search:focus { background-tint: transparent; }
     FilePicker { height: 1fr; scrollbar-size: 0 0; background: %(bg)s; color: %(text)s; }
-    /* Selected file: bright accent background with darker amber-brown text — two shades of
-       orange rather than orange-on-black. */
     FilePicker > .tree--cursor { background: %(accent)s; color: %(accent_dark)s; text-style: bold; }
     FilePicker > .tree--highlight { color: %(accent)s; }
 
@@ -134,27 +141,15 @@ class ChatApp(App):
 
     #chat { width: %(chat_width)s; background: %(bg)s; }
     #log { height: 1fr; scrollbar-size: 0 0; background: %(bg)s; color: %(text)s; }
-    /* Suggestion checklist: docked above the input bar, inline in the chat column rather than a
-       modal overlay — a suggestion is a list to review, not an interruption to dismiss. Same
-       background as #log and no border (OptionList's default draws one on all sides, reappearing
-       on :focus even after border-top alone was overridden), so it reads as more chat output
-       rather than a boxed dialog. background-tint reset for the same reason as #cmd:focus below:
-       OptionList blends in a 5%%-foreground tint by default while focused, which this widget
-       almost always is, showing up as a permanent lightened background on every row. */
     SuggestionChecklist, SuggestionChecklist:focus {
         height: auto; max-height: %(checklist_max_height)s; background: %(bg)s; color: %(text)s;
         border: none; padding: 0; scrollbar-size: 0 0; background-tint: transparent;
     }
     SuggestionChecklist > .option-list--option-highlighted { background: %(accent)s; color: %(accent_dark)s; }
-    /* Row divider recolored to match the background so it reads as a blank gap between rows
-       (see SuggestionChecklist._build_options) rather than the default visible ─── rule. */
     SuggestionChecklist > .option-list--separator { color: %(bg)s; background: %(bg)s; }
-    /* Surface color rather than a border-top, for the same reason as #file-search above. */
     #inputbar { height: %(input_bar_height)s; padding: 0 0 %(breathing_row)s 0; background: %(surface)s; }
     #caret { width: %(caret_width)s; color: %(accent)s; text-style: bold; }
     #cmd { background: %(surface)s; color: %(text)s; border: none; padding: 0; }
-    /* Input adds a background-tint on :focus by default; since this input is focused almost
-       always, that shows as a permanent mismatched patch. */
     #cmd:focus { background-tint: transparent; }
     """
         % {
@@ -178,13 +173,6 @@ class ChatApp(App):
         }
     )
 
-    # ctrl+e is taken by Input's built-in "go to end of line" and never reaches the App while
-    # the input has focus (almost always), so f2 (unclaimed) toggles the sidebar and ctrl+f
-    # (the usual find key) focuses search. tab needs priority=True: Screen's own plain "tab"
-    # -> "app.focus_next" binding otherwise wins, and only a higher-priority binding overrides it.
-
-    #TODO: fix improper commenting ^
-
     BINDINGS = [
         Binding("f2", "toggle_sidebar", "Toggle explorer"),
         Binding("ctrl+f", "focus_search", "Find file"),
@@ -196,33 +184,8 @@ class ChatApp(App):
             if command.title != "Theme":
                 yield command
 
-    #TODO: why is init all the way down here?
-    def __init__(
-        self, vault: Vault, retriever: Retriever, model: ModelClient, settings: Settings, transcript: TranscriptWriter
-    ) -> None:
-        super().__init__()
-        self.vault = vault
-        self.retriever = retriever
-        self.model = model
-        self.settings = settings
-        self.transcript = transcript
-        self.tools = build_registry(vault, retriever, model, settings)
-        self._active_file: File | None = None
-        self._selected_folder: Path | None = None
-        self._folder_tag_plan: list[tuple[Path, FolderTagChange]] = []
-        self._drafting = False
-        self._history: list[tuple[str, str]] = []
-        self._web_enabled = False
-        self._classification: ClassificationSuggestion | None = None
-        self._checklist: SuggestionChecklist | None = None
-        self._checklist_kind: str | None = None  # "tags" | "folder" | "wikilinks"
-        self._checklist_wikilink_kind: dict[str, str] = {}  # title -> "inline" | "see_also"
-        self._review_queue: list[ReviewQuestion] = []
-        self._review_index = 0
-
     def compose(self) -> ComposeResult:
-        yield Header(icon="")  # the default "⭘" icon has no function here — just noise
-        #TODO: remove this comment and any that reffer to old stale lines of code. claude added a comment instead of just removing th lin:w
+        yield Header(icon="")
         with Horizontal():
             with Vertical(id="sidebar"):
                 yield Input(id="file-search", placeholder="search files…")
@@ -239,22 +202,13 @@ class ChatApp(App):
 
     def on_mount(self) -> None:
         self.title = f"chatui — {self.vault.root.name}/"
-        _write_hint(self, "/explorer or f2 toggles the file tree. ctrl+f or click search to find a file.")
-        _write_hint(self, "Click a file (or jump to one), then /draft to start revising it — write an")
-        _write_hint(self, "instruction, /done saves. /tags, /wikilinks, /folder, /review, /ingest,")
-        _write_hint(self, "/model, /web, /palette also work.")
         self.query_one("#cmd", Input).focus()
         self.query_one(StreamingText).on_link_click = self._open_wikilink_target
         self._update_statusbar()
-        # Retriever.ingest() already diffs against local_db/manifest.json and only re-embeds
-        # new/changed files (and prunes removed ones) — running it on every launch keeps the
-        # index in sync with on-disk edits automatically, without a full re-embed each time.
         self.run_worker(self._handle_ingest())
         self.set_interval(_FILE_TREE_POLL_SECONDS, self._poll_file_tree)
 
     def _poll_file_tree(self) -> None:
-        # Best-effort: a file dropped on disk by another editor should show up (green, pending
-        # ingest) without the user having to run /ingest or restart the app first.
         self.query_one(FilePicker).refresh_from_disk(self.retriever.ingested_paths())
 
     def _update_statusbar(self) -> None:
@@ -274,9 +228,6 @@ class ChatApp(App):
         self.query_one("#file-search", Input).focus()
 
     def action_accept_suggestion_or_focus_next(self) -> None:
-        # Does what Right-arrow does here — accept the pending autocomplete suggestion — or
-        # else cycles focus. cmd._suggestion is private, but Input exposes no public
-        # "is a suggestion pending" accessor.
         cmd = self.query_one("#cmd", Input)
         if self.focused is cmd and cmd._suggestion:
             cmd.action_cursor_right()
@@ -318,7 +269,7 @@ class ChatApp(App):
         self._drafting = False
         self._review_queue = []
         if self._checklist is not None:
-            self._checklist.remove()  # belonged to the file we're leaving — discard, don't apply
+            self._checklist.remove()
             self._checklist = None
             self._checklist_kind = None
             self._checklist_wikilink_kind = {}
@@ -335,8 +286,6 @@ class ChatApp(App):
         self.query_one(StreamingText).show_links(text, spans, -1 if not spans else 0)
 
     def _preview_content(self) -> tuple[str, list[tuple[str, int, int]]]:
-        """Text + pending-highlight spans for the preview pane, reflecting an open checklist's
-        currently-checked items — nothing here is written to disk until /done."""
         file = self._active_file
         if self._checklist is None or self._checklist_kind is None:
             return file.body, []
@@ -348,7 +297,6 @@ class ChatApp(App):
             inline = [t for t in checked if self._checklist_wikilink_kind.get(t) == "inline"]
             see_also = [t for t in checked if self._checklist_wikilink_kind.get(t) == "see_also"]
             preview_body = classify_tools.preview_with_wikilinks(file.body, inline, see_also)
-            # Every [[wikilink]] not already saved in the file is part of this pending preview.
             spans = [
                 (target, start, end)
                 for start, end, target in find_wikilinks(preview_body)
@@ -363,7 +311,7 @@ class ChatApp(App):
             preview_text = render_frontmatter(meta, file.body)
             return preview_text, [("frontmatter", 0, len(preview_text) - len(file.body))]
 
-        return file.body, []  # "folder"/"folder-tags": no body location to preview into
+        return file.body, []
 
     @on(Input.Changed, "#file-search")
     def on_search_changed(self, event: Input.Changed) -> None:
@@ -374,16 +322,13 @@ class ChatApp(App):
         picker = self.query_one(FilePicker)
         best_match = picker.filter_files(event.value)
         event.input.value = ""
-        picker.filter_files("")  # back to the full tree once we've jumped
+        picker.filter_files("")
         if best_match is not None:
             self._preview_file(best_match)
         else:
             self.query_one("#cmd", Input).focus()
 
     async def on_key(self, event: events.Key) -> None:
-        # Escape while searching clears the query and returns focus to the main input, rather
-        # than leaving a stale filter and orphaned focus. This is the one place a second Input
-        # can steal focus from the primary one.
         search = self.query_one("#file-search", Input)
         if event.key == "escape" and self.focused is search:
             search.value = ""
@@ -395,7 +340,7 @@ class ChatApp(App):
             event.stop()
             await self._dismiss_checklist("cancelled")
 
-    # --- Ask -----------------------------------------------------------------------------
+    # ---- Ask -----------------------------------------------------------------------------
 
     async def _ask(self, question: str) -> None:
         def on_status(text: str) -> None:
@@ -404,8 +349,6 @@ class ChatApp(App):
         def on_tool_call(name: str, args: dict) -> None:
             _write_status(self, f"tool: {name}({_format_tool_args(args)})")
 
-        # Streamed into its own resting widget from the first token, so the finished answer
-        # never has to jump from a scratch location into the log — it's the same widget throughout.
         stream = self.query_one("#log", ChatLog).begin_streaming()
         tokens: list[str] = []
 
@@ -425,15 +368,18 @@ class ChatApp(App):
             _log.error("ask failed for %r: %s", question, exc)
             _write_status(self, f"couldn't answer: {exc}")
             return
-        stream.update(result.answer)  # guarantee the resting text matches the returned answer exactly
+        stream.update(result.answer)
         self.transcript.write_answer(result.answer)
         self._history.append((question, result.answer))
         if result.sources:
             _write_status(self, "source: " + ", ".join(str(p) for p in result.sources))
 
-    # --- Draft -----------------------------------------------------------------------------
+
+    # ---- Draft -----------------------------------------------------------------------------
+    """ start/continue drafting, _save_draft edits to file """
 
     async def _start_or_continue_draft(self, subject: str | None) -> None:
+        """ select a file to draft """
         if subject is not None:
             self._set_active_file(draft_tools.edit_draft(subject, self.vault))
         elif self._active_file is None:
@@ -442,6 +388,8 @@ class ChatApp(App):
         self._drafting = True
         _write_status(self, f'drafting "{self._active_file.title}"... (write an instruction, /done to save and stop)')
 
+
+    #TODO: currently this re-writes an entire version of the given article, I never want to call on a model to complete an entire work, so this function will be removed
     async def _revise_active_draft(self, instruction: str) -> None:
         old_body = self._active_file.body
         try:
@@ -454,6 +402,8 @@ class ChatApp(App):
         self.query_one(StreamingText).update(_diff_highlight(old_body, revised.body))
         _write_status(self, "revised — another instruction, or /done to save and stop")
 
+
+    #TODO: consider _save_draft as a name instead of _finish_draft, more litteral
     async def _finish_draft(self) -> None:
         if not self._drafting or self._active_file is None:
             _write_status(self, "nothing being drafted")
@@ -470,7 +420,7 @@ class ChatApp(App):
         self.query_one(FilePicker).reload(self.retriever.ingested_paths())
         self._refresh_preview()
 
-    # --- Classify: tags / folder / wikilinks (all share one checklist) -----------------------
+    # ---- Classify: tags / folder / wikilinks ------------------------------------
 
     async def _ensure_classification(self) -> ClassificationSuggestion | None:
         if self._active_file is None:
@@ -505,9 +455,6 @@ class ChatApp(App):
         await self._open_checklist(kind, items)
 
     async def _start_wikilink_walkthrough(self) -> None:
-        """Suggest wikilinks: inline (text match) and see-also (vector-similar, no text match)
-        candidates share one checklist — checking either kind previews it live (wrapped in place,
-        or appended as a "## See also" bullet) until /done writes it for real."""
         if self._active_file is None:
             self._flash_status("nothing to link: click a file or search for one first")
             return
@@ -534,10 +481,6 @@ class ChatApp(App):
         await self._open_checklist("wikilinks", suggestion.inline_new + suggestion.see_also_new)
 
     async def _show_folder_tag_checklist(self) -> None:
-        """Batch counterpart to /tags on a single file: syncs every file under the selected folder
-        to the current folder structure — adds missing folder-derived tags (Vault.folder_tags) and
-        strips stale ones left over from a folder that was since moved/renamed — all pre-checked
-        for review."""
         folder = self._selected_folder
         plan = classify_tools.suggest_folder_tags(folder, self.vault)
         if not plan:
@@ -606,8 +549,6 @@ class ChatApp(App):
         kind = self._checklist_kind
         checked = self._checklist.checked_items()
         checked_indices = self._checklist.checked_indices()
-        # Snapshot lookups keyed by this checklist before closing it — _close_checklist wipes
-        # both, and reading them afterward would silently see nothing checked as "applied".
         wikilink_kind = dict(self._checklist_wikilink_kind)
         folder_tag_plan = list(self._folder_tag_plan)
         await self._close_checklist()
@@ -657,7 +598,7 @@ class ChatApp(App):
     def _flash_status(self, text: str) -> None:
         self.query_one("#statusbar", Static).update(Text(text, style=theme.ACCENT))
 
-    # --- Review ------------------------------------------------------------------------------
+    # ---- Review ------------------------------------------------------------------------------
 
     async def _start_review(self) -> None:
         if self._active_file is None:
@@ -708,13 +649,11 @@ class ChatApp(App):
             return
         self._ask_review_question()
 
-    # --- Support commands ----------------------------------------------------------------
+    # ---- Support commands ----------------------------------------------------------------
 
     async def _handle_ingest(self) -> None:
         _write_status(self, "ingesting…")
         try:
-            # Retriever.ingest() is synchronous (chromadb/langchain, no async), so run it in a
-            # thread to keep embedding from stalling the UI.
             stats = await asyncio.to_thread(self.retriever.ingest, self.vault.list_files())
         except ChatUIError as exc:
             _log.error("ingest failed: %s", exc)
@@ -733,7 +672,7 @@ class ChatApp(App):
         _write_status(self, f"model: switched to {name}")
         self._update_statusbar()
 
-    # --- Dispatch ----------------------------------------------------------------------------
+    # ---- Dispatch ----------------------------------------------------------------------------
 
     @on(Input.Submitted, "#cmd")
     async def on_cmd_submitted(self, event: Input.Submitted) -> None:
